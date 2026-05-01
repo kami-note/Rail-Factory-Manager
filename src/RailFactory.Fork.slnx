@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="RailFactory.AppHost/RailFactory.AppHost.csproj" />
+  <Project Path="RailFactory.Frontend/RailFactory.Frontend.csproj" />
+  <Project Path="RailFactory.Gateway/RailFactory.Gateway.csproj" />
+  <Project Path="RailFactory.Iam.Api/RailFactory.Iam.Api.csproj" />
+  <Project Path="RailFactory.Inventory.Api/RailFactory.Inventory.Api.csproj" />
+  <Project Path="RailFactory.Production.Api/RailFactory.Production.Api.csproj" />
+  <Project Path="RailFactory.ServiceDefaults/RailFactory.ServiceDefaults.csproj" />
+  <Project Path="RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj" />
+  <Project Path="RailFactory.Tenancy.Api/RailFactory.Tenancy.Api.csproj" />
+</Solution>
