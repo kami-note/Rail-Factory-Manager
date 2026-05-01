@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rail Factory Engineering"
+  short_description: "Regras de engenharia para o Rail-Factory Fork."
+  default_prompt: "Use esta skill ao implementar ou revisar codigo e documentacao do Rail-Factory Fork."
