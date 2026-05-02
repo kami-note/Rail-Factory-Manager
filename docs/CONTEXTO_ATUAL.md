@@ -108,6 +108,25 @@ Rail-Factory-Fork/src/RailFactory.Frontend/App
 
 Resultado validado: build Vite concluido.
 
+```bash
+dotnet test src/RailFactory.Iam.Api.Tests/RailFactory.Iam.Api.Tests.csproj -v:minimal
+dotnet test src/RailFactory.Frontend.Tests/RailFactory.Frontend.Tests.csproj -v:minimal
+```
+
+Resultado validado: suites unitarias de auth/session verdes (IAM: 3 testes; Frontend/BFF: 6 testes).
+
+```bash
+npm test
+```
+
+Executar em:
+
+```bash
+Rail-Factory-Fork/src/RailFactory.Frontend/App
+```
+
+Resultado validado: testes de UI auth (`useAuthSession`) verdes (2 testes).
+
 Estado funcional validado:
 
 - middleware tenant-aware ativo e erros padronizados para tenant ausente/inexistente;
@@ -122,17 +141,34 @@ Estado funcional validado:
 - UI React/Vite possui rota protegida inicial em `/app`, liberada apos retorno OAuth com `oauth=success` e bloqueada por sessao real do servidor; enquanto valida sessao, a UI exibe estado de carregamento e evita flicker de redirecionamento;
 - validacao da rota protegida da UI migrada para sessao real via BFF (`GET /api/auth/session`), que encaminha cookie + `X-Tenant-Code` ao IAM (`GET /auth/session`) e usa resposta autenticada do servidor como fonte de verdade (sem `localStorage` para auth);
 - contrato de sessao endurecido no IAM e no BFF: `200` autenticado e `401` nao autenticado com payload consistente para consumo previsivel da UI;
+- contrato de auth/session consolidado em tipo compartilhado (`RailFactory.BuildingBlocks/Auth/AuthSessionDto`) reutilizado por IAM e BFF, removendo DTO local duplicado;
+- IAM com portas de aplicacao para auth externo (`IExternalIdentityProvider`, `StartExternalLogin`, `FinalizeExternalLogin`) e adapter Google em infraestrutura, mantendo endpoints publicos atuais;
+- BFF com mapeamento consistente de erro para UI (`unauthorized`, `oauth_error`, `tenant_error`) nos endpoints de auth/session;
+- BFF com CSRF ativo para rotas mutaveis de auth (`GET /api/auth/csrf` + validacao em `POST /api/auth/logout`) e erro padronizado `csrf_error` em falha de token;
+- BFF com validacao CSRF de logout robusta para edge com proxy HTTPS (`X-Forwarded-Proto`): normaliza scheme antes do `ValidateRequestAsync` e retorna erro controlado `csrf_https_required` quando a request chega sem HTTPS efetivo;
+- logout ponta a ponta implementado (`POST /api/auth/logout` no BFF -> `POST /auth/logout` no IAM), com encerramento de cookie/sessao no servidor;
+- endpoint de usuario atual protegido no IAM (`GET /auth/current-user`) com contrato compartilhado `AuthSessionDto`;
+- autorizacao minima aplicada no IAM com rotas protegidas explicitas (`GET /auth/current-user` e `POST /auth/logout` com `RequireAuthorization`) e rotas publicas de OAuth/sessao em `AllowAnonymous`;
+- UI com modulo de auth reutilizavel (`src/RailFactory.Frontend/App/src/auth`) e estados padronizados (`loading`, `authenticated`, `unauthenticated`, `error`) para rotas protegidas;
 - Vite local recebe `VITE_ALLOWED_HOST` definido no proprio Vite via leitura de `.env.local`, mantendo o host ngrok permitido sem depender do AppHost;
 - hardening de OAuth aplicado no IAM (`UseForwardedHeaders`, cookie `Secure`/`HttpOnly`/`SameSite=Lax`, normalizacao de `returnUrl`, validacao de configuracao Google quando OAuth esta ativo e origem publica explicita para o `redirect_uri` do Google na autorizacao);
 - falhas de OAuth no callback agora retornam fluxo controlado para a UI (`oauth=error`) com log estruturado e sem vazamento de stack trace para UX;
 - registro de autenticacao Google no IAM ajustado para `AddOAuth<GoogleOptions, GoogleOAuthPublicOriginHandler>(...)` com defaults do provider Google + handler custom no token exchange (`ExchangeCodeAsync`) para manter o mesmo `redirect_uri` publico no authorize e no token endpoint, evitando `NullReferenceException` no `Challenge` e `redirect_uri_mismatch` no callback.
+- ajuste no registro de eventos OAuth para preservar simultaneamente `OnRedirectToAuthorizationEndpoint` (origem publica canônica) e `OnRemoteFailure` (erro controlado), evitando regressao de `redirect_uri` para localhost;
 - AppHost pronto para deploy Aspire Docker Compose (`AddDockerComposeEnvironment`) com exposicao externa apenas do `frontend`;
 - credenciais Google e origem publica injetadas por parametros externos do AppHost (`google-client-id`, `google-client-secret`, `frontend-public-origin`) no IAM e no Frontend/BFF, enquanto o Vite dev server usa a configuracao local do proprio frontend para o host allowlist.
 - parametro `frontend-public-origin` ajustado no AppHost para `secret: true`, alinhando persistencia via `aspire secret set` com os demais parametros OAuth.
 
-Pendencia ativa para fechar P1.2:
+P1.2 validado operacionalmente em 2026-05-02:
 
-- configurar `Authentication:Google` com credenciais reais, definir `frontend-public-origin` com a URL HTTPS publica do Frontend/BFF e validar smoke real via ngrok no fluxo `Frontend -> BFF -> Gateway -> IAM`.
+- credenciais reais configuradas externamente no AppHost;
+- `frontend-public-origin` aplicado no IAM/BFF;
+- redirect real para Google com `redirect_uri=https://unarticulative-unelectrical-shavon.ngrok-free.dev/auth/google/callback`;
+- callback OAuth real observado em log estruturado (`/auth/google/callback` com `code=` do Google) seguido de finalize `302` para UI.
+
+Pendencia ativa para fechamento operacional final de P1.3:
+
+- executar smoke manual autenticado completo validando logout com CSRF no ambiente real e registrar evidencia (`/api/auth/google/start` -> callback/finalize -> `/api/auth/session` -> `/api/auth/logout` -> `/api/auth/session` retornando `401`).
 
 ## Como Subir Localmente
 
@@ -182,13 +218,12 @@ A base tecnica inicial esta fechada para permitir avancar em P1. Os padroes abai
 
 ## Proxima Passada Recomendada
 
-Continuar P1 no OAuth e sessao:
+Continuar P1 com foco em validacao operacional:
 
 1. configuracao OAuth Google sem segredo hardcoded;
 2. inicio e callback de login com `redirect_uri` usando a origem publica do Frontend/BFF;
-3. sessao por cookie no BFF;
-4. protecao CSRF e endpoint de usuario atual;
-5. logout e autorizacao minima deny by default.
+3. validar fluxo OAuth real com credenciais reais e origem publica HTTPS;
+4. executar smoke de logout com CSRF e registrar evidencia.
 
 Execucao paralela recomendada:
 
@@ -203,7 +238,7 @@ Comecar por:
 2. ler `docs/PLANO_DE_TASKS.md`, secao `P1.2 - OAuth Google`;
 3. configurar credenciais OAuth Google externas e `frontend-public-origin`;
 4. implementar inicio/callback de login;
-5. preparar sessao BFF para P1.3.
+5. executar smoke OAuth/CSRF/logout com evidencia.
 
 Comando de validacao principal:
 
