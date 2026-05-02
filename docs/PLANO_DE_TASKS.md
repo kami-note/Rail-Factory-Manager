@@ -208,61 +208,69 @@ Objetivo: padronizar estrutura interna dos servicos em paralelo as tasks funcion
 
 ### P1.2 - OAuth Google
 
-- [ ] Configurar credenciais OAuth Google.
+- [x] Configurar credenciais OAuth Google.
   - Aceite: ambiente local possui configuracao externa, sem segredo hardcoded.
   - Depende: IAM API e BFF.
-  - Andamento: chaves movidas para configuracao externa `Authentication:Google` no IAM e agora injetadas por parametros externos no AppHost (`google-client-id` e `google-client-secret`). A origem publica do Frontend/BFF e injetada por `frontend-public-origin` no BFF (`Frontend:PublicOrigin`) e no IAM (`Authentication:Google:PublicOrigin`); a UI local mantém `VITE_ALLOWED_HOST` na configuracao do proprio Vite via `.env.local`. Falta preencher credenciais reais de ambiente e validar smoke.
+  - Entregue: credenciais e origem publica configuradas externamente no AppHost (`google-client-id`, `google-client-secret`, `frontend-public-origin`) e validadas em runtime no IAM.
 
-- [ ] Implementar inicio de login.
+- [x] Implementar inicio de login.
   - Aceite: usuario consegue iniciar login pela UI.
   - Depende: OAuth configurado.
-  - Andamento: endpoint `GET /api/auth/google/start` no BFF e `GET /api/iam/auth/google/start` no IAM implementados, com Frontend/BFF como edge unico e proxy interno para Gateway. UI envia `returnUrl` relativo e o BFF converte para URL publica validada.
+  - Entregue: endpoint `GET /api/auth/google/start` no BFF e `GET /api/iam/auth/google/start` no IAM ativos, com redirect real para Google e `redirect_uri` publico HTTPS canônico.
 
-- [ ] Implementar callback OAuth.
+- [x] Implementar callback OAuth.
   - Aceite: Google retorna identidade validada para IAM/BFF.
   - Depende: inicio de login.
-  - Andamento: callback tecnico `GET /auth/google/callback` no host publico edge, roteado internamente para Gateway/IAM e finalizacao em `GET /auth/google/finalize`; cookie/forwarded headers/returnUrl hardening aplicados. IAM agora valida configuracao OAuth quando ativa e substitui o `redirect_uri` do handler Google pela origem publica configurada em `Authentication:Google:PublicOrigin` na autorizacao e no token exchange, evitando `localhost`/porta interna no OAuth. Falhas OAuth no callback agora geram redirecionamento controlado (`oauth=error`) para a UI e log estruturado sem stack/sensivel.
+  - Entregue: callback `GET /auth/google/callback` executado com codigo real do Google no fluxo edge -> gateway -> IAM, com finalize `GET /auth/google/finalize` retornando redirect controlado para UI (`oauth=success`/`oauth=error`).
 
 - [ ] Criar ou atualizar usuario local apos login.
   - Aceite: usuario autenticado existe no IAM DB do tenant `dev`.
   - Depende: callback OAuth.
+  - Progresso atual: fluxo de `finalize` do IAM ja executa upsert tenant-aware em `iam_local_users` (PostgreSQL `iamdb`) com fallback in-memory sem connection string; falta evidencia operacional do login real para marcar concluida.
 
 ### P1.3 - Sessao E Autorizacao Minima
 
-- [ ] Criar sessao no BFF por cookie.
+- [x] Criar sessao no BFF por cookie.
   - Aceite: usuario autenticado permanece logado entre requests.
   - Depende: login Google.
-  - Andamento: `GET /auth/session` no IAM e `GET /api/auth/session` no BFF padronizados com payload de sessao para `200` autenticado e `401` nao autenticado, mantendo cookie/sessao do servidor como fonte unica de verdade para a UI.
+  - Entregue: `GET /auth/session` no IAM e `GET /api/auth/session` no BFF padronizados com contrato compartilhado `AuthSessionDto` (`RailFactory.BuildingBlocks`), mantendo payload canonico para `200` autenticado e `401` nao autenticado, com cookie/sessao do servidor como fonte unica de verdade para a UI.
 
-- [ ] Proteger chamadas autenticadas contra CSRF.
+- [x] Proteger chamadas autenticadas contra CSRF.
   - Aceite: chamadas mutaveis pelo BFF exigem protecao CSRF ou mecanismo equivalente.
   - Depende: sessao no BFF.
+  - Entregue: BFF expõe `GET /api/auth/csrf` e valida `X-CSRF-TOKEN` em `POST /api/auth/logout`, retornando `403` com codigo estavel `csrf_error` quando o token e ausente/invalido.
 
-- [ ] Criar endpoint de usuario atual.
+- [x] Criar endpoint de usuario atual.
   - Aceite: UI mostra usuario, tenant e permissoes minimas.
   - Depende: sessao no BFF.
+  - Entregue: IAM disponibiliza `GET /auth/current-user` protegido e mantendo o contrato compartilhado `AuthSessionDto`; UI protegida em `/app` reutiliza modulo `auth` (client + hook/guard de sessao) e exibe usuario autenticado.
 
-- [ ] Implementar logout.
+- [x] Implementar logout.
   - Aceite: cookie/sessao sao encerrados e chamadas protegidas passam a falhar.
   - Depende: sessao no BFF.
+  - Entregue: `POST /api/auth/logout` no BFF encaminha cookie/tenant para `POST /auth/logout` no IAM e encerra sessao no servidor.
 
-- [ ] Implementar autorizacao minima deny by default.
+- [x] Implementar autorizacao minima deny by default.
   - Aceite: endpoint protegido falha sem usuario/permissao minima.
   - Depende: usuario atual.
+  - Entregue: IAM com rotas protegidas explicitas (`GET /auth/current-user` e `POST /auth/logout` com `RequireAuthorization`), mantendo rotas publicas de OAuth/sessao com `AllowAnonymous`.
 
 ### P1.4 - UI Inicial
 
-- [ ] Criar tela de login.
+- [x] Criar tela de login.
   - Aceite: botao de login Google inicia fluxo real.
   - Depende: inicio de login.
+  - Entregue: UI React/Vite em `/` com CTA `Sign in with Google` chamando `GET /api/auth/google/start` via `buildLoginHref(...)`, usando `tenantCode` explicito e `returnUrl=/app`.
 
-- [ ] Criar layout autenticado inicial.
+- [x] Criar layout autenticado inicial.
   - Aceite: usuario logado ve navegacao basica.
   - Depende: usuario atual.
+  - Entregue: rota protegida `/app` com estado autenticado, exibicao de usuario/sessao, acao de logout e navegacao basica de retorno para inicio.
 
-- [ ] Criar tratamento de erro de autenticacao.
+- [x] Criar tratamento de erro de autenticacao.
   - Aceite: falhas de login aparecem de forma clara na UI.
   - Depende: fluxo OAuth.
+  - Entregue: UI trata erros de OAuth (`oauth=error`) e falhas de sessao/logout com mensagens visiveis e estados seguros (`unauthenticated`/`error`).
 
 ## P2 - Entrada De Materiais E Inventory Inicial
 

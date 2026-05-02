@@ -143,6 +143,7 @@ Estado funcional validado:
 - contrato de sessao endurecido no IAM e no BFF: `200` autenticado e `401` nao autenticado com payload consistente para consumo previsivel da UI;
 - contrato de auth/session consolidado em tipo compartilhado (`RailFactory.BuildingBlocks/Auth/AuthSessionDto`) reutilizado por IAM e BFF, removendo DTO local duplicado;
 - IAM com portas de aplicacao para auth externo (`IExternalIdentityProvider`, `StartExternalLogin`, `FinalizeExternalLogin`) e adapter Google em infraestrutura, mantendo endpoints publicos atuais;
+- IAM com provisionamento local de usuario no `finalize` OAuth: upsert tenant-aware (`tenant_code + external_provider + external_subject`) em `iam_local_users` no banco `iamdb`, com schema initializer idempotente e fallback in-memory quando nao ha connection string;
 - BFF com mapeamento consistente de erro para UI (`unauthorized`, `oauth_error`, `tenant_error`) nos endpoints de auth/session;
 - BFF com CSRF ativo para rotas mutaveis de auth (`GET /api/auth/csrf` + validacao em `POST /api/auth/logout`) e erro padronizado `csrf_error` em falha de token;
 - BFF com validacao CSRF de logout robusta para edge com proxy HTTPS (`X-Forwarded-Proto`): normaliza scheme antes do `ValidateRequestAsync` e retorna erro controlado `csrf_https_required` quando a request chega sem HTTPS efetivo;
@@ -169,6 +170,7 @@ P1.2 validado operacionalmente em 2026-05-02:
 Pendencia ativa para fechamento operacional final de P1.3:
 
 - executar smoke manual autenticado completo validando logout com CSRF no ambiente real e registrar evidencia (`/api/auth/google/start` -> callback/finalize -> `/api/auth/session` -> `/api/auth/logout` -> `/api/auth/session` retornando `401`).
+- validar no smoke OAuth real a persistencia de usuario local no IAM DB (`iam_local_users`) apos `GET /auth/google/finalize`, para fechar o aceite de P1.2.
 
 ## Como Subir Localmente
 
