@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using RailFactory.BuildingBlocks.Auth;
 using RailFactory.Iam.Api.Application;
+using RailFactory.Iam.Api.Application.Auth;
 using RailFactory.Iam.Api.Infrastructure;
 
 namespace RailFactory.Iam.Api.Api;
@@ -12,16 +16,20 @@ public static class IamEndpoints
     private const string InfoPath = "/info";
     private const string GoogleStartPath = "/auth/google/start";
     private const string SessionPath = "/auth/session";
+    private const string LogoutPath = "/auth/logout";
+    private const string CurrentUserPath = "/auth/current-user";
     private const string GoogleFinalizePath = "/auth/google/finalize";
-    private static readonly AuthSessionResponse UnauthenticatedSession = AuthSessionResponse.Unauthenticated;
+    private static readonly AuthSessionDto UnauthenticatedSession = AuthSessionDto.Unauthenticated;
 
     public static WebApplication MapIamEndpoints(this WebApplication app)
     {
         app.MapGet(RootPath, () => Results.Redirect(InfoPath));
-        app.MapGet(InfoPath, HandleGetInfo);
-        app.MapGet(GoogleStartPath, HandleStartGoogleLogin);
-        app.MapGet(SessionPath, HandleGetSession);
-        app.MapGet(GoogleFinalizePath, HandleFinalizeGoogleLogin);
+        app.MapGet(InfoPath, HandleGetInfo).AllowAnonymous();
+        app.MapGet(GoogleStartPath, HandleStartGoogleLogin).AllowAnonymous();
+        app.MapGet(SessionPath, HandleGetSession).AllowAnonymous();
+        app.MapPost(LogoutPath, (Func<HttpContext, Task<IResult>>)HandleLogout).RequireAuthorization();
+        app.MapGet(CurrentUserPath, HandleGetCurrentUser).RequireAuthorization();
+        app.MapGet(GoogleFinalizePath, HandleFinalizeGoogleLogin).AllowAnonymous();
         return app;
     }
 
@@ -41,52 +49,68 @@ public static class IamEndpoints
     private static async Task<IResult> HandleStartGoogleLogin(
         string tenantCode,
         string? returnUrl,
-        [FromServices] GoogleOAuthRedirects redirects,
-        ITenantCatalogClient tenantCatalogClient,
+        StartExternalLogin startExternalLogin,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(tenantCode))
+        var result = await startExternalLogin.ExecuteGoogleAsync(tenantCode, returnUrl, cancellationToken);
+        if (!result.Success)
         {
-            return TenantHttpResults.CodeRequired();
-        }
+            if (result.ErrorStatusCode == StatusCodes.Status400BadRequest && result.ErrorCode == TenantConstants.CodeRequiredErrorCode)
+            {
+                return TenantHttpResults.CodeRequired();
+            }
 
-        var resolvedTenant = await tenantCatalogClient.ResolveAsync(tenantCode.Trim(), cancellationToken);
-        if (!resolvedTenant.Found)
-        {
-            return Results.NotFound(new { code = TenantConstants.NotFoundErrorCode });
-        }
-
-        if (!resolvedTenant.IsActive)
-        {
-            return Results.BadRequest(new { code = TenantConstants.InactiveErrorCode });
+            return Results.Json(
+                new AuthErrorDto(result.ErrorCode ?? AuthResultErrorCode.TenantError, result.ErrorMessage ?? "Authentication start failed."),
+                statusCode: result.ErrorStatusCode ?? StatusCodes.Status400BadRequest);
         }
 
         var properties = new AuthenticationProperties
         {
-            RedirectUri = redirects.BuildFinalizeRedirectPath(resolvedTenant.Code, returnUrl ?? "/")
+            RedirectUri = result.RedirectUri
         };
 
-        return Results.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
+        return Results.Challenge(properties, [result.ChallengeScheme ?? GoogleDefaults.AuthenticationScheme]);
     }
 
-    private static IResult HandleFinalizeGoogleLogin(
+    private static async Task<IResult> HandleFinalizeGoogleLogin(
         HttpContext context,
         string tenantCode,
         string? returnUrl,
         string? oauthError,
-        [FromServices] GoogleOAuthRedirects redirects)
+        [FromServices] GoogleOAuthRedirects redirects,
+        [FromServices] FinalizeExternalLogin finalizeExternalLogin,
+        [FromServices] UpsertLocalUserFromExternalLogin upsertLocalUserFromExternalLogin,
+        CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(oauthError))
+        var result = finalizeExternalLogin.Execute(
+            context.User.Identity?.IsAuthenticated is true,
+            tenantCode,
+            returnUrl,
+            oauthError);
+
+        if (!result.Success)
         {
-            return Results.Redirect(redirects.BuildFailedFrontendRedirect(returnUrl, tenantCode, oauthError));
+            return Results.Redirect(redirects.BuildFailedFrontendRedirect(
+                result.ReturnUrl,
+                result.TenantCode,
+                result.ErrorCode ?? AuthResultErrorCode.OAuthError));
         }
 
-        if (context.User.Identity?.IsAuthenticated is not true)
-        {
-            return Results.Redirect(redirects.BuildFailedFrontendRedirect(returnUrl, tenantCode, "authentication_required"));
-        }
+        var upsertResult = await upsertLocalUserFromExternalLogin.ExecuteAsync(
+            tenantCode,
+            externalProvider: "google",
+            externalSubject: context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
+            email: context.User.FindFirstValue("email"),
+            displayName: context.User.Identity?.Name,
+            cancellationToken);
 
-        return Results.Redirect(redirects.BuildSuccessfulFrontendRedirect(returnUrl, tenantCode));
+        return upsertResult.Success
+            ? Results.Redirect(redirects.BuildSuccessfulFrontendRedirect(result.ReturnUrl, result.TenantCode))
+            : Results.Redirect(redirects.BuildFailedFrontendRedirect(
+                result.ReturnUrl,
+                result.TenantCode,
+                upsertResult.ErrorCode ?? AuthResultErrorCode.OAuthError));
     }
 
     private static IResult HandleGetSession(HttpContext context)
@@ -96,18 +120,19 @@ public static class IamEndpoints
             return Results.Json(UnauthenticatedSession, statusCode: StatusCodes.Status401Unauthorized);
         }
 
-        return Results.Ok(AuthSessionResponse.CreateAuthenticated(
+        return Results.Ok(AuthSessionDto.CreateAuthenticated(
             context.User.Identity?.Name,
             context.User.FindFirst("email")?.Value));
     }
 
-    private sealed record AuthSessionResponse(bool Authenticated, AuthSessionUserResponse? User)
+    private static async Task<IResult> HandleLogout(HttpContext context)
     {
-        public static AuthSessionResponse Unauthenticated { get; } = new(false, null);
-
-        public static AuthSessionResponse CreateAuthenticated(string? name, string? email)
-            => new(true, new AuthSessionUserResponse(name, email));
+        await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return Results.NoContent();
     }
 
-    private sealed record AuthSessionUserResponse(string? Name, string? Email);
+    private static IResult HandleGetCurrentUser(HttpContext context)
+        => Results.Ok(AuthSessionDto.CreateAuthenticated(
+            context.User.Identity?.Name,
+            context.User.FindFirst("email")?.Value));
 }
