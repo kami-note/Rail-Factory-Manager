@@ -7,7 +7,7 @@ namespace RailFactory.Frontend.Api;
 internal static class FrontendAuthSessionEndpoint
 {
     private const string IamSessionPath = "/api/iam/auth/session";
-    private static readonly SessionResponse UnauthenticatedSession = SessionResponse.Unauthenticated;
+    private static readonly AuthSessionDto UnauthenticatedSession = AuthSessionDto.Unauthenticated;
 
     public static async Task<IResult> HandleGet(
         HttpContext httpContext,
@@ -32,7 +32,7 @@ internal static class FrontendAuthSessionEndpoint
         using var response = await gateway.SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            var unauthorizedPayload = await response.Content.ReadFromJsonAsync<SessionResponse>(cancellationToken: cancellationToken);
+            var unauthorizedPayload = await response.Content.ReadFromJsonAsync<AuthSessionDto>(cancellationToken: cancellationToken);
             return Results.Json(unauthorizedPayload ?? UnauthenticatedSession, statusCode: StatusCodes.Status401Unauthorized);
         }
 
@@ -41,14 +41,14 @@ internal static class FrontendAuthSessionEndpoint
             return Results.StatusCode((int)response.StatusCode);
         }
 
-        var payload = await response.Content.ReadFromJsonAsync<SessionResponse>(cancellationToken: cancellationToken);
+        var payload = await response.Content.ReadFromJsonAsync<AuthSessionDto>(cancellationToken: cancellationToken);
         return Results.Ok(payload ?? UnauthenticatedSession);
     }
 
-    private sealed record SessionResponse(bool Authenticated, SessionUserResponse? User)
+    private sealed record AuthSessionDto(bool Authenticated, SessionUserDto? User)
     {
-        public static SessionResponse Unauthenticated { get; } = new(false, null);
+        public static AuthSessionDto Unauthenticated { get; } = new(false, null);
     }
 
-    private sealed record SessionUserResponse(string? Name, string? Email);
+    private sealed record SessionUserDto(string? Name, string? Email);
 }
