@@ -14,8 +14,11 @@ Nao e permitido:
 - implementar recursos avancados antes do fluxo exigir;
 - misturar responsabilidades entre dominios;
 - criar abstracoes vazias sem uso real;
+- manter implementacao provisoria, placeholder funcional ou contrato temporario quando ja houver definicao de versao final;
 - marcar task como concluida sem criterio de aceite;
 - deixar `CONTEXTO_ATUAL.md` desatualizado depois de mudar estado real do projeto.
+
+Diretriz obrigatoria: priorizar sempre implementacao definitiva para a versao final. Quando um trecho estiver temporario, ele deve ser substituido na mesma passada ou registrado explicitamente como pendencia bloqueadora.
 
 ## 2. Fluxo Obrigatorio De Trabalho
 
@@ -133,6 +136,21 @@ Dependencias proibidas:
 - Application -> implementacao concreta de banco/fila/provedor;
 - UI -> Gateway ou microservicos internos.
 
+## 4.1 Convencao De Program.cs Em APIs
+
+Para reduzir divergencia estrutural entre microservicos, `Program.cs` deve seguir o mesmo desenho base.
+
+Regras:
+
+- `Program.cs` e apenas composicao de pipeline e mapeamento de rotas;
+- regra de negocio fica fora do endpoint inline, em caso de uso na `Application`;
+- quando houver muitos endpoints, extrair mapeamento para `Api/*Endpoints` e manter `Program.cs` com composicao minima;
+- usar constante para rotas publicas estaveis (ex: `InfoPath = "/info"`);
+- preferir handler nomeado (`HandleGetInfo`) em arquivo de endpoints em vez de bloco inline longo no `Program.cs`;
+- manter ordem consistente: `AddServiceDefaults`/`AddTenantResolution`, build, `UseServiceDefaults`/`UseTenantResolution`, `MapDefaultEndpoints`, rotas do servico.
+
+Objetivo: facilitar manutencao, leitura e comparacao entre servicos sem alterar contratos HTTP.
+
 ## 5. Bounded Contexts
 
 Responsabilidades nao devem vazar:
@@ -227,3 +245,15 @@ Atualize arquitetura/requisitos apenas quando houver decisao real, nao por detal
 - [ ] Build/teste aplicavel foi executado.
 - [ ] `CONTEXTO_ATUAL.md` foi atualizado se o estado mudou.
 - [ ] `PLANO_DE_TASKS.md` foi atualizado se task mudou de estado.
+
+## 11. Refatoracao Continua Em Paralelo As Tasks
+
+Refatoracao e permitida durante as proximas passadas, desde que seja incremental e nao desvie da entrega funcional da task ativa.
+
+Regras:
+
+- cada refatoracao deve ficar no mesmo bounded context da task atual ou em camada compartilhada ja usada pela task;
+- nao mudar contrato publico sem atualizar aceite e `docs/CONTRATOS_API.md`;
+- refatoracao deve sair com build/teste/smoke da task ativa ainda passando;
+- preferir refatoracao por fatias pequenas (ex: um servico por vez), evitando big-bang nos microservicos;
+- quando houver refatoracao paralela, registrar no `CONTEXTO_ATUAL.md` o que foi padronizado e o que ainda falta.

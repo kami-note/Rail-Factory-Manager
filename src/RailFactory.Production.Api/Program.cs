@@ -1,20 +1,14 @@
+using RailFactory.Production.Api.Api;
+using RailFactory.Production.Api.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
-builder.AddTenantResolution();
+builder.AddProductionHosting();
+builder.Services.AddProductionModule();
 
 var app = builder.Build();
 
-app.UseServiceDefaults();
-app.UseTenantResolution();
-app.MapDefaultEndpoints();
-app.MapGet("/", () => Results.Redirect("/info"));
-app.MapGet("/info", (HttpContext context, IHostEnvironment environment) => Results.Ok(new
-{
-    service = "production",
-    environment = environment.EnvironmentName,
-    purpose = "Production order placeholder",
-    tenant = context.GetResolvedTenant()
-}));
+app.UseProductionHosting();
+app.MapProductionEndpoints();
 
 app.Run();

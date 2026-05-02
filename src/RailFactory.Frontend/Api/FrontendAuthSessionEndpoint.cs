@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using RailFactory.BuildingBlocks.Auth;
 using RailFactory.Frontend.Infrastructure;
 
 namespace RailFactory.Frontend.Api;
@@ -38,17 +39,12 @@ internal static class FrontendAuthSessionEndpoint
 
         if (!response.IsSuccessStatusCode)
         {
-            return Results.StatusCode((int)response.StatusCode);
+            return Results.Json(
+                AuthUiErrorMapper.MapFromStatusCode((int)response.StatusCode),
+                statusCode: (int)response.StatusCode);
         }
 
         var payload = await response.Content.ReadFromJsonAsync<AuthSessionDto>(cancellationToken: cancellationToken);
         return Results.Ok(payload ?? UnauthenticatedSession);
     }
-
-    private sealed record AuthSessionDto(bool Authenticated, SessionUserDto? User)
-    {
-        public static AuthSessionDto Unauthenticated { get; } = new(false, null);
-    }
-
-    private sealed record SessionUserDto(string? Name, string? Email);
 }

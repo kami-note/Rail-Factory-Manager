@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "src/RailFactory.AppHost/RailFactory.AppHost.csproj"
+  }
+}

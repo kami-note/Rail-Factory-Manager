@@ -1,22 +1,13 @@
+using RailFactory.Gateway.Api;
+using RailFactory.Gateway.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
-builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
-    .AddServiceDiscoveryDestinationResolver();
+builder.AddGatewayHosting();
 
 var app = builder.Build();
 
-app.UseServiceDefaults();
-app.MapDefaultEndpoints();
-app.MapGet("/", () => Results.Redirect("/info"));
-app.MapGet("/info", () => Results.Ok(new
-{
-    service = "gateway",
-    purpose = "YARP entry point for Rail-Factory Fork APIs",
-    tenant = "dev",
-    routes = new[] { "tenancy", "iam", "supply-chain", "inventory", "production" }
-}));
-app.MapReverseProxy();
+app.UseGatewayHosting();
+app.MapGatewayEndpoints();
 
 app.Run();
