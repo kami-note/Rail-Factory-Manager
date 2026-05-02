@@ -1,0 +1,19 @@
+namespace RailFactory.Production.Api.Infrastructure;
+
+public static class ProductionHostingExtensions
+{
+    public static WebApplicationBuilder AddProductionHosting(this WebApplicationBuilder builder)
+    {
+        builder.AddServiceDefaults();
+        builder.AddTenantResolution();
+        return builder;
+    }
+
+    public static WebApplication UseProductionHosting(this WebApplication app)
+    {
+        app.UseServiceDefaults();
+        app.UseTenantResolution();
+        app.MapDefaultEndpoints();
+        return app;
+    }
+}

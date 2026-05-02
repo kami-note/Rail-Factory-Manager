@@ -12,7 +12,22 @@ internal sealed class TenantResolutionMiddleware(
 {
     public async Task InvokeAsync(HttpContext context, ILogger<TenantResolutionMiddleware> logger)
     {
+        var path = context.Request.Path;
+        var isGoogleOAuthPath = path.StartsWithSegments("/auth/google", StringComparison.OrdinalIgnoreCase);
+        var isGoogleOAuthCallbackPath = path.StartsWithSegments("/auth/google/callback", StringComparison.OrdinalIgnoreCase);
+
+        if (isGoogleOAuthCallbackPath)
+        {
+            await next(context);
+            return;
+        }
+
         var tenantCode = context.Request.Headers[TenantConstants.TenantCodeHeaderName].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(tenantCode) && isGoogleOAuthPath)
+        {
+            tenantCode = context.Request.Query["tenantCode"].FirstOrDefault();
+        }
+
         if (string.IsNullOrWhiteSpace(tenantCode))
         {
             await TenantProblemResults.WriteCodeRequiredAsync(context);

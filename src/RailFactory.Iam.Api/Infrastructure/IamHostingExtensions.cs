@@ -26,6 +26,7 @@ public static class IamHostingExtensions
 
         builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(GoogleOAuthOptions.SectionName));
         builder.Services.AddSingleton<GoogleOAuthRedirects>();
+        builder.Services.AddAuthorization();
         builder.Services
             .AddAuthentication(options =>
             {
@@ -44,8 +45,10 @@ public static class IamHostingExtensions
                 options.ClientId = googleOAuth.ClientId;
                 options.ClientSecret = googleOAuth.ClientSecret;
                 GoogleOAuthRedirectUri.ApplyPublicOrigin(options, googleOAuth);
+                var existingEvents = options.Events;
                 options.Events = new OAuthEvents
                 {
+                    OnRedirectToAuthorizationEndpoint = existingEvents.OnRedirectToAuthorizationEndpoint,
                     OnRemoteFailure = context =>
                     {
                         var logger = context.HttpContext.RequestServices
@@ -85,6 +88,7 @@ public static class IamHostingExtensions
         app.UseServiceDefaults();
         app.UseAuthentication();
         app.UseTenantResolution();
+        app.UseAuthorization();
         app.MapDefaultEndpoints();
         return app;
     }

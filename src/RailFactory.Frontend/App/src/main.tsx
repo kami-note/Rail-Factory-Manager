@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Boxes, CheckCircle2, Lock, Server } from 'lucide-react';
+import { LogOut, ShieldCheck } from 'lucide-react';
+import { buildLoginHref, logout, useAuthSession } from './auth';
 import './styles.css';
 
 type Status = {
@@ -12,46 +13,17 @@ type Status = {
   gateway: unknown;
 };
 
-function clearOAuthQueryFlag() {
-  const query = new URLSearchParams(window.location.search);
-  const oauthState = query.get('oauth');
-  if (oauthState !== 'success' && oauthState !== 'error') return null;
-
-  const oauthError = oauthState === 'error' ? query.get('error') : null;
-
-  query.delete('oauth');
-  query.delete('error');
-  const queryString = query.toString();
-  const cleanUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}${window.location.hash}`;
-  window.history.replaceState(null, '', cleanUrl);
-  return oauthError;
-}
-
-type SessionState = {
-  authenticated: boolean;
-  user?: {
-    name?: string;
-    email?: string;
-  };
-};
-
 function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<SessionState | null>(null);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
   const tenantCode = import.meta.env.VITE_TENANT_CODE ?? 'dev';
   const routePath = window.location.pathname;
   const isProtectedRoute = routePath.startsWith('/app');
-  const loginHref = `/api/auth/google/start?tenantCode=${encodeURIComponent(tenantCode)}&returnUrl=${encodeURIComponent('/app')}`;
+  const loginHref = buildLoginHref(tenantCode, '/app');
+  const auth = useAuthSession(tenantCode);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => {
-    const oauthError = clearOAuthQueryFlag();
-    if (oauthError) {
-      setAuthError(`Falha no login OAuth (${oauthError}).`);
-    }
-
     fetch('/api/status', {
       credentials: 'include',
       headers: {
@@ -67,141 +39,106 @@ function App() {
       })
       .then(setStatus)
       .catch((requestError: Error) => setError(requestError.message));
-
-    fetch('/api/auth/session', {
-      credentials: 'include',
-      headers: {
-        'X-Tenant-Code': tenantCode
-      }
-    })
-      .then(async response => {
-        if (response.status === 401) {
-          try {
-            const unauthorizedPayload = (await response.json()) as SessionState;
-            setSession(unauthorizedPayload);
-          } catch {
-            setSession({ authenticated: false });
-          }
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(`Session request failed: ${response.status}`);
-        }
-
-        const payload = (await response.json()) as SessionState;
-        setSession(payload);
-      })
-      .catch((requestError: Error) => {
-        setError(requestError.message);
-        setSession({ authenticated: false });
-      })
-      .finally(() => setSessionLoaded(true));
   }, [tenantCode]);
 
-  if (isProtectedRoute && !sessionLoaded) {
+  if (isProtectedRoute && auth.status === 'loading') {
     return (
-      <main className="shell">
-        <section className="workspace protected">
-          <div className="panel">
-            <p>Validando sessao...</p>
-          </div>
+      <main className="page">
+        <section className="card">
+          <div className="brand-mark" aria-hidden="true" />
+          <p className="brand-name">Rail Factory</p>
+          <h1 className="title">Validando sessao</h1>
+          <p className="subtitle">Aguarde enquanto confirmamos seu acesso.</p>
         </section>
       </main>
     );
   }
 
-  if (isProtectedRoute && sessionLoaded && !session?.authenticated) {
+  if (isProtectedRoute && auth.status !== 'authenticated') {
     return (
-      <main className="shell">
-        <section className="workspace protected">
-          <div className="panel">
-            <div className="panel-title">
-              <Lock size={20} aria-hidden="true" />
-              <h2>Acesso nao autorizado</h2>
-            </div>
-            <p>Esta area exige sessao autenticada no servidor.</p>
-            <p>
-              <a href={loginHref}>Entrar com Google</a>
-            </p>
-            <p>
-              <a href="/" className="link-button">
-                Voltar para inicio
-              </a>
-            </p>
-          </div>
+      <main className="page">
+        <section className="stack">
+          <header className="hero">
+            <div className="brand-mark" aria-hidden="true" />
+            <p className="brand-name">Rail Factory</p>
+          </header>
+          <article className="card auth-card">
+            <h1 className="title">Sessao expirada</h1>
+            <p className="subtitle">Esta area exige autenticacao ativa no servidor.</p>
+            <a href={loginHref} className="primary-button">
+              <img src="/google-g-logo.png" alt="" className="google-logo" aria-hidden="true" />
+              Sign in with Google
+            </a>
+            <a href="/" className="text-link">Voltar para inicio</a>
+          </article>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="shell">
-      <section className="topbar">
-        <div className="brand">
-          <Boxes size={24} aria-hidden="true" />
-          <div>
-            <h1>Rail-Factory Fork</h1>
-            <p>Tenant dev</p>
-          </div>
-        </div>
-        <span className="badge">P0</span>
-      </section>
-
+    <main className="page">
       {isProtectedRoute ? (
-        <section className="workspace protected">
-          <div className="panel">
-            <div className="panel-title">
-              <Lock size={20} aria-hidden="true" />
-            <h2>Area protegida</h2>
-            </div>
-            <p>Voce acessou esta area apos login com Google.</p>
-            <p>Tenant ativo: {tenantCode}</p>
-            <p>Usuario: {session?.user?.email ?? session?.user?.name ?? 'autenticado'}</p>
-            <p>
-              <a href="/" className="link-button">
-                Voltar para inicio
-              </a>
+        <section className="stack">
+          <header className="hero">
+            <div className="brand-mark" aria-hidden="true" />
+            <p className="brand-name">Rail Factory</p>
+          </header>
+          <article className="card auth-card">
+            <h1 className="title">Area protegida</h1>
+            <p className="subtitle">
+              <ShieldCheck size={16} aria-hidden="true" /> Sessao ativa para tenant <strong>{tenantCode}</strong>.
             </p>
-          </div>
+            <p className="meta-text">Usuario: {auth.session.user?.email ?? auth.session.user?.name ?? 'autenticado'}</p>
+            {logoutError ? <p className="error-text">{logoutError}</p> : null}
+            <button
+              type="button"
+              className="primary-button"
+              onClick={async () => {
+                try {
+                  setLogoutError(null);
+                  await logout(tenantCode);
+                  window.location.href = '/';
+                } catch (requestError) {
+                  setLogoutError(requestError instanceof Error ? requestError.message : 'Falha ao encerrar sessao.');
+                }
+              }}
+            >
+              <LogOut size={16} aria-hidden="true" /> Encerrar sessao
+            </button>
+            <a href="/" className="text-link">Voltar para inicio</a>
+          </article>
+          <p className="status-pill">
+            <span className="status-dot" aria-hidden="true" />
+            SYSTEM STATUS: OPERATIONAL
+          </p>
         </section>
       ) : (
-      <section className="workspace">
-        <div className="panel">
-          <div className="panel-title">
-            <Server size={20} aria-hidden="true" />
-            <h2>Base Aspire</h2>
-          </div>
-          <p>
-            Fluxo tenant-aware com BFF, Gateway e microservicos em baseline arquitetural definitivo.
-          </p>
-          {authError ? <p>{authError}</p> : null}
-          <p>
-            <a href={loginHref}>Entrar com Google</a>
-          </p>
-          {session?.authenticated ? (
-            <p>
-              <a href="/app" className="link-button">
-                Ir para area protegida
-              </a>
+        <section className="stack">
+          <header className="hero">
+            <div className="brand-mark" aria-hidden="true" />
+            <p className="brand-name">Rail Factory</p>
+          </header>
+          <article className="card auth-card">
+            <h1 className="title">Sign In</h1>
+            <p className="subtitle">Access your industrial dashboard</p>
+            <a href={loginHref} className="primary-button">
+              <img src="/google-g-logo.png" alt="" className="google-logo" aria-hidden="true" />
+              Sign in with Google
+            </a>
+            <p className="meta-text">
+              By continuing, you agree to our <a className="text-link inline" href="#">Terms of Service</a>
             </p>
-          ) : null}
-        </div>
-
-        <div className="panel">
-          <div className="panel-title">
-            <CheckCircle2 size={20} aria-hidden="true" />
-            <h2>Status</h2>
-          </div>
-          {error ? (
-            <pre className="status error">{error}</pre>
-          ) : status ? (
-            <pre className="status">{JSON.stringify(status, null, 2)}</pre>
-          ) : (
-            <pre className="status">Carregando status...</pre>
-          )}
-        </div>
-      </section>
+            {auth.oauthError ? <p className="error-text">{auth.oauthError}</p> : null}
+            {auth.status === 'error' && auth.error ? <p className="error-text">{auth.error}</p> : null}
+          </article>
+          <p className="status-pill">
+            <span className="status-dot" aria-hidden="true" />
+            SYSTEM STATUS: OPERATIONAL
+          </p>
+          {status ? <pre className="status-dump">{JSON.stringify(status, null, 2)}</pre> : null}
+          {error ? <pre className="status-dump error">{error}</pre> : null}
+        </section>
       )}
     </main>
   );

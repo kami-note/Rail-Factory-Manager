@@ -192,6 +192,19 @@ Resposta `401` (nao autenticado):
 }
 ```
 
+Contrato canonico compartilhado (`RailFactory.BuildingBlocks/Auth/AuthSessionDto`):
+
+- `authenticated: boolean`
+- `user: { name?: string, email?: string } | null`
+
+Tabela de erros de auth para UI (payload `AuthErrorDto` quando aplicavel):
+
+| Codigo | Quando ocorre | HTTP |
+|---|---|---|
+| `unauthorized` | Sessao ausente/expirada no fluxo de auth/session | `401` |
+| `oauth_error` | Falha controlada em callback/finalizacao OAuth | `302` para UI com `oauth=error` e `error=<code>` |
+| `tenant_error` | Tenant ausente/invalido no edge auth | `400`/`404` |
+
 Para os endpoints `/info` tenant-aware, quando o header `X-Tenant-Code` e valido, o campo `tenant` retorna:
 
 ```json
