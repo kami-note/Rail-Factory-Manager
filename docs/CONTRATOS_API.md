@@ -108,9 +108,7 @@ Resposta `404`:
 }
 ```
 
-## Placeholders Atuais
-
-As APIs abaixo ainda possuem apenas contratos operacionais minimos. Elas nao devem receber regras de negocio antes da passada correta.
+## Contratos Operacionais Dos Microservicos Tenant-Aware
 
 | Servico | Endpoint atual via Gateway |
 |---|---|
@@ -119,6 +117,81 @@ As APIs abaixo ainda possuem apenas contratos operacionais minimos. Elas nao dev
 | Inventory | `GET /api/inventory/info` |
 | Production | `GET /api/production/info` |
 
+## Frontend BFF
+
+Base publica (edge unico):
+
+```text
+/
+```
+
+Observacao de topologia de deploy (Aspire): somente o recurso `frontend` possui endpoint externo; Gateway e microservicos permanecem internos.
+
+### GET `/api/status`
+
+Retorna status agregado do BFF e do Gateway.
+
+Headers:
+
+| Header | Obrigatorio | Observacao |
+|---|---|---|
+| `X-Tenant-Code` | Sim | Ausencia retorna erro padronizado de tenant. |
+
+Resposta `200`:
+
+```json
+{
+  "service": "frontend-bff",
+  "environment": "Development",
+  "tenant": {
+    "code": "dev"
+  },
+  "gateway": {}
+}
+```
+
+### GET `/api/auth/google/start`
+
+Inicia login OAuth Google no fluxo `Frontend -> BFF -> Gateway -> IAM`.
+
+Query params:
+
+| Parametro | Obrigatorio | Exemplo |
+|---|---|---|
+| `tenantCode` | Sim | `dev` |
+| `returnUrl` | Nao | `/` |
+
+### GET `/api/auth/session`
+
+Fachada oficial de sessao da UI no BFF. Encaminha cookie + `X-Tenant-Code` para `GET /auth/session` do IAM.
+
+Headers:
+
+| Header | Obrigatorio | Observacao |
+|---|---|---|
+| `X-Tenant-Code` | Sim | Ausencia retorna erro padronizado de tenant. |
+
+Resposta `200` (autenticado):
+
+```json
+{
+  "authenticated": true,
+  "user": {
+    "name": "usuario",
+    "email": "usuario@exemplo.com"
+  }
+}
+```
+
+Resposta `401` (nao autenticado):
+
+```json
+{
+  "authenticated": false,
+  "user": null
+}
+```
+
 Para os endpoints `/info` tenant-aware, quando o header `X-Tenant-Code` e valido, o campo `tenant` retorna:
 
 ```json
@@ -126,5 +199,116 @@ Para os endpoints `/info` tenant-aware, quando o header `X-Tenant-Code` e valido
   "code": "dev",
   "locale": "pt-BR",
   "timeZone": "America/Sao_Paulo"
+}
+```
+
+O endpoint `GET /api/iam/info` usa o contrato:
+
+```json
+{
+  "service": "identity-access-management",
+  "environment": "Development",
+  "capability": "Identity, access, session and authorization boundary",
+  "tenant": {
+    "code": "dev",
+    "locale": "pt-BR",
+    "timeZone": "America/Sao_Paulo"
+  }
+}
+```
+
+OAuth Google via cadeia `Frontend -> BFF -> Gateway -> IAM`:
+
+- `GET /api/auth/google/start?tenantCode=<code>&returnUrl=<path>` no BFF inicia o fluxo.
+- UI envia `returnUrl` relativo. O BFF valida o caminho e monta a URL publica usando `Frontend:PublicOrigin`.
+- BFF redireciona para `GET /api/iam/auth/google/start` no Gateway/IAM.
+- Callback tecnico do provedor: `GET /auth/google/callback` no host publico (Frontend/BFF edge), com proxy interno para Gateway e IAM.
+- Finalizacao tecnica: `GET /auth/google/finalize` no IAM, com redirecionamento de volta para `returnUrl`.
+- Em falha OAuth de callback, IAM redireciona para a UI com `oauth=error` e `error=<codigo-normalizado>` para UX previsivel.
+- `returnUrl` absoluto externo ao Frontend/BFF deve ser normalizado para `/`.
+
+Configuracao obrigatoria para OAuth Google:
+
+| Configuracao | Dono | Observacao |
+|---|---|---|
+| `Frontend:PublicOrigin` | Frontend/BFF | Origem publica HTTPS vista pelo navegador. Injetado pelo AppHost via parametro externo `frontend-public-origin`. |
+| `Authentication:Google:ClientId` | IAM | Injetado pelo AppHost via parametro externo `google-client-id`. |
+| `Authentication:Google:ClientSecret` | IAM | Injetado pelo AppHost via parametro externo `google-client-secret`. |
+| `Authentication:Google:PublicOrigin` | IAM | Origem publica do Frontend/BFF edge. Injetado pelo AppHost via parametro externo `frontend-public-origin`. |
+| `VITE_ALLOWED_HOST` | UI local Vite | Host publico permitido no dev server local. Definido no Vite local, com leitura de `.env.local`. |
+| `Authentication:Google:CallbackPath` | IAM | Padrao definitivo: `/auth/google/callback`. |
+
+O unico endpoint externo da aplicacao e o Frontend/BFF. Gateway e microservicos permanecem internos ao grafo Aspire.
+
+O URI autorizado no Google Cloud Console deve ser formado por:
+
+```text
+{Authentication:Google:PublicOrigin}{Authentication:Google:CallbackPath}
+```
+
+Exemplo para ngrok:
+
+```text
+https://<origem-publica-do-frontend>/auth/google/callback
+```
+
+O `redirect_uri` enviado ao Google deve usar essa origem publica tanto na autorizacao quanto na troca do `code` pelo token. Nao deve apontar para `localhost`, porta interna do Aspire, Gateway ou microservico.
+
+Configurar o parametro pelo Aspire CLI:
+
+```bash
+aspire secret set "Parameters:frontend-public-origin" "https://<origem-publica-do-frontend>" --apphost src/RailFactory.AppHost/RailFactory.AppHost.csproj
+aspire secret set "Parameters:google-client-id" "<google-client-id>" --apphost src/RailFactory.AppHost/RailFactory.AppHost.csproj
+aspire secret set "Parameters:google-client-secret" "<google-client-secret>" --apphost src/RailFactory.AppHost/RailFactory.AppHost.csproj
+```
+
+Subir pelo Aspire CLI:
+
+```bash
+aspire run --apphost src/RailFactory.AppHost/RailFactory.AppHost.csproj
+```
+
+O endpoint `GET /api/supply-chain/info` usa o contrato:
+
+```json
+{
+  "service": "supply-chain",
+  "environment": "Development",
+  "capability": "Receiving, supplier collaboration and inbound material boundary",
+  "tenant": {
+    "code": "dev",
+    "locale": "pt-BR",
+    "timeZone": "America/Sao_Paulo"
+  }
+}
+```
+
+O endpoint `GET /api/inventory/info` usa o contrato:
+
+```json
+{
+  "service": "inventory",
+  "environment": "Development",
+  "capability": "Stock balance, reservation and ledger boundary",
+  "tenant": {
+    "code": "dev",
+    "locale": "pt-BR",
+    "timeZone": "America/Sao_Paulo"
+  }
+}
+```
+
+O endpoint `GET /api/production/info` usa o contrato:
+
+```json
+{
+  "service": "production",
+  "environment": "Development",
+  "capability": "Manufacturing execution, work orders and quality boundary",
+  "tenant": {
+    "code": "dev",
+    "locale": "pt-BR",
+    "timeZone": "America/Sao_Paulo"
+  }
 }
 ```
