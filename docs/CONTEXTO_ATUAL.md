@@ -1,6 +1,6 @@
 # Contexto Atual De Implementacao
 
-Atualizado em: 2026-05-01.
+Atualizado em: 2026-05-02.
 
 Este arquivo e a fonte principal do estado real do fork. Os outros documentos descrevem arquitetura, requisitos e plano; este documento registra o que existe no codigo agora, o que foi validado e o que falta para a proxima etapa.
 
@@ -11,7 +11,7 @@ O fork possui uma base tecnica executavel em `src/`.
 | Passada | Estado | Observacao |
 |---|---|---|
 | P0 - Base tecnica | Concluido inicial | Base operacional, defaults, contratos iniciais e grafo Aspire validados |
-| P1 - IAM e tenant `dev` | Em andamento | Resolver e middleware por `X-Tenant-Code` implementados; proxima task e OAuth Google |
+| P1 - IAM e tenant `dev` | Em andamento | Resolver/middleware por `X-Tenant-Code` implementados, baseline em camadas aplicado e fluxo OAuth Google iniciado no encadeamento Frontend -> BFF -> Gateway -> IAM |
 | P2+ | Nao iniciado | Fluxos de negocio ainda nao foram implementados |
 
 Foram criados:
@@ -25,7 +25,7 @@ Foram criados:
 - Frontend BFF .NET;
 - UI React/Vite;
 - API de Tenancy com primeira regra real;
-- APIs placeholder de IAM, SupplyChain, Inventory e Production;
+- APIs tenant-aware de IAM, SupplyChain, Inventory e Production com contrato `/info` definitivo;
 - contratos HTTP iniciais em `docs/CONTRATOS_API.md`;
 - regras operacionais para IAs em `AGENTS.md` e `docs/REGRAS_PARA_IAS.md`;
 - skill local `.codex/skills/rail-factory-engineering`.
@@ -41,10 +41,10 @@ Foram criados:
 | `RailFactory.Frontend` | Criado | BFF .NET com endpoint de status |
 | `RailFactory.Frontend/App` | Criado | UI React/Vite inicial |
 | `RailFactory.Tenancy.Api` | Iniciado | Tenant `dev` persistido no Tenant Catalog, caso de uso `GetTenantByCode`, repositorio PostgreSQL, `/tenants/{code}`, `/info`, `/health` e `/alive` |
-| `RailFactory.Iam.Api` | Criado | Placeholder com `/info`, `/health` e `/alive` |
-| `RailFactory.SupplyChain.Api` | Criado | Placeholder com `/info`, `/health` e `/alive` |
-| `RailFactory.Inventory.Api` | Criado | Placeholder com `/info`, `/health` e `/alive` |
-| `RailFactory.Production.Api` | Criado | Placeholder com `/info`, `/health` e `/alive` |
+| `RailFactory.Iam.Api` | Baseline arquitetural aplicado | Estrutura em camadas (Api/Application/Domain/Infrastructure) com contrato `/info` definitivo |
+| `RailFactory.SupplyChain.Api` | Baseline arquitetural aplicado | Estrutura em camadas (Api/Application/Domain/Infrastructure) com contrato `/info` definitivo |
+| `RailFactory.Inventory.Api` | Baseline arquitetural aplicado | Estrutura em camadas (Api/Application/Domain/Infrastructure) com contrato `/info` definitivo |
+| `RailFactory.Production.Api` | Baseline arquitetural aplicado | Estrutura em camadas (Api/Application/Domain/Infrastructure) com contrato `/info` definitivo |
 
 ## Infra Local No Aspire
 
@@ -108,15 +108,54 @@ Rail-Factory-Fork/src/RailFactory.Frontend/App
 
 Resultado validado: build Vite concluido.
 
-Smoke adicional validado em 2026-05-01:
+Estado funcional validado:
 
-- middleware tenant-aware ativo no IAM;
-- erro padronizado para ausencia de `X-Tenant-Code`;
-- resolucao de tenant `dev` e propagacao de `locale/timezone`;
-- erro padronizado para tenant inexistente.
-- `ServiceDefaults` refatorado para organizacao por modulo (correlation, problem details, health, telemetry e tenancy), sem regressao funcional.
+- middleware tenant-aware ativo e erros padronizados para tenant ausente/inexistente;
+- propagacao de `locale/timezone` do tenant `dev` funcionando;
+- `ServiceDefaults` modularizado (correlation, problem details, health, telemetry, tenancy);
+- IAM, SupplyChain, Inventory e Production em baseline arquitetural definitivo (Api/Application/Domain/Infrastructure), com `Program.cs` enxuto e endpoints em `Api/*Endpoints`;
+- Gateway e Frontend/BFF alinhados ao mesmo padrao de composicao minima (`Infrastructure` + `Api`);
+- fluxo OAuth iniciado com endpoints `GET /api/auth/google/start`, `GET /auth/google/callback` e `GET /auth/google/finalize`;
+- Frontend/BFF como edge unico com proxy interno de `/api/*` e `/auth/google/*` para o Gateway;
+- Frontend/BFF centraliza a origem publica em `Frontend:PublicOrigin`, normaliza `returnUrl` recebido da UI e repassa ao IAM apenas URL publica segura;
+- UI React/Vite chama somente `/api/*` e envia `returnUrl` relativo; a origem publica nao e mais montada no browser;
+- UI React/Vite possui rota protegida inicial em `/app`, liberada apos retorno OAuth com `oauth=success` e bloqueada por sessao real do servidor; enquanto valida sessao, a UI exibe estado de carregamento e evita flicker de redirecionamento;
+- validacao da rota protegida da UI migrada para sessao real via BFF (`GET /api/auth/session`), que encaminha cookie + `X-Tenant-Code` ao IAM (`GET /auth/session`) e usa resposta autenticada do servidor como fonte de verdade (sem `localStorage` para auth);
+- contrato de sessao endurecido no IAM e no BFF: `200` autenticado e `401` nao autenticado com payload consistente para consumo previsivel da UI;
+- Vite local recebe `VITE_ALLOWED_HOST` definido no proprio Vite via leitura de `.env.local`, mantendo o host ngrok permitido sem depender do AppHost;
+- hardening de OAuth aplicado no IAM (`UseForwardedHeaders`, cookie `Secure`/`HttpOnly`/`SameSite=Lax`, normalizacao de `returnUrl`, validacao de configuracao Google quando OAuth esta ativo e origem publica explicita para o `redirect_uri` do Google na autorizacao);
+- falhas de OAuth no callback agora retornam fluxo controlado para a UI (`oauth=error`) com log estruturado e sem vazamento de stack trace para UX;
+- registro de autenticacao Google no IAM ajustado para `AddOAuth<GoogleOptions, GoogleOAuthPublicOriginHandler>(...)` com defaults do provider Google + handler custom no token exchange (`ExchangeCodeAsync`) para manter o mesmo `redirect_uri` publico no authorize e no token endpoint, evitando `NullReferenceException` no `Challenge` e `redirect_uri_mismatch` no callback.
+- AppHost pronto para deploy Aspire Docker Compose (`AddDockerComposeEnvironment`) com exposicao externa apenas do `frontend`;
+- credenciais Google e origem publica injetadas por parametros externos do AppHost (`google-client-id`, `google-client-secret`, `frontend-public-origin`) no IAM e no Frontend/BFF, enquanto o Vite dev server usa a configuracao local do proprio frontend para o host allowlist.
+- parametro `frontend-public-origin` ajustado no AppHost para `secret: true`, alinhando persistencia via `aspire secret set` com os demais parametros OAuth.
+
+Pendencia ativa para fechar P1.2:
+
+- configurar `Authentication:Google` com credenciais reais, definir `frontend-public-origin` com a URL HTTPS publica do Frontend/BFF e validar smoke real via ngrok no fluxo `Frontend -> BFF -> Gateway -> IAM`.
 
 ## Como Subir Localmente
+
+Configurar a origem publica atual do Frontend/BFF edge pelo Aspire CLI:
+
+```bash
+aspire secret set "Parameters:frontend-public-origin" "https://<origem-publica-do-frontend>" --apphost Rail-Factory-Fork/src/RailFactory.AppHost/RailFactory.AppHost.csproj
+```
+
+Para validar OAuth Google, configurar tambem as credenciais reais:
+
+```bash
+aspire secret set "Parameters:google-client-id" "<google-client-id>" --apphost Rail-Factory-Fork/src/RailFactory.AppHost/RailFactory.AppHost.csproj
+aspire secret set "Parameters:google-client-secret" "<google-client-secret>" --apphost Rail-Factory-Fork/src/RailFactory.AppHost/RailFactory.AppHost.csproj
+```
+
+Subir pelo Aspire CLI:
+
+```bash
+aspire run --apphost Rail-Factory-Fork/src/RailFactory.AppHost/RailFactory.AppHost.csproj
+```
+
+Alternativa direta pelo .NET CLI:
 
 ```bash
 dotnet run --project Rail-Factory-Fork/src/RailFactory.AppHost/RailFactory.AppHost.csproj
@@ -139,17 +178,22 @@ A base tecnica inicial esta fechada para permitir avancar em P1. Os padroes abai
 | Contrato padrao de erro | Concluido inicial | `ProblemDetails`, excecao global e erro de dominio do Tenancy validados |
 | `correlationId` | Concluido inicial | Middleware aplica/propaga `X-Correlation-Id`; validado via Gateway |
 | Logs estruturados | Concluido inicial | Scope de log inclui `CorrelationId` e `TraceId`; tenant entra depois do resolver |
-| Contratos HTTP iniciais | Concluido inicial | `CONTRATOS_API.md` documenta convencoes, Tenancy e placeholders atuais |
+| Contratos HTTP iniciais | Concluido inicial | `CONTRATOS_API.md` documenta convencoes, Tenancy e contratos `/info` tenant-aware definitivos |
 
 ## Proxima Passada Recomendada
 
 Continuar P1 no OAuth e sessao:
 
 1. configuracao OAuth Google sem segredo hardcoded;
-2. inicio e callback de login;
+2. inicio e callback de login com `redirect_uri` usando a origem publica do Frontend/BFF;
 3. sessao por cookie no BFF;
 4. protecao CSRF e endpoint de usuario atual;
 5. logout e autorizacao minima deny by default.
+
+Execucao paralela recomendada:
+
+- manter refatoracoes pequenas e orientadas aos fluxos de P1.2/P1.3, sem quebra de contrato publico;
+- usar `docs/PLANO_DE_TASKS.md` para abrir novas tasks de refino somente quando houver necessidade real do fluxo funcional.
 
 ## Retomada Do Proximo Chat
 
@@ -157,7 +201,7 @@ Comecar por:
 
 1. ler este arquivo;
 2. ler `docs/PLANO_DE_TASKS.md`, secao `P1.2 - OAuth Google`;
-3. configurar credenciais OAuth Google externas;
+3. configurar credenciais OAuth Google externas e `frontend-public-origin`;
 4. implementar inicio/callback de login;
 5. preparar sessao BFF para P1.3.
 

@@ -177,19 +177,51 @@ Objetivo: permitir login real com Google, sessao no BFF e tenant `dev` obrigator
   - Aceite: APIs tenant-aware conseguem acessar locale/timezone do tenant resolvido.
   - Depende: resolver de tenant.
 
+### P1.x - Refatoracao Incremental Dos Microservicos
+
+Objetivo: padronizar estrutura interna dos servicos em paralelo as tasks funcionais, sem bloquear fluxo de entrega.
+
+- [x] Refatorar IAM para estrutura em camadas coerente com hexagonal (Api/Application/Domain/Infrastructure).
+  - Aceite: endpoints atuais continuam funcionando; dependencias entre camadas respeitam `REGRAS_PARA_IAS.md`.
+  - Depende: P1.1 concluido.
+  - Entregue: `Program.cs` sem regra de negocio inline para `/info`, caso de uso em `Application`, modulo de DI em `Infrastructure` e contrato `/info` definitivo sem linguagem de placeholder.
+
+- [x] Refatorar SupplyChain no mesmo padrao incremental.
+  - Aceite: endpoint atual continua funcionando; sem regressao de contratos HTTP.
+  - Depende: baseline de padrao aplicada no IAM.
+  - Entregue: `Program.cs` sem regra de negocio inline para `/info`, caso de uso em `Application`, modulo de DI em `Infrastructure` e contrato `/info` com capacidade explicita do contexto.
+
+- [x] Refatorar Inventory no mesmo padrao incremental.
+  - Aceite: endpoint atual continua funcionando; sem regressao de contratos HTTP.
+  - Depende: baseline de padrao aplicada no IAM.
+  - Entregue: `Program.cs` sem regra de negocio inline para `/info`, caso de uso em `Application`, modulo de DI em `Infrastructure` e contrato `/info` com capacidade explicita do contexto.
+
+- [x] Refatorar Production no mesmo padrao incremental.
+  - Aceite: endpoint atual continua funcionando; sem regressao de contratos HTTP.
+  - Depende: baseline de padrao aplicada no IAM.
+  - Entregue: `Program.cs` sem regra de negocio inline para `/info`, caso de uso em `Application`, modulo de DI em `Infrastructure` e contrato `/info` com capacidade explicita do contexto.
+
+- [x] Padronizar middlewares/helpers compartilhados de borda (tenant, correlation, erro) nos servicos que ainda estiverem divergentes.
+  - Aceite: comportamento de headers e erros fica consistente entre os microservicos tenant-aware.
+  - Depende: refatoracao incremental por servico iniciada.
+  - Entregue: IAM, SupplyChain, Inventory e Production usam o mesmo baseline (`AddServiceDefaults`, `UseServiceDefaults`, `AddTenantResolution`, `UseTenantResolution`, `MapDefaultEndpoints`), mantendo contrato de erro e headers de borda consistentes. `Program.cs` e composicao minima, com mapeamento consolidado em `Api/*Endpoints`.
+
 ### P1.2 - OAuth Google
 
 - [ ] Configurar credenciais OAuth Google.
   - Aceite: ambiente local possui configuracao externa, sem segredo hardcoded.
   - Depende: IAM API e BFF.
+  - Andamento: chaves movidas para configuracao externa `Authentication:Google` no IAM e agora injetadas por parametros externos no AppHost (`google-client-id` e `google-client-secret`). A origem publica do Frontend/BFF e injetada por `frontend-public-origin` no BFF (`Frontend:PublicOrigin`) e no IAM (`Authentication:Google:PublicOrigin`); a UI local mantém `VITE_ALLOWED_HOST` na configuracao do proprio Vite via `.env.local`. Falta preencher credenciais reais de ambiente e validar smoke.
 
 - [ ] Implementar inicio de login.
   - Aceite: usuario consegue iniciar login pela UI.
   - Depende: OAuth configurado.
+  - Andamento: endpoint `GET /api/auth/google/start` no BFF e `GET /api/iam/auth/google/start` no IAM implementados, com Frontend/BFF como edge unico e proxy interno para Gateway. UI envia `returnUrl` relativo e o BFF converte para URL publica validada.
 
 - [ ] Implementar callback OAuth.
   - Aceite: Google retorna identidade validada para IAM/BFF.
   - Depende: inicio de login.
+  - Andamento: callback tecnico `GET /auth/google/callback` no host publico edge, roteado internamente para Gateway/IAM e finalizacao em `GET /auth/google/finalize`; cookie/forwarded headers/returnUrl hardening aplicados. IAM agora valida configuracao OAuth quando ativa e substitui o `redirect_uri` do handler Google pela origem publica configurada em `Authentication:Google:PublicOrigin` na autorizacao e no token exchange, evitando `localhost`/porta interna no OAuth. Falhas OAuth no callback agora geram redirecionamento controlado (`oauth=error`) para a UI e log estruturado sem stack/sensivel.
 
 - [ ] Criar ou atualizar usuario local apos login.
   - Aceite: usuario autenticado existe no IAM DB do tenant `dev`.
@@ -200,6 +232,7 @@ Objetivo: permitir login real com Google, sessao no BFF e tenant `dev` obrigator
 - [ ] Criar sessao no BFF por cookie.
   - Aceite: usuario autenticado permanece logado entre requests.
   - Depende: login Google.
+  - Andamento: `GET /auth/session` no IAM e `GET /api/auth/session` no BFF padronizados com payload de sessao para `200` autenticado e `401` nao autenticado, mantendo cookie/sessao do servidor como fonte unica de verdade para a UI.
 
 - [ ] Proteger chamadas autenticadas contra CSRF.
   - Aceite: chamadas mutaveis pelo BFF exigem protecao CSRF ou mecanismo equivalente.
