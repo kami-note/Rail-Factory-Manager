@@ -6,7 +6,6 @@ public interface IIamLocalUserRepository
 }
 
 public sealed record IamLocalUser(
-    string TenantCode,
     string ExternalProvider,
     string ExternalSubject,
     string? Email,
@@ -15,25 +14,18 @@ public sealed record IamLocalUser(
 public sealed class UpsertLocalUserFromExternalLogin(IIamLocalUserRepository repository)
 {
     public async Task<UpsertLocalUserResult> ExecuteAsync(
-        string tenantCode,
         string externalProvider,
         string? externalSubject,
         string? email,
         string? displayName,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return UpsertLocalUserResult.Failed(AuthResultErrorCode.TenantError);
-        }
-
         if (string.IsNullOrWhiteSpace(externalProvider) || string.IsNullOrWhiteSpace(externalSubject))
         {
             return UpsertLocalUserResult.Failed(AuthResultErrorCode.OAuthError);
         }
 
         var user = new IamLocalUser(
-            tenantCode.Trim(),
             externalProvider.Trim().ToLowerInvariant(),
             externalSubject.Trim(),
             Normalize(email),
