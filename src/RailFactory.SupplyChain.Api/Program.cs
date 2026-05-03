@@ -4,7 +4,7 @@ using RailFactory.SupplyChain.Api.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddSupplyChainHosting();
-builder.Services.AddSupplyChainModule();
+builder.Services.AddSupplyChainModule(builder.Configuration);
 
 var app = builder.Build();
 

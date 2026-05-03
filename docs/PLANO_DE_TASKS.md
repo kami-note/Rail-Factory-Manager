@@ -223,10 +223,10 @@ Objetivo: padronizar estrutura interna dos servicos em paralelo as tasks funcion
   - Depende: inicio de login.
   - Entregue: callback `GET /auth/google/callback` executado com codigo real do Google no fluxo edge -> gateway -> IAM, com finalize `GET /auth/google/finalize` retornando redirect controlado para UI (`oauth=success`/`oauth=error`).
 
-- [ ] Criar ou atualizar usuario local apos login.
+- [x] Criar ou atualizar usuario local apos login.
   - Aceite: usuario autenticado existe no IAM DB do tenant `dev`.
   - Depende: callback OAuth.
-  - Progresso atual: fluxo de `finalize` do IAM ja executa upsert tenant-aware em `iam_local_users` (PostgreSQL `iamdb`) com fallback in-memory sem connection string; falta evidencia operacional do login real para marcar concluida.
+  - Entregue: login OAuth real executado em 2026-05-03 com persistencia confirmada no `iamdb.public.iam_local_users` (`external_provider=google`, `external_subject` preenchido, `display_name` preenchido, `updated_at` atualizado).
 
 ### P1.3 - Sessao E Autorizacao Minima
 
@@ -278,81 +278,81 @@ Objetivo: criar o primeiro fluxo de negocio real: recebimento de material e sald
 
 ### P2.1 - Supply Chain Inicial
 
-- [ ] Criar cadastro minimo de fornecedor.
+- [x] Criar cadastro minimo de fornecedor.
   - Aceite: recebimento pode referenciar fornecedor com identificacao fiscal/nome.
   - Depende: tenant `dev`.
 
-- [ ] Criar modelo de recebimento.
+- [x] Criar modelo de recebimento.
   - Aceite: recebimento possui numero, fornecedor, documento, data, tenant e status.
   - Depende: cadastro minimo de fornecedor.
 
-- [ ] Criar modelo de item de recebimento.
+- [x] Criar modelo de item de recebimento.
   - Aceite: item possui material, quantidade esperada, UoM e referencia ao recebimento.
   - Depende: modelo de recebimento.
 
-- [ ] Criar entrada manual de recebimento.
+- [x] Criar entrada manual de recebimento.
   - Aceite: usuario cria recebimento sem integracao externa.
   - Depende: modelos Supply.
 
-- [ ] Criar upload/importacao XML basica.
+- [x] Criar upload/importacao XML basica.
   - Aceite: XML valido cria recebimento e itens.
   - Depende: modelos Supply.
 
-- [ ] Criar provider interno substituivel de NF-e.
+- [x] Criar provider interno substituivel de NF-e.
   - Aceite: entrada manual/upload usam interface que depois pode receber PlugNotas/SEFAZ.
   - Depende: entrada manual/upload.
 
 ### P2.2 - Inventory Inicial
 
-- [ ] Criar Inventory API.
+- [x] Criar Inventory API.
   - Aceite: Inventory possui health e endpoint protegido.
   - Depende: P0/P1.
 
-- [ ] Criar Inventory DB `dev`.
+- [x] Criar Inventory DB `dev`.
   - Aceite: migracao inicial cria tabelas de saldo e ledger.
   - Depende: AppHost com banco Inventory.
 
-- [ ] Criar modelo de saldo.
+- [x] Criar modelo de saldo.
   - Aceite: saldo identifica tenant, material, UoM, status, local de estoque e quantidade.
   - Depende: Inventory DB.
 
-- [ ] Criar cadastro minimo de local de estoque.
+- [x] Criar cadastro minimo de local de estoque.
   - Aceite: saldo pendente/disponivel pode ser associado a um local fisico ou logico.
   - Depende: Inventory DB.
 
-- [ ] Criar ledger minimo.
+- [x] Criar ledger minimo.
   - Aceite: cada alteracao de saldo gera lancamento append-only.
   - Depende: modelo de saldo.
 
-- [ ] Criar contrato `CreatePendingBalance`.
+- [x] Criar contrato `CreatePendingBalance`.
   - Aceite: Supply consegue solicitar saldo pendente para recebimento criado.
   - Depende: Inventory API.
 
 ### P2.3 - Integracao Supply -> Inventory
 
-- [ ] Ao criar recebimento, criar saldo pendente.
+- [x] Ao criar recebimento, criar saldo pendente.
   - Aceite: recebimento criado gera saldo `Pending` no Inventory.
   - Depende: Supply inicial e `CreatePendingBalance`.
 
-- [ ] Garantir idempotencia basica por recebimento/item.
+- [x] Garantir idempotencia basica por recebimento/item.
   - Aceite: retry nao duplica saldo pendente.
   - Depende: ledger minimo.
 
-- [ ] Registrar auditoria basica da entrada.
+- [x] Registrar auditoria basica da entrada.
   - Aceite: criacao de recebimento registra usuario, tenant, data e acao.
   - Depende: usuario autenticado.
 
 ### P2.4 - UI De Entrada
 
-- [ ] Criar tela de lista de recebimentos.
+- [x] Criar tela de lista de recebimentos.
   - Aceite: usuario ve recebimentos do tenant `dev`.
   - Depende: API de recebimentos.
 
-- [ ] Criar tela/formulario de novo recebimento.
+- [x] Criar tela/formulario de novo recebimento.
   - Aceite: usuario cria recebimento manual.
   - Depende: entrada manual.
 
-- [ ] Criar upload de XML.
+- [x] Criar upload de XML.
   - Aceite: usuario importa XML e revisa itens criados.
   - Depende: upload/importacao XML.
 
@@ -929,7 +929,7 @@ Esta tabela nao substitui `REQUISITOS.md`; ela mostra onde cada requisito aparec
 
 ## Proximos Documentos Necessarios
 
-- [x] `REGRAS_PARA_IAS.md`: regras para agentes, SOLID, arquitetura hexagonal e atualizacao de contexto.
+- [x] `REGRAS_PARA_IAS.md`: AI agent rules, SOLID, Hexagonal Architecture, established standards, and context synchronization.
 - [ ] `MODELO_DOMINIO.md`: entidades, estados e regras por dominio.
 - [x] `CONTRATOS_API.md`: convencoes HTTP iniciais, Tenancy, headers e erros.
 - [ ] `MODELO_DADOS.md`: tabelas, indices, migrations e seeds.
