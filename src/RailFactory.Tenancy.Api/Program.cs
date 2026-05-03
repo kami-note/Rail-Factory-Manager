@@ -1,6 +1,9 @@
 using RailFactory.BuildingBlocks.Results;
 using RailFactory.Tenancy.Api.Application;
 using RailFactory.Tenancy.Api.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using RailFactory.Tenancy.Api.Api;
+using RailFactory.Tenancy.Api.Api.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,9 +27,15 @@ app.MapGet("/info", async (IHostEnvironment environment, GetTenantByCode getTena
         defaultTenant = tenant.IsSuccess ? tenant.Value : null
     });
 });
-app.MapGet("/tenants/{code}", async (string code, GetTenantByCode getTenant, CancellationToken cancellationToken) =>
+app.MapGet("/tenants/{code}", async ([AsParameters] GetTenantByCodeRequest request, GetTenantByCode getTenant, CancellationToken cancellationToken) =>
 {
-    var result = await getTenant.ExecuteAsync(code, cancellationToken);
+    var validation = RequestValidator.Validate(request);
+    if (validation is not null)
+    {
+        return validation;
+    }
+
+    var result = await getTenant.ExecuteAsync(request.Code, cancellationToken);
 
     return result.IsSuccess
         ? Results.Ok(result.Value)
