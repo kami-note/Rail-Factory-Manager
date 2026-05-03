@@ -1,10 +1,11 @@
-using Npgsql;
+using Microsoft.EntityFrameworkCore;
 using RailFactory.Tenancy.Api.Application;
 using RailFactory.Tenancy.Api.Domain;
+using RailFactory.Tenancy.Api.Infrastructure.Persistence;
 
 namespace RailFactory.Tenancy.Api.Infrastructure;
 
-public sealed class PostgresTenantRepository(NpgsqlDataSource dataSource) : ITenantRepository
+public sealed class PostgresTenantRepository(TenancyDbContext dbContext) : ITenantRepository
 {
     public Task<Tenant?> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
@@ -13,55 +14,52 @@ public sealed class PostgresTenantRepository(NpgsqlDataSource dataSource) : ITen
 
     public async Task<Tenant?> FindByCodeAsync(string code, CancellationToken cancellationToken = default)
     {
-        const string sql = """
-            select code, display_name, locale, time_zone, status
-            from tenants
-            where lower(code) = lower(@code)
-            limit 1;
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("code", code);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken))
+        var normalizedCode = code.Trim().ToLowerInvariant();
+        var record = await dbContext.Tenants
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Code.ToLower() == normalizedCode, cancellationToken);
+        if (record is null)
         {
             return null;
         }
 
         return Tenant.Restore(
-            reader.GetString(0),
-            reader.GetString(1),
-            reader.GetString(2),
-            reader.GetString(3),
-            Enum.Parse<TenantStatus>(reader.GetString(4), ignoreCase: true));
+            record.Code,
+            record.DisplayName,
+            record.Locale,
+            record.TimeZone,
+            Enum.Parse<TenantStatus>(record.Status, ignoreCase: true));
     }
 
     public async Task AddAsync(Tenant aggregate, CancellationToken cancellationToken = default)
     {
-        const string sql = """
-            insert into tenants (code, display_name, locale, time_zone, status)
-            values (@code, @displayName, @locale, @timeZone, @status)
-            on conflict (code) do update set
-                display_name = excluded.display_name,
-                locale = excluded.locale,
-                time_zone = excluded.time_zone,
-                status = excluded.status,
-                updated_at = now();
-            """;
+        var existing = await dbContext.Tenants
+            .SingleOrDefaultAsync(x => x.Code == aggregate.Code, cancellationToken);
 
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("code", aggregate.Code);
-        command.Parameters.AddWithValue("displayName", aggregate.DisplayName);
-        command.Parameters.AddWithValue("locale", aggregate.Locale);
-        command.Parameters.AddWithValue("timeZone", aggregate.TimeZone);
-        command.Parameters.AddWithValue("status", aggregate.Status.ToString());
-
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        if (existing is null)
+        {
+            dbContext.Tenants.Add(new TenantRecord
+            {
+                Code = aggregate.Code,
+                DisplayName = aggregate.DisplayName,
+                Locale = aggregate.Locale,
+                TimeZone = aggregate.TimeZone,
+                Status = aggregate.Status.ToString(),
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        else
+        {
+            existing.DisplayName = aggregate.DisplayName;
+            existing.Locale = aggregate.Locale;
+            existing.TimeZone = aggregate.TimeZone;
+            existing.Status = aggregate.Status.ToString();
+            existing.UpdatedAt = now;
+        }
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        return Task.CompletedTask;
-    }
+        => dbContext.SaveChangesAsync(cancellationToken);
 }

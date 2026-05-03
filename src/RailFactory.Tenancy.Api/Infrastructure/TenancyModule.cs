@@ -1,5 +1,6 @@
-using Npgsql;
+using Microsoft.EntityFrameworkCore;
 using RailFactory.Tenancy.Api.Application;
+using RailFactory.Tenancy.Api.Infrastructure.Persistence;
 
 namespace RailFactory.Tenancy.Api.Infrastructure;
 
@@ -12,14 +13,12 @@ public static class TenancyModule
         var tenantCatalogConnectionString = configuration.GetConnectionString("tenantcatalog");
         if (string.IsNullOrWhiteSpace(tenantCatalogConnectionString))
         {
-            services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
+            throw new InvalidOperationException("Tenant catalog connection string is required.");
         }
-        else
-        {
-            services.AddSingleton(_ => NpgsqlDataSource.Create(tenantCatalogConnectionString));
-            services.AddHostedService<TenantCatalogSchemaInitializer>();
-            services.AddScoped<ITenantRepository, PostgresTenantRepository>();
-        }
+
+        services.AddDbContext<TenancyDbContext>(options => options.UseNpgsql(tenantCatalogConnectionString));
+        services.AddHostedService<TenantCatalogSchemaInitializer>();
+        services.AddScoped<ITenantRepository, PostgresTenantRepository>();
 
         services.AddScoped<GetTenantByCode>();
 

@@ -1,16 +1,20 @@
-using Npgsql;
+using Microsoft.EntityFrameworkCore;
 using RailFactory.Tenancy.Api.Domain;
+using RailFactory.Tenancy.Api.Infrastructure.Persistence;
 
 namespace RailFactory.Tenancy.Api.Infrastructure;
 
 public sealed class TenantCatalogSchemaInitializer(
-    NpgsqlDataSource dataSource,
+    IServiceProvider serviceProvider,
     ILogger<TenantCatalogSchemaInitializer> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await CreateSchemaAsync(cancellationToken);
-        await SeedDevTenantAsync(cancellationToken);
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TenancyDbContext>();
+
+        await dbContext.Database.MigrateAsync(cancellationToken);
+        await SeedDevTenantAsync(dbContext, cancellationToken);
 
         logger.LogInformation("Tenant catalog schema initialized.");
     }
@@ -20,48 +24,35 @@ public sealed class TenantCatalogSchemaInitializer(
         return Task.CompletedTask;
     }
 
-    private async Task CreateSchemaAsync(CancellationToken cancellationToken)
-    {
-        const string sql = """
-            create table if not exists tenants (
-                code text primary key,
-                display_name text not null,
-                locale text not null,
-                time_zone text not null,
-                status text not null,
-                created_at timestamptz not null default now(),
-                updated_at timestamptz not null default now()
-            );
-
-            create index if not exists ix_tenants_status on tenants (status);
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private async Task SeedDevTenantAsync(CancellationToken cancellationToken)
+    private static async Task SeedDevTenantAsync(TenancyDbContext dbContext, CancellationToken cancellationToken)
     {
         var tenant = Tenant.RegisterDevTenant();
+        var existing = await dbContext.Tenants
+            .SingleOrDefaultAsync(x => x.Code == tenant.Code, cancellationToken);
 
-        const string sql = """
-            insert into tenants (code, display_name, locale, time_zone, status)
-            values (@code, @displayName, @locale, @timeZone, @status)
-            on conflict (code) do update set
-                display_name = excluded.display_name,
-                locale = excluded.locale,
-                time_zone = excluded.time_zone,
-                status = excluded.status,
-                updated_at = now();
-            """;
+        var now = DateTimeOffset.UtcNow;
+        if (existing is null)
+        {
+            dbContext.Tenants.Add(new TenantRecord
+            {
+                Code = tenant.Code,
+                DisplayName = tenant.DisplayName,
+                Locale = tenant.Locale,
+                TimeZone = tenant.TimeZone,
+                Status = tenant.Status.ToString(),
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        else
+        {
+            existing.DisplayName = tenant.DisplayName;
+            existing.Locale = tenant.Locale;
+            existing.TimeZone = tenant.TimeZone;
+            existing.Status = tenant.Status.ToString();
+            existing.UpdatedAt = now;
+        }
 
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("code", tenant.Code);
-        command.Parameters.AddWithValue("displayName", tenant.DisplayName);
-        command.Parameters.AddWithValue("locale", tenant.Locale);
-        command.Parameters.AddWithValue("timeZone", tenant.TimeZone);
-        command.Parameters.AddWithValue("status", tenant.Status.ToString());
-
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
