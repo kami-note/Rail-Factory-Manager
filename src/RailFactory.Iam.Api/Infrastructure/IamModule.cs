@@ -1,7 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using RailFactory.Iam.Api.Application;
 using RailFactory.Iam.Api.Application.Auth;
 using RailFactory.Iam.Api.Infrastructure.Auth;
-using Npgsql;
+using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
 
 namespace RailFactory.Iam.Api.Infrastructure;
 
@@ -9,17 +10,13 @@ public static class IamModule
 {
     public static IServiceCollection AddIamModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var iamConnectionString = configuration.GetConnectionString("iamdb");
-        if (string.IsNullOrWhiteSpace(iamConnectionString))
-        {
-            services.AddSingleton<IIamLocalUserRepository, InMemoryIamLocalUserRepository>();
-        }
-        else
-        {
-            services.AddSingleton(_ => NpgsqlDataSource.Create(iamConnectionString));
-            services.AddHostedService<IamLocalUsersSchemaInitializer>();
-            services.AddScoped<IIamLocalUserRepository, PostgresIamLocalUserRepository>();
-        }
+        var iamConnectionString = ResolveIamConnectionString(configuration)
+            ?? throw new InvalidOperationException(
+                "IAM database connection string is required. Configure ConnectionStrings:iamdb or ConnectionStrings:tenant-dev-iamdb.");
+
+        services.AddDbContext<IamAuthDbContext>(options => options.UseNpgsql(iamConnectionString));
+        services.AddHostedService<IamLocalUsersSchemaInitializer>();
+        services.AddScoped<IIamLocalUserRepository, PostgresIamLocalUserRepository>();
 
         services.AddScoped<GetIamInfo>();
         services.AddScoped<StartExternalLogin>();
@@ -27,5 +24,16 @@ public static class IamModule
         services.AddScoped<UpsertLocalUserFromExternalLogin>();
         services.AddScoped<IExternalIdentityProvider, GoogleExternalIdentityProvider>();
         return services;
+    }
+
+    private static string? ResolveIamConnectionString(IConfiguration configuration)
+    {
+        var primary = configuration.GetConnectionString("iamdb");
+        if (!string.IsNullOrWhiteSpace(primary))
+        {
+            return primary;
+        }
+
+        return configuration.GetConnectionString("tenant-dev-iamdb");
     }
 }

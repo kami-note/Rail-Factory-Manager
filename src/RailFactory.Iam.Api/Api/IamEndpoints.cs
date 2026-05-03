@@ -7,6 +7,7 @@ using RailFactory.BuildingBlocks.Auth;
 using RailFactory.Iam.Api.Application;
 using RailFactory.Iam.Api.Application.Auth;
 using RailFactory.Iam.Api.Infrastructure;
+using RailFactory.Iam.Api.Api.Validation;
 
 namespace RailFactory.Iam.Api.Api;
 
@@ -47,12 +48,17 @@ public static class IamEndpoints
     }
 
     private static async Task<IResult> HandleStartGoogleLogin(
-        string tenantCode,
-        string? returnUrl,
+        [AsParameters] StartGoogleLoginRequest request,
         StartExternalLogin startExternalLogin,
         CancellationToken cancellationToken)
     {
-        var result = await startExternalLogin.ExecuteGoogleAsync(tenantCode, returnUrl, cancellationToken);
+        var validation = RequestValidator.Validate(request);
+        if (validation is not null)
+        {
+            return validation;
+        }
+
+        var result = await startExternalLogin.ExecuteGoogleAsync(request.TenantCode, request.ReturnUrl, cancellationToken);
         if (!result.Success)
         {
             if (result.ErrorStatusCode == StatusCodes.Status400BadRequest && result.ErrorCode == TenantConstants.CodeRequiredErrorCode)
@@ -75,19 +81,23 @@ public static class IamEndpoints
 
     private static async Task<IResult> HandleFinalizeGoogleLogin(
         HttpContext context,
-        string tenantCode,
-        string? returnUrl,
-        string? oauthError,
+        [AsParameters] FinalizeGoogleLoginRequest request,
         [FromServices] GoogleOAuthRedirects redirects,
         [FromServices] FinalizeExternalLogin finalizeExternalLogin,
         [FromServices] UpsertLocalUserFromExternalLogin upsertLocalUserFromExternalLogin,
         CancellationToken cancellationToken)
     {
+        var validation = RequestValidator.Validate(request);
+        if (validation is not null)
+        {
+            return validation;
+        }
+
         var result = finalizeExternalLogin.Execute(
             context.User.Identity?.IsAuthenticated is true,
-            tenantCode,
-            returnUrl,
-            oauthError);
+            request.TenantCode,
+            request.ReturnUrl,
+            request.OAuthError);
 
         if (!result.Success)
         {
@@ -98,7 +108,6 @@ public static class IamEndpoints
         }
 
         var upsertResult = await upsertLocalUserFromExternalLogin.ExecuteAsync(
-            tenantCode,
             externalProvider: "google",
             externalSubject: context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
             email: context.User.FindFirstValue("email"),

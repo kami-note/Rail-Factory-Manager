@@ -43,7 +43,6 @@ public sealed class IamAuthSessionTests
         var sut = new UpsertLocalUserFromExternalLogin(new FakeIamLocalUserRepository());
 
         var result = await sut.ExecuteAsync(
-            tenantCode: "dev",
             externalProvider: "google",
             externalSubject: null,
             email: "user@example.com",
@@ -61,7 +60,6 @@ public sealed class IamAuthSessionTests
         var sut = new UpsertLocalUserFromExternalLogin(repository);
 
         var result = await sut.ExecuteAsync(
-            tenantCode: "dev",
             externalProvider: "google",
             externalSubject: "subject-123",
             email: "user@example.com",
