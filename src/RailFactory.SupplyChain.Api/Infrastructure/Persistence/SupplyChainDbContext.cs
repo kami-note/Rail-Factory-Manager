@@ -62,7 +62,10 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
             entity.Property(x => x.EventType).HasMaxLength(128).IsRequired();
             entity.Property(x => x.CorrelationId).HasMaxLength(128).IsRequired();
             entity.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
+            entity.Property(x => x.LastError).HasMaxLength(2000);
             entity.HasIndex(x => new { x.DispatchedAt, x.CreatedAt });
+            entity.HasIndex(x => new { x.Status, x.CreatedAt });
         });
     }
 }

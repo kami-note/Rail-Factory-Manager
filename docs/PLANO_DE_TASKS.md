@@ -272,6 +272,21 @@ Objetivo: padronizar estrutura interna dos servicos em paralelo as tasks funcion
   - Depende: fluxo OAuth.
   - Entregue: UI trata erros de OAuth (`oauth=error`) e falhas de sessao/logout com mensagens visiveis e estados seguros (`unauthenticated`/`error`).
 
+- [x] Evoluir area protegida para dashboard inicial consistente.
+  - Aceite: rota `/app` protegida exibe layout de dashboard com navegacao para fluxos P2 e componentes reutilizaveis sem quebrar sessao.
+  - Depende: layout autenticado inicial.
+  - Entregue: topbar, navegacao, cards de KPI e modulos (`overview`, `receipts`, `new receipt`, `import xml`) com estados de erro/carregamento e logout preservado.
+
+- [x] Alinhar visual da dashboard protegida ao padrao do projeto legado.
+  - Aceite: shell visual de `/app` reproduz os elementos centrais do layout legado (appbar azul contextual, sidebar segmentada, cards/tabelas/timeline e navegacao mobile), mantendo os fluxos P2 existentes.
+  - Depende: dashboard inicial consistente.
+  - Entregue: `ProtectedDashboardLayout` e `OverviewPanel` refeitos com paridade visual do legado e CSS reorganizado (`tokens/layout/components`) sem regressao funcional.
+
+- [x] Consolidar recebimentos em tela unica e migrar navegacao protegida para SPA local.
+  - Aceite: sidebar deixa de ter card/borda propria, navegacao entre `Overview` e `Receipts` nao recarrega a pagina e `Receipts` concentra lista, criacao manual e importacao XML.
+  - Depende: alinhamento visual da dashboard protegida.
+  - Entregue: `ReceiptsWorkspace`, navegacao por History API no frontend, rotas legadas `/app/new-receipt`/`/app/import-xml` normalizadas para `/app/receipts`, lista mantida como workspace principal, acoes principais visiveis e criacao/importacao em drawer lateral responsivo.
+
 ## P2 - Entrada De Materiais E Inventory Inicial
 
 Objetivo: criar o primeiro fluxo de negocio real: recebimento de material e saldo pendente no Inventory.
@@ -297,10 +312,12 @@ Objetivo: criar o primeiro fluxo de negocio real: recebimento de material e sald
 - [x] Criar upload/importacao XML basica.
   - Aceite: XML valido cria recebimento e itens.
   - Depende: modelos Supply.
+  - Entregue: importacao aceita XML colado, arquivo local unitario e lote atomico via `POST /receipts/import/xml/batch`; lote com qualquer XML invalido ou duplicado retorna `receipt.batch_invalid` e nao grava supplier/receipt/outbox/auditoria.
 
 - [x] Criar provider interno substituivel de NF-e.
   - Aceite: entrada manual/upload usam interface que depois pode receber PlugNotas/SEFAZ.
   - Depende: entrada manual/upload.
+  - Entregue: `BasicXmlNfeProvider` mantem XML simplificado legado, aceita NF-e `1.10` apenas como compatibilidade legado/dev, e valida NF-e `4.00` contra XSD oficial versionado no repo (`PL_010c_NT2022_002v1.30`, `nfe_v4.00.xsd`). `NFe` e `nfeProc` sao suportados; para `nfeProc`, o `NFe` interno e validado porque o pacote oficial atual nao inclui `procNFe_v4.00.xsd`. Extrai emitente, chave/documento, data e itens `det/prod`; `receiptNumber` de NF-e usa `NFE-{accessKey}` para evitar colisao por serie/numero.
 
 ### P2.2 - Inventory Inicial
 
@@ -333,6 +350,12 @@ Objetivo: criar o primeiro fluxo de negocio real: recebimento de material e sald
 - [x] Ao criar recebimento, criar saldo pendente.
   - Aceite: recebimento criado gera saldo `Pending` no Inventory.
   - Depende: Supply inicial e `CreatePendingBalance`.
+  - Entregue: outbox Supply segue criando evento por item; dispatcher foi endurecido para payload legado/permanent failure sem bloquear a fila inteira, com estado persistido (`Pending`, `Dispatched`, `DeadLetter`), tentativas, ultimo erro e endpoint operacional `GET /outbox/dead-letters`.
+
+- [ ] Criar replay operacional de dead letters do outbox Supply.
+  - Aceite: operador consegue reprocessar dead letters selecionados apos corrigir a causa externa, sem duplicar saldos no Inventory.
+  - Depende: `GET /outbox/dead-letters` e idempotencia do Inventory.
+  - Evidencia: rodada de resiliencia em 2026-05-04 confirmou que Inventory fora por tempo suficiente gera dead-letter rastreavel, mas sem caminho de recuperacao operacional.
 
 - [x] Garantir idempotencia basica por recebimento/item.
   - Aceite: retry nao duplica saldo pendente.
@@ -355,6 +378,7 @@ Objetivo: criar o primeiro fluxo de negocio real: recebimento de material e sald
 - [x] Criar upload de XML.
   - Aceite: usuario importa XML e revisa itens criados.
   - Depende: upload/importacao XML.
+  - Entregue: drawer de recebimentos permite selecionar um ou varios arquivos `.xml`, exibe a lista selecionada e importa os documentos em lote via `/api/supply-chain/receipts/import/xml`.
 
 ## P3 - Conferencia Cega E Saldo Disponivel
 
@@ -747,6 +771,7 @@ Objetivo: preparar o sistema para entrega final com seguranca, performance, obse
 - [ ] Implementar retry e dead-letter.
   - Aceite: falha temporaria reprocessa; falha permanente fica rastreavel.
   - Depende: RabbitMQ/eventos.
+  - Parcial P2 entregue: retry HTTP do dispatcher Supply -> Inventory permanece pendente ate limite; payload invalido e `400` viram dead-letter rastreavel em banco. Mensageria RabbitMQ ampla continua escopo P10.
 
 ### P10.2 - Seguranca E Auditoria
 
@@ -840,7 +865,7 @@ Objetivo: preparar o sistema para entrega final com seguranca, performance, obse
 |---|---|---|
 | P0 - Base tecnica | Concluido inicial | Expandir padroes conforme novos endpoints aparecerem |
 | P1 - IAM e tenant `dev` | Iniciado | Resolver tenant, OAuth Google, sessao e autorizacao minima |
-| P2 - Entrada de materiais e Inventory inicial | Pendente | P1 entregue |
+| P2 - Entrada de materiais e Inventory inicial | Concluido com hardening P2 | P1 entregue |
 | P3 - Conferencia cega e saldo disponivel/bloqueado | Pendente | P2 entregue |
 | P4 - Producao inicial | Pendente | Saldo real disponivel no Inventory |
 | P5 - Execucao de OP usando Inventory | Pendente | P4 entregue |
@@ -930,6 +955,7 @@ Esta tabela nao substitui `REQUISITOS.md`; ela mostra onde cada requisito aparec
 ## Proximos Documentos Necessarios
 
 - [x] `REGRAS_PARA_IAS.md`: AI agent rules, SOLID, Hexagonal Architecture, established standards, and context synchronization.
+- [x] Frontend specialist agent profile: `.codex/skills/rail-factory-engineering/agents/frontend.yaml` defines the React/Vite UI agent, BFF boundary, accessibility, responsive layout, Figma adaptation, and evidence-informed UX quality bar.
 - [ ] `MODELO_DOMINIO.md`: entidades, estados e regras por dominio.
 - [x] `CONTRATOS_API.md`: convencoes HTTP iniciais, Tenancy, headers e erros.
 - [ ] `MODELO_DADOS.md`: tabelas, indices, migrations e seeds.

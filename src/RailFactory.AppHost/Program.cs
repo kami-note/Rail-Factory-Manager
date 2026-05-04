@@ -78,16 +78,6 @@ static AppHostDomainServices AddDomainServices(
         .WaitFor(infra.Redis)
         .WaitFor(tenantManagement);
 
-    var supplyChain = builder.AddProject<Projects.RailFactory_SupplyChain_Api>("supply-chain")
-        .WithReference(tenantManagement)
-        .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevSupplyChainDb)
-        .WithEnvironment("TenantRouting__ServiceKey", "supplychaindb")
-        .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
-        .WaitFor(infra.TenantCatalogDb)
-        .WaitFor(infra.TenantDevSupplyChainDb)
-        .WaitFor(tenantManagement);
-
     var inventory = builder.AddProject<Projects.RailFactory_Inventory_Api>("inventory")
         .WithReference(tenantManagement)
         .WithReference(infra.TenantCatalogDb)
@@ -97,6 +87,18 @@ static AppHostDomainServices AddDomainServices(
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevInventoryDb)
         .WaitFor(tenantManagement);
+
+    var supplyChain = builder.AddProject<Projects.RailFactory_SupplyChain_Api>("supply-chain")
+        .WithReference(tenantManagement)
+        .WithReference(inventory)
+        .WithReference(infra.TenantCatalogDb)
+        .WithReference(infra.TenantDevSupplyChainDb)
+        .WithEnvironment("TenantRouting__ServiceKey", "supplychaindb")
+        .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
+        .WaitFor(infra.TenantCatalogDb)
+        .WaitFor(infra.TenantDevSupplyChainDb)
+        .WaitFor(tenantManagement)
+        .WaitFor(inventory);
 
     var production = builder.AddProject<Projects.RailFactory_Production_Api>("production")
         .WithReference(tenantManagement)

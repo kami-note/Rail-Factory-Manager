@@ -9,6 +9,8 @@ public sealed class InventoryPendingBalanceDispatcher(
     IServiceProvider serviceProvider,
     ILogger<InventoryPendingBalanceDispatcher> logger) : BackgroundService
 {
+    private const int MaxTransientAttempts = 10;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -34,20 +36,31 @@ public sealed class InventoryPendingBalanceDispatcher(
         var client = httpClientFactory.CreateClient("inventory-integration");
 
         var pendingMessages = await dbContext.OutboxMessages
-            .Where(x => x.DispatchedAt == null)
+            .Where(x => x.Status == SupplyOutboxMessageStatus.Pending)
             .OrderBy(x => x.CreatedAt)
             .Take(50)
             .ToListAsync(cancellationToken);
 
         foreach (var message in pendingMessages)
         {
-            var payload = JsonSerializer.Deserialize<PendingBalanceRequestedPayload>(
-                message.PayloadJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            PendingBalanceRequestedPayload? payload;
+            try
+            {
+                payload = JsonSerializer.Deserialize<PendingBalanceRequestedPayload>(
+                    message.PayloadJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (JsonException ex)
+            {
+                logger.LogError(ex, "Invalid outbox payload for message {MessageId}.", message.Id);
+                message.MarkDeadLetter($"Invalid JSON payload: {ex.Message}");
+                continue;
+            }
 
             if (payload is null)
             {
                 logger.LogError("Invalid outbox payload for message {MessageId}.", message.Id);
+                message.MarkDeadLetter("Invalid JSON payload: payload was null.");
                 continue;
             }
 
@@ -58,16 +71,47 @@ public sealed class InventoryPendingBalanceDispatcher(
                     eventId = message.Id,
                     eventType = message.EventType,
                     correlationId = message.CorrelationId,
-                    payload
+                    payload = new
+                    {
+                        payload.TenantCode,
+                        payload.ReceiptId,
+                        payload.ReceiptItemId,
+                        payload.ReceiptNumber,
+                        payload.MaterialCode,
+                        payload.Quantity,
+                        payload.UnitOfMeasure,
+                        source = string.IsNullOrWhiteSpace(payload.Source) ? "supply-chain" : payload.Source
+                    }
                 })
             };
 
             request.Headers.Add("X-Tenant-Code", message.TenantCode);
 
-            var response = await client.SendAsync(request, cancellationToken);
+            HttpResponseMessage response;
+            try
+            {
+                response = await client.SendAsync(request, cancellationToken);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                logger.LogWarning(ex, "Inventory integration request failed for outbox message {MessageId}.", message.Id);
+                MarkTransientFailure(message, ex.Message);
+                continue;
+            }
+
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("Inventory integration returned status code {StatusCode} for outbox message {MessageId}.", response.StatusCode, message.Id);
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    message.MarkDeadLetter($"Inventory returned 400 Bad Request. Body: {errorBody}");
+                }
+                else
+                {
+                    MarkTransientFailure(message, $"Inventory returned {(int)response.StatusCode} {response.StatusCode}.");
+                }
+
                 continue;
             }
 
@@ -75,6 +119,17 @@ public sealed class InventoryPendingBalanceDispatcher(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void MarkTransientFailure(SupplyOutboxMessage message, string error)
+    {
+        if (message.AttemptCount + 1 >= MaxTransientAttempts)
+        {
+            message.MarkDeadLetter($"Transient retry limit exceeded. Last error: {error}");
+            return;
+        }
+
+        message.MarkTransientFailure(error);
     }
 
     private sealed record PendingBalanceRequestedPayload(
@@ -85,5 +140,5 @@ public sealed class InventoryPendingBalanceDispatcher(
         string MaterialCode,
         decimal Quantity,
         string UnitOfMeasure,
-        string Source);
+        string? Source);
 }

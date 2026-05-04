@@ -1,13 +1,12 @@
 using RailFactory.SupplyChain.Api.Application.Ports;
-using RailFactory.SupplyChain.Api.Application.Suppliers;
+using RailFactory.SupplyChain.Api.Domain;
 
 namespace RailFactory.SupplyChain.Api.Application.Receiving;
 
 public sealed class ImportXmlReceipt(
     INfeProvider nfeProvider,
     ISupplyChainRepository repository,
-    CreateSupplier createSupplier,
-    CreateManualReceipt createManualReceipt)
+    MaterialReceiptWriter receiptWriter)
 {
     public async Task<Guid> ExecuteAsync(
         string tenantCode,
@@ -18,20 +17,23 @@ public sealed class ImportXmlReceipt(
     {
         var parsed = nfeProvider.Parse(xmlContent);
 
-        var existingSupplier = await repository.GetSupplierByFiscalIdAsync(parsed.SupplierFiscalId, cancellationToken);
-        var supplierId = existingSupplier?.Id ?? (await createSupplier.ExecuteAsync(parsed.SupplierFiscalId, parsed.SupplierName, cancellationToken)).Id;
+        var supplier = await receiptWriter.ResolveOrCreateSupplierAsync(
+            parsed,
+            new Dictionary<string, Supplier>(StringComparer.OrdinalIgnoreCase),
+            cancellationToken);
 
-        var receipt = await createManualReceipt.ExecuteAsync(
+        var receipt = await receiptWriter.StageReceiptAsync(
             tenantCode,
             userIdentifier,
             parsed.ReceiptNumber,
-            supplierId,
+            supplier.Id,
             parsed.DocumentNumber,
             parsed.ReceiptDate,
             parsed.Items.Select(x => new CreateManualReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure)).ToList(),
             correlationId,
             cancellationToken);
 
+        await repository.SaveChangesAsync(cancellationToken);
         return receipt.Id;
     }
 }
