@@ -1,33 +1,55 @@
-using System.Xml.Linq;
 using RailFactory.SupplyChain.Api.Application.Ports;
 
 namespace RailFactory.SupplyChain.Api.Infrastructure.Integration;
 
 public sealed class BasicXmlNfeProvider : INfeProvider
 {
+    private readonly SecureXmlDocumentLoader documentLoader;
+    private readonly LegacyReceiptXmlParser legacyReceiptParser;
+    private readonly NfeXmlParser nfeParser;
+    private readonly NfeSchemaValidator nfeSchemaValidator;
+
+    public BasicXmlNfeProvider()
+        : this(new SecureXmlDocumentLoader(), new LegacyReceiptXmlParser(), new NfeXmlParser(), new NfeSchemaValidator())
+    {
+    }
+
+    internal BasicXmlNfeProvider(
+        SecureXmlDocumentLoader documentLoader,
+        LegacyReceiptXmlParser legacyReceiptParser,
+        NfeXmlParser nfeParser,
+        NfeSchemaValidator nfeSchemaValidator)
+    {
+        this.documentLoader = documentLoader;
+        this.legacyReceiptParser = legacyReceiptParser;
+        this.nfeParser = nfeParser;
+        this.nfeSchemaValidator = nfeSchemaValidator;
+    }
+
     public ParsedReceiptDocument Parse(string xmlContent)
     {
-        var document = XDocument.Parse(xmlContent);
+        var document = documentLoader.Load(xmlContent);
         var root = document.Root ?? throw new InvalidOperationException("Invalid XML root.");
 
-        var supplier = root.Element("supplier") ?? throw new InvalidOperationException("XML supplier section is required.");
-        var items = root.Element("items")?.Elements("item").ToList() ?? [];
-        if (items.Count == 0)
+        if (LegacyReceiptXmlParser.CanParse(root))
         {
-            throw new InvalidOperationException("At least one XML item is required.");
+            return legacyReceiptParser.Parse(root);
         }
 
-        var parsedItems = items.Select(item => new ParsedReceiptItem(
-            item.Element("materialCode")?.Value ?? throw new InvalidOperationException("materialCode is required."),
-            decimal.Parse(item.Element("quantity")?.Value ?? throw new InvalidOperationException("quantity is required.")),
-            item.Element("uom")?.Value ?? throw new InvalidOperationException("uom is required."))).ToList();
+        var nfe = NfeXmlLocator.FindNfeElement(root)
+            ?? throw new InvalidOperationException("XML document must be a legacy receipt or an NF-e document.");
 
-        return new ParsedReceiptDocument(
-            root.Element("receiptNumber")?.Value ?? throw new InvalidOperationException("receiptNumber is required."),
-            root.Element("documentNumber")?.Value ?? throw new InvalidOperationException("documentNumber is required."),
-            DateOnly.Parse(root.Element("receiptDate")?.Value ?? throw new InvalidOperationException("receiptDate is required.")),
-            supplier.Element("fiscalId")?.Value ?? throw new InvalidOperationException("supplier fiscalId is required."),
-            supplier.Element("name")?.Value ?? throw new InvalidOperationException("supplier name is required."),
-            parsedItems);
+        var version = NfeXmlLocator.ResolveNfeVersion(root, nfe);
+        if (version == NfeXmlConstants.OfficialVersion)
+        {
+            nfeSchemaValidator.Validate(nfe);
+        }
+        else if (version != NfeXmlConstants.LegacyCompatibleVersion)
+        {
+            throw new InvalidOperationException(
+                $"NF-e XML version '{version}' is not supported. Supported versions: {NfeXmlConstants.LegacyCompatibleVersion}, {NfeXmlConstants.OfficialVersion}.");
+        }
+
+        return nfeParser.Parse(nfe);
     }
 }

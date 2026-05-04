@@ -6,6 +6,7 @@ public interface ISupplyChainRepository
 {
     Task<Supplier?> GetSupplierByIdAsync(Guid supplierId, CancellationToken cancellationToken);
     Task<Supplier?> GetSupplierByFiscalIdAsync(string fiscalId, CancellationToken cancellationToken);
+    Task<MaterialReceipt?> GetReceiptByReceiptNumberAsync(string tenantCode, string receiptNumber, CancellationToken cancellationToken);
     Task AddSupplierAsync(Supplier supplier, CancellationToken cancellationToken);
     Task AddReceiptAsync(MaterialReceipt receipt, CancellationToken cancellationToken);
     Task<List<MaterialReceipt>> ListReceiptsAsync(string tenantCode, CancellationToken cancellationToken);

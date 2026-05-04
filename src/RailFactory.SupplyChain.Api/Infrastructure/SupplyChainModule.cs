@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RailFactory.SupplyChain.Api.Application;
+using RailFactory.SupplyChain.Api.Application.Integration;
 using RailFactory.SupplyChain.Api.Application.Ports;
 using RailFactory.SupplyChain.Api.Application.Receiving;
 using RailFactory.SupplyChain.Api.Application.Suppliers;
@@ -28,13 +29,19 @@ public static class SupplyChainModule
 
         services.AddScoped<ISupplyChainRepository, PostgresSupplyChainRepository>();
         services.AddScoped<ISupplyOutbox, SupplyOutboxStore>();
+        services.AddScoped<ISupplyOutboxDiagnostics, PostgresSupplyOutboxDiagnostics>();
+        services.AddScoped<ISupplyChainTransactionRunner, EfSupplyChainTransactionRunner>();
         services.AddScoped<INfeProvider, BasicXmlNfeProvider>();
 
         services.AddScoped<GetSupplyChainInfo>();
+        services.AddScoped<MaterialReceiptWriter>();
+        services.AddScoped<XmlReceiptBatchParser>();
         services.AddScoped<CreateSupplier>();
         services.AddScoped<CreateManualReceipt>();
         services.AddScoped<ImportXmlReceipt>();
+        services.AddScoped<ImportXmlReceiptBatch>();
         services.AddScoped<ListReceipts>();
+        services.AddScoped<ListSupplyOutboxDeadLetters>();
 
         return services;
     }

@@ -17,7 +17,7 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0-preview.3.25171.6")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -163,6 +163,9 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CorrelationId")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -174,14 +177,29 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("DispatchedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("DeadLetteredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("EventType")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("PayloadJson")
                         .IsRequired()
                         .HasColumnType("jsonb");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
 
                     b.Property<string>("TenantCode")
                         .IsRequired()
@@ -191,6 +209,8 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DispatchedAt", "CreatedAt");
+
+                    b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("supply_outbox_messages", (string)null);
                 });

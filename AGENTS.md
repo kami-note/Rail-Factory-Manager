@@ -1,49 +1,99 @@
-# Regras Para Agentes De IA
+# AI Agent Rules
 
-Estas regras valem para qualquer IA trabalhando neste repositorio.
+These rules apply to every AI agent working in this repository.
 
-## Prioridade Das Fontes
+## Source Priority
 
-1. `docs/CONTEXTO_ATUAL.md`: estado real do codigo e proxima acao.
-2. `docs/PLANO_DE_TASKS.md`: checklist executavel.
-3. `docs/REGRAS_PARA_IAS.md`: regras de engenharia e documentacao.
-4. `docs/ARQUITETURA_GERAL.md`: arquitetura alvo.
-5. `docs/REQUISITOS.md`: requisitos canonicos.
+1. `docs/CONTEXTO_ATUAL.md`: real code state and next action.
+2. `docs/PLANO_DE_TASKS.md`: executable checklist.
+3. `docs/REGRAS_PARA_IAS.md`: engineering and documentation rules.
+4. `docs/ARQUITETURA_GERAL.md`: target architecture.
+5. `docs/REQUISITOS.md`: canonical requirements.
 
-Se houver conflito, nao inventar. Registrar a divergencia e corrigir o documento mais especifico.
+If sources conflict, do not invent behavior. Record the divergence and fix the most specific document.
 
-## Antes De Implementar
+## Before Implementing
 
-- Ler `docs/CONTEXTO_ATUAL.md`.
-- Confirmar em `docs/PLANO_DE_TASKS.md` qual task esta sendo trabalhada.
-- Nao pular passadas.
-- Nao implementar funcionalidade futura sem dependencia real do fluxo atual.
-- Verificar se a mudanca pertence a Domain, Application, Infrastructure, Api, Gateway, BFF ou UI.
+- Read `docs/CONTEXTO_ATUAL.md`.
+- Confirm the active task in `docs/PLANO_DE_TASKS.md`.
+- Do not skip passes.
+- Do not implement future functionality without a real dependency from the current flow.
+- Identify whether the change belongs to `Domain`, `Application`, `Infrastructure`, `Api`, `Gateway`, `BFF`, or `UI`.
 
-## Regras De Codigo
+## Established Standards
 
-- Aplicar SOLID com rigor.
-- Usar Arquitetura Hexagonal.
-- Dominio nao referencia infraestrutura, framework web, banco, HTTP, fila, Aspire ou UI.
-- Application orquestra casos de uso e depende de portas.
-- Infrastructure implementa portas.
-- Api adapta HTTP para Application.
-- Gateway roteia; nao implementa regra de negocio.
-- BFF cuida de sessao/cookie/CSRF/fachada; nao implementa regra de dominio.
-- UI chama BFF, nunca servicos internos diretamente.
+- Write code identifiers, comments, API contracts, and engineering documentation in English.
+- Use SOLID rigorously, without decorative overengineering.
+- Use Hexagonal Architecture.
+- Use `Api`, `Application`, `Domain`, and `Infrastructure` as service boundaries.
+- Keep `Domain` free of infrastructure, web frameworks, database, HTTP, queue, Aspire, Gateway, BFF, and UI concerns.
+- Let `Application` orchestrate use cases and depend on ports.
+- Let `Infrastructure` implement ports for persistence and providers.
+- Let `Api` adapt HTTP to `Application`.
+- Let `Gateway` route; it must not implement business rules.
+- Let `BFF` handle session, cookies, CSRF, and UI facade concerns; it must not implement domain rules.
+- Let `UI` call BFF only, never internal services directly.
+- Use EF Core plus formal migrations for relational persistence.
+- Do not use raw SQL for common CRUD unless the reason is documented.
+- Do not add runtime in-memory persistence fallback for production services.
+- Validate HTTP DTOs at the API boundary and business invariants in `Application` or `Domain`.
+- Separate DTOs, validators, endpoints, use cases, domain models, and persistence adapters by reason to change.
+- Keep `Program.cs` small and limited to composition, middleware, and mapping.
+- Do not add `tenant_code` columns when data is already isolated by separate PostgreSQL instances or databases.
+- Fail explicitly for missing critical configuration; do not silently degrade.
 
-## Contexto E Documentacao
+## Documentation
 
-Toda mudanca relevante deve atualizar:
+Every relevant change must update:
 
-- `docs/CONTEXTO_ATUAL.md`, quando mudar o estado real do projeto;
-- `docs/PLANO_DE_TASKS.md`, quando concluir ou abrir task;
-- documentos de arquitetura/requisitos apenas quando houver decisao ou mudanca de direcao.
+- `docs/CONTEXTO_ATUAL.md` when the real project state changes.
+- `docs/PLANO_DE_TASKS.md` when a task is opened, completed, or reclassified.
+- Architecture or requirements docs only when a real decision or direction changes.
 
-Nao marcar task como concluida sem build/teste ou criterio de aceite verificavel.
+Do not mark a task complete without build/test evidence or a documented blocker.
 
-## Validacao Minima
+## Minimum Validation
 
-- Rodar build/teste aplicavel.
-- Se nao puder validar, registrar claramente o motivo.
-- Nao esconder pendencia tecnica como concluida.
+- Run the applicable build/test set for the changed boundary.
+- If validation cannot run, document the exact reason.
+- Do not hide technical debt as completed work.
+
+See `docs/REGRAS_PARA_IAS.md` for the full engineering standard.
+
+## Figma Design System Rules (UI Consistency)
+
+These rules are mandatory for Figma-driven UI changes in this repository.
+
+### Component Organization
+
+- IMPORTANT: Keep UI implementation under `src/RailFactory.Frontend/App/src`.
+- Reuse existing feature modules before creating new files: `src/auth`, route-level modules in `src/main.tsx` (until route extraction is introduced).
+- New UI components must use PascalCase names and single-responsibility boundaries.
+- UI must call BFF endpoints only (`/api/*`), never internal services directly.
+
+### Styling and Tokens
+
+- Styling approach is plain CSS with global tokens in `src/RailFactory.Frontend/App/src/styles.css`.
+- IMPORTANT: Never hardcode repeated colors/spacing in JSX; use CSS classes and shared variables in `:root`.
+- Keep visual primitives centralized in `styles.css` (`--brand`, `--line`, `--surface`, typography, spacing scales).
+- Preserve responsive behavior with existing breakpoints and mobile-first fallbacks.
+
+### Figma MCP Flow
+
+1. Run `get_design_context` for the target node.
+2. Run `get_screenshot` for visual parity reference.
+3. Adapt generated structure to project conventions (`React + TypeScript + global CSS`).
+4. Reuse existing page/layout/form/table blocks before creating new primitives.
+5. Validate session-protected behavior on `/app*` routes and ensure UI still depends on BFF session state (`/api/auth/session`).
+
+### Asset and Icon Rules
+
+- Icons are currently sourced from `lucide-react`; do not introduce new icon packages without explicit need.
+- IMPORTANT: If Figma MCP returns localhost assets, use those assets directly; do not replace with placeholders.
+- Store static assets in `src/RailFactory.Frontend/App/public/`.
+
+### Protected Dashboard Rules
+
+- Keep `/app` as protected entry point; unauthenticated state must redirect to login CTA and never expose internal data.
+- Keep navigation, KPI cards, and module panels visually consistent with shared `card`, `module-*`, and `kpi-*` class patterns.
+- Any new dashboard widget must provide loading, empty, and error states.

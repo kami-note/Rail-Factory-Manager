@@ -2,6 +2,19 @@
 
 Use this reference as the compact checklist for Rail-Factory Fork implementation.
 
+## Established Standards
+
+- Write code identifiers, comments, API contracts, and engineering documentation in English.
+- Use Hexagonal Architecture with `Api`, `Application`, `Domain`, and `Infrastructure` boundaries.
+- Use EF Core plus formal migrations for relational persistence.
+- Do not use raw SQL for common CRUD unless the reason is documented.
+- Do not add runtime in-memory persistence fallback for production services.
+- Validate HTTP DTOs at the API boundary and business invariants in `Application` or `Domain`.
+- Keep `Program.cs` small: composition, middleware, and endpoint/module mapping only.
+- UI calls BFF only; BFF owns session/cookies/CSRF; Gateway routes only.
+- Do not add `tenant_code` columns when data is already isolated by separate PostgreSQL instances or databases.
+- Fail explicitly for missing critical configuration.
+
 ## Source Order
 
 1. `docs/CONTEXTO_ATUAL.md`
@@ -59,3 +72,13 @@ Do not update architecture/requisitos for implementation details unless a decisi
 - Tenant explicit when applicable.
 - Docs synchronized.
 - Remaining risks stated.
+
+## First-Time Quality Defaults
+
+- Prefer existing repo patterns over inventing a new one.
+- Keep DTOs, validation, endpoints, use cases, persistence, and external adapters in separate files/classes when they have different reasons to change.
+- HTTP inputs use DTO/border validation plus Application/Domain business validation.
+- Application persistence uses EF Core and formal migrations by default.
+- Raw SQL is allowed only with documented technical justification.
+- Critical configuration must fail explicitly; do not hide it behind in-memory fallback.
+- Do not mark a task complete without verifiable acceptance evidence.

@@ -53,6 +53,18 @@ Forbidden dependencies:
 - Application -> Api or concrete infrastructure.
 - UI -> Gateway or internal services.
 
+## Established Standards
+
+- Code identifiers, comments, API contracts, and engineering documentation are written in English.
+- Services use `Api`, `Application`, `Domain`, and `Infrastructure` as default boundaries.
+- Request DTOs live in `Api/Requests`; response DTOs live in `Api/Responses`; DTO validators live in `Api/Validation`.
+- Relational persistence uses EF Core and formal migrations by default.
+- Raw SQL is allowed only with documented technical justification.
+- Runtime in-memory persistence fallback is not allowed for production services.
+- HTTP DTO validation and Application/Domain business validation are both required when applicable.
+- `Program.cs` stays small and limited to composition, middleware, and endpoint/module mapping.
+- Do not add `tenant_code` columns when data is isolated by separate PostgreSQL instances or databases.
+
 ## SOLID Enforcement
 
 - Single Responsibility: one clear reason to change.

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using RailFactory.SupplyChain.Api.Api.Requests;
 using RailFactory.SupplyChain.Api.Api.Validation;
 using RailFactory.SupplyChain.Api.Application;
+using RailFactory.SupplyChain.Api.Application.Integration;
 using RailFactory.SupplyChain.Api.Application.Receiving;
 using RailFactory.SupplyChain.Api.Application.Suppliers;
 using RailFactory.SupplyChain.Api.Domain;
@@ -15,6 +16,8 @@ public static class SupplyChainEndpoints
     private const string SuppliersPath = "/suppliers";
     private const string ReceiptsPath = "/receipts";
     private const string ImportXmlPath = "/receipts/import/xml";
+    private const string ImportXmlBatchPath = "/receipts/import/xml/batch";
+    private const string OutboxDeadLettersPath = "/outbox/dead-letters";
 
     public static WebApplication MapSupplyChainEndpoints(this WebApplication app)
     {
@@ -24,6 +27,8 @@ public static class SupplyChainEndpoints
         app.MapPost(ReceiptsPath, HandleCreateReceipt);
         app.MapGet(ReceiptsPath, HandleListReceipts);
         app.MapPost(ImportXmlPath, HandleImportXmlReceipt);
+        app.MapPost(ImportXmlBatchPath, HandleImportXmlReceiptBatch);
+        app.MapGet(OutboxDeadLettersPath, HandleListOutboxDeadLetters);
         return app;
     }
 
@@ -163,6 +168,14 @@ public static class SupplyChainEndpoints
                 context.TraceIdentifier,
                 cancellationToken);
         }
+        catch (ReceiptAlreadyExistsException ex)
+        {
+            return Results.Problem(
+                title: "Invalid request",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?> { ["code"] = "receipt.duplicate" });
+        }
         catch (Exception ex) when (ex is InvalidOperationException or FormatException)
         {
             return Results.Problem(
@@ -173,5 +186,82 @@ public static class SupplyChainEndpoints
         }
 
         return Results.Created($"{ReceiptsPath}/{receiptId}", new { receiptId });
+    }
+
+    private static async Task<IResult> HandleImportXmlReceiptBatch(
+        HttpContext context,
+        [FromBody] ImportXmlReceiptBatchRequest request,
+        ImportXmlReceiptBatch importXmlReceiptBatch,
+        CancellationToken cancellationToken)
+    {
+        var validation = RequestValidator.Validate(request);
+        if (validation is not null)
+        {
+            return validation;
+        }
+
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        try
+        {
+            var imported = await importXmlReceiptBatch.ExecuteAsync(
+                tenantCode,
+                context.User.Identity?.Name ?? "anonymous",
+                request.Documents.Select(x => new ImportXmlReceiptBatchDocument(x.FileName, x.XmlContent)).ToList(),
+                context.TraceIdentifier,
+                cancellationToken);
+
+            return Results.Created(ImportXmlBatchPath, new
+            {
+                imported = imported.Select(x => new
+                {
+                    x.FileName,
+                    x.ReceiptId,
+                    x.ReceiptNumber,
+                    x.DocumentNumber
+                })
+            });
+        }
+        catch (ImportXmlReceiptBatchValidationException ex)
+        {
+            return Results.BadRequest(new
+            {
+                code = "receipt.batch_invalid",
+                errors = ex.Errors.Select(x => new { x.FileName, x.Message })
+            });
+        }
+    }
+
+    private static async Task<IResult> HandleListOutboxDeadLetters(
+        HttpContext context,
+        [FromQuery] int take,
+        ListSupplyOutboxDeadLetters listDeadLetters,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        var messages = await listDeadLetters.ExecuteAsync(tenantCode, take == 0 ? 50 : take, cancellationToken);
+        return Results.Ok(new
+        {
+            deadLetters = messages.Select(x => new
+            {
+                x.Id,
+                x.EventType,
+                x.CorrelationId,
+                x.CreatedAt,
+                x.AttemptCount,
+                x.LastAttemptAt,
+                x.DeadLetteredAt,
+                x.LastError
+            })
+        });
     }
 }
