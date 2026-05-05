@@ -14,8 +14,8 @@ public sealed class PostgresSupplyChainRepository(SupplyChainDbContext dbContext
     public Task<Supplier?> GetSupplierByFiscalIdAsync(string fiscalId, CancellationToken cancellationToken)
         => dbContext.Suppliers.FirstOrDefaultAsync(x => x.FiscalId == fiscalId, cancellationToken);
 
-    public Task<MaterialReceipt?> GetReceiptByReceiptNumberAsync(string tenantCode, string receiptNumber, CancellationToken cancellationToken)
-        => dbContext.Receipts.FirstOrDefaultAsync(x => x.TenantCode == tenantCode && x.ReceiptNumber == receiptNumber, cancellationToken);
+    public Task<MaterialReceipt?> GetReceiptByReceiptNumberAsync(string receiptNumber, CancellationToken cancellationToken)
+        => dbContext.Receipts.FirstOrDefaultAsync(x => x.ReceiptNumber == receiptNumber, cancellationToken);
 
     public Task AddSupplierAsync(Supplier supplier, CancellationToken cancellationToken)
         => dbContext.Suppliers.AddAsync(supplier, cancellationToken).AsTask();
@@ -23,10 +23,9 @@ public sealed class PostgresSupplyChainRepository(SupplyChainDbContext dbContext
     public Task AddReceiptAsync(MaterialReceipt receipt, CancellationToken cancellationToken)
         => dbContext.Receipts.AddAsync(receipt, cancellationToken).AsTask();
 
-    public Task<List<MaterialReceipt>> ListReceiptsAsync(string tenantCode, CancellationToken cancellationToken)
+    public Task<List<MaterialReceipt>> ListReceiptsAsync(CancellationToken cancellationToken)
         => dbContext.Receipts
             .AsNoTracking()
-            .Where(x => x.TenantCode == tenantCode)
             .Include(x => x.Items)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -49,7 +48,7 @@ public sealed class PostgresSupplyChainRepository(SupplyChainDbContext dbContext
     private static bool TryGetReceiptUniqueConflict(DbUpdateException exception, out string receiptNumber)
     {
         receiptNumber = string.Empty;
-        if (exception.InnerException is not PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_material_receipts_TenantCode_ReceiptNumber" })
+        if (exception.InnerException is not PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_material_receipts_ReceiptNumber" })
         {
             return false;
         }

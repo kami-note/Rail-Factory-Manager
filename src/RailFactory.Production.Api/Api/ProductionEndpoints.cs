@@ -20,7 +20,6 @@ public static class ProductionEndpoints
 
         var response = getProductionInfo.Execute(
             environment.EnvironmentName,
-            tenant?.Code,
             tenant?.Locale,
             tenant?.TimeZone);
 

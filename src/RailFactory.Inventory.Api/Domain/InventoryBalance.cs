@@ -3,7 +3,6 @@ namespace RailFactory.Inventory.Api.Domain;
 public sealed class InventoryBalance
 {
     public Guid Id { get; private set; }
-    public string TenantCode { get; private set; }
     public string MaterialCode { get; private set; }
     public string UnitOfMeasure { get; private set; }
     public decimal Quantity { get; private set; }
@@ -14,7 +13,6 @@ public sealed class InventoryBalance
 
     private InventoryBalance()
     {
-        TenantCode = string.Empty;
         MaterialCode = string.Empty;
         UnitOfMeasure = string.Empty;
         SourceReference = string.Empty;
@@ -22,7 +20,6 @@ public sealed class InventoryBalance
 
     private InventoryBalance(
         Guid id,
-        string tenantCode,
         string materialCode,
         string unitOfMeasure,
         decimal quantity,
@@ -30,7 +27,6 @@ public sealed class InventoryBalance
         string sourceReference)
     {
         Id = id;
-        TenantCode = tenantCode;
         MaterialCode = materialCode;
         UnitOfMeasure = unitOfMeasure;
         Quantity = quantity;
@@ -41,7 +37,6 @@ public sealed class InventoryBalance
     }
 
     public static InventoryBalance CreatePending(
-        string tenantCode,
         string materialCode,
         string unitOfMeasure,
         decimal quantity,
@@ -55,7 +50,6 @@ public sealed class InventoryBalance
 
         return new InventoryBalance(
             Guid.NewGuid(),
-            tenantCode.Trim(),
             materialCode.Trim(),
             unitOfMeasure.Trim(),
             quantity,

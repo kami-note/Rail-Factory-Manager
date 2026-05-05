@@ -21,6 +21,7 @@ public static class TenancyModule
         services.AddScoped<ITenantRepository, PostgresTenantRepository>();
 
         services.AddScoped<GetTenantByCode>();
+        services.AddScoped<ListTenants>();
 
         return services;
     }

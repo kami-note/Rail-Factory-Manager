@@ -10,11 +10,13 @@ public static class InventoryModule
 {
     public static IServiceCollection AddInventoryModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var inventoryConnectionString = ResolveInventoryConnectionString(configuration)
-            ?? throw new InvalidOperationException(
-                "Inventory database connection string is required. Configure ConnectionStrings:inventorydb or ConnectionStrings:tenant-dev-inventorydb.");
+        services.AddDbContext<InventoryDbContext>((sp, options) =>
+        {
+            var resolver = sp.GetRequiredService<ITenantConnectionResolver>();
+            var connectionString = resolver.ResolveConnection("inventorydb");
+            options.UseNpgsql(connectionString);
+        });
 
-        services.AddDbContext<InventoryDbContext>(options => options.UseNpgsql(inventoryConnectionString));
         services.AddHostedService<InventorySchemaInitializer>();
         services.AddScoped<IInventoryRepository, PostgresInventoryRepository>();
 
@@ -23,16 +25,5 @@ public static class InventoryModule
         services.AddScoped<ListPendingBalances>();
 
         return services;
-    }
-
-    private static string? ResolveInventoryConnectionString(IConfiguration configuration)
-    {
-        var primary = configuration.GetConnectionString("inventorydb");
-        if (!string.IsNullOrWhiteSpace(primary))
-        {
-            return primary;
-        }
-
-        return configuration.GetConnectionString("tenant-dev-inventorydb");
     }
 }

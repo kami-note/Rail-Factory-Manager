@@ -10,7 +10,6 @@ public sealed class ImportXmlReceiptBatch(
     ISupplyChainTransactionRunner transactionRunner)
 {
     public async Task<IReadOnlyList<ImportedReceiptResult>> ExecuteAsync(
-        string tenantCode,
         string userIdentifier,
         IReadOnlyCollection<ImportXmlReceiptBatchDocument> documents,
         string correlationId,
@@ -25,7 +24,7 @@ public sealed class ImportXmlReceiptBatch(
         }
 
         var parsedDocuments = batchParser.Parse(documents);
-        await ValidateDuplicatesAsync(tenantCode, parsedDocuments, cancellationToken);
+        await ValidateDuplicatesAsync(parsedDocuments, cancellationToken);
 
         var imported = new List<ImportedReceiptResult>();
         var suppliersByFiscalId = new Dictionary<string, Supplier>(StringComparer.OrdinalIgnoreCase);
@@ -38,7 +37,6 @@ public sealed class ImportXmlReceiptBatch(
                 {
                     var supplier = await receiptWriter.ResolveOrCreateSupplierAsync(document.Parsed, suppliersByFiscalId, ct);
                     var receipt = await receiptWriter.StageReceiptAsync(
-                        tenantCode,
                         userIdentifier,
                         document.Parsed.ReceiptNumber,
                         supplier.Id,
@@ -71,13 +69,13 @@ public sealed class ImportXmlReceiptBatch(
         return imported;
     }
 
-    private async Task ValidateDuplicatesAsync(string tenantCode, IReadOnlyCollection<ParsedBatchDocument> parsedDocuments, CancellationToken cancellationToken)
+    private async Task ValidateDuplicatesAsync(IReadOnlyCollection<ParsedBatchDocument> parsedDocuments, CancellationToken cancellationToken)
     {
         var errors = new List<ImportXmlReceiptBatchError>();
 
         foreach (var document in parsedDocuments)
         {
-            var existingReceipt = await repository.GetReceiptByReceiptNumberAsync(tenantCode, document.Parsed.ReceiptNumber, cancellationToken);
+            var existingReceipt = await repository.GetReceiptByReceiptNumberAsync(document.Parsed.ReceiptNumber, cancellationToken);
             if (existingReceipt is not null)
             {
                 errors.Add(new ImportXmlReceiptBatchError(

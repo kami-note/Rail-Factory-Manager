@@ -8,7 +8,7 @@ public sealed class SupplyOutboxMessageTests
     [Fact]
     public void MarkDeadLetter_persists_operational_failure_state()
     {
-        var message = new SupplyOutboxMessage(Guid.NewGuid(), "dev", "supply.receipt_item_registered", "corr-1", "{}");
+        var message = new SupplyOutboxMessage(Guid.NewGuid(), "supply.receipt_item_registered", "corr-1", "{}");
 
         message.MarkDeadLetter("Inventory returned 400 Bad Request.");
 
@@ -23,7 +23,7 @@ public sealed class SupplyOutboxMessageTests
     [Fact]
     public void MarkTransientFailure_keeps_message_pending_for_retry()
     {
-        var message = new SupplyOutboxMessage(Guid.NewGuid(), "dev", "supply.receipt_item_registered", "corr-1", "{}");
+        var message = new SupplyOutboxMessage(Guid.NewGuid(), "supply.receipt_item_registered", "corr-1", "{}");
 
         message.MarkTransientFailure("Inventory timeout.");
 

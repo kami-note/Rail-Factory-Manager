@@ -13,11 +13,13 @@ public static class SupplyChainModule
 {
     public static IServiceCollection AddSupplyChainModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var supplyChainConnectionString = ResolveSupplyChainConnectionString(configuration)
-            ?? throw new InvalidOperationException(
-                "SupplyChain database connection string is required. Configure ConnectionStrings:supplychaindb or ConnectionStrings:tenant-dev-supplychaindb.");
+        services.AddDbContext<SupplyChainDbContext>((sp, options) =>
+        {
+            var resolver = sp.GetRequiredService<ITenantConnectionResolver>();
+            var connectionString = resolver.ResolveConnection("supplychaindb");
+            options.UseNpgsql(connectionString);
+        });
 
-        services.AddDbContext<SupplyChainDbContext>(options => options.UseNpgsql(supplyChainConnectionString));
         services.AddHostedService<SupplyChainSchemaInitializer>();
         services.AddHostedService<InventoryPendingBalanceDispatcher>();
 
@@ -43,16 +45,5 @@ public static class SupplyChainModule
         services.AddScoped<ListSupplyOutboxDeadLetters>();
 
         return services;
-    }
-
-    private static string? ResolveSupplyChainConnectionString(IConfiguration configuration)
-    {
-        var primary = configuration.GetConnectionString("supplychaindb");
-        if (!string.IsNullOrWhiteSpace(primary))
-        {
-            return primary;
-        }
-
-        return configuration.GetConnectionString("tenant-dev-supplychaindb");
     }
 }

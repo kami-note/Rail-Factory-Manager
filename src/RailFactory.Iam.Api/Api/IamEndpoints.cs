@@ -40,7 +40,6 @@ public static class IamEndpoints
 
         var response = getIamInfo.Execute(
             environment.EnvironmentName,
-            tenant?.Code,
             tenant?.Locale,
             tenant?.TimeZone);
 

@@ -41,10 +41,29 @@ internal sealed class TenantCatalogHttpClient(
             tenant.Code,
             tenant.Locale,
             tenant.TimeZone,
-            string.Equals(tenant.Status, "Active", StringComparison.OrdinalIgnoreCase));
+            string.Equals(tenant.Status, "Active", StringComparison.OrdinalIgnoreCase),
+            tenant.ConnectionStrings);
 
         cache.Set(cacheKey, resolved, GetCacheLifetime(options.Value.CatalogCacheTtlSeconds));
         return resolved;
+    }
+
+    public async Task<IReadOnlyList<TenantResolutionResult>> ListAllAsync(CancellationToken cancellationToken)
+    {
+        // For simplicity and because this is used mainly by background workers, we don't cache the whole list
+        using var response = await httpClient.GetAsync("/tenants", cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var tenants = await response.Content.ReadFromJsonAsync<IReadOnlyList<TenantCatalogResponse>>(cancellationToken)
+            ?? throw new InvalidOperationException("Tenant catalog returned an empty response.");
+
+        return tenants.Select(tenant => new TenantResolutionResult(
+            true,
+            tenant.Code,
+            tenant.Locale,
+            tenant.TimeZone,
+            string.Equals(tenant.Status, "Active", StringComparison.OrdinalIgnoreCase),
+            tenant.ConnectionStrings)).ToList();
     }
 
     private static TimeSpan GetCacheLifetime(int ttlSeconds)
@@ -54,5 +73,6 @@ internal sealed class TenantCatalogHttpClient(
         string Code,
         string Locale,
         string TimeZone,
-        string Status);
+        string Status,
+        IReadOnlyDictionary<string, string> ConnectionStrings);
 }

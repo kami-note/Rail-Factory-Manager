@@ -37,7 +37,6 @@ public static class SupplyChainEndpoints
 
         var response = getSupplyChainInfo.Execute(
             environment.EnvironmentName,
-            tenant?.Code,
             tenant?.Locale,
             tenant?.TimeZone);
 
@@ -70,7 +69,7 @@ public static class SupplyChainEndpoints
             return TenantHttpResults.CodeRequired();
         }
 
-        var receipts = await listReceipts.ExecuteAsync(tenantCode, cancellationToken);
+        var receipts = await listReceipts.ExecuteAsync(cancellationToken);
         var response = receipts.Select(x => new
         {
             x.Id,
@@ -116,7 +115,6 @@ public static class SupplyChainEndpoints
             var xmlContent = await reader.ReadToEndAsync(cancellationToken);
 
             receiptId = await importXmlReceipt.ExecuteAsync(
-                tenantCode,
                 context.User.Identity?.Name ?? "anonymous",
                 xmlContent,
                 context.TraceIdentifier,
@@ -170,7 +168,6 @@ public static class SupplyChainEndpoints
             }
 
             var imported = await importXmlReceiptBatch.ExecuteAsync(
-                tenantCode,
                 context.User.Identity?.Name ?? "anonymous",
                 documents,
                 context.TraceIdentifier,
@@ -209,7 +206,7 @@ public static class SupplyChainEndpoints
             return TenantHttpResults.CodeRequired();
         }
 
-        var messages = await listDeadLetters.ExecuteAsync(tenantCode, take == 0 ? 50 : take, cancellationToken);
+        var messages = await listDeadLetters.ExecuteAsync(take == 0 ? 50 : take, cancellationToken);
         return Results.Ok(new
         {
             deadLetters = messages.Select(x => new

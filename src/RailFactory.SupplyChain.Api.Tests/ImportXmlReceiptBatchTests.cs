@@ -15,7 +15,6 @@ public sealed class ImportXmlReceiptBatchTests
         var useCase = CreateUseCase(repository);
 
         var imported = await useCase.ExecuteAsync(
-            "dev",
             "tester",
             [
                 new ImportXmlReceiptBatchDocument("one.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001")),
@@ -37,7 +36,6 @@ public sealed class ImportXmlReceiptBatchTests
         var useCase = CreateUseCase(repository);
 
         var error = await Assert.ThrowsAsync<ImportXmlReceiptBatchValidationException>(() => useCase.ExecuteAsync(
-            "dev",
             "tester",
             [
                 new ImportXmlReceiptBatchDocument("one.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001")),
@@ -60,7 +58,6 @@ public sealed class ImportXmlReceiptBatchTests
         var useCase = CreateUseCase(repository);
 
         var error = await Assert.ThrowsAsync<ImportXmlReceiptBatchValidationException>(() => useCase.ExecuteAsync(
-            "dev",
             "tester",
             [
                 new ImportXmlReceiptBatchDocument("one.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001")),
@@ -85,13 +82,11 @@ public sealed class ImportXmlReceiptBatchTests
             "NFE-35260599999090910270550010000000015180051273",
             existingSupplier.Id,
             "35260599999090910270550010000000015180051273",
-            new DateOnly(2026, 5, 3),
-            "dev"));
+            new DateOnly(2026, 5, 3)));
 
         var useCase = CreateUseCase(repository);
 
         var error = await Assert.ThrowsAsync<ImportXmlReceiptBatchValidationException>(() => useCase.ExecuteAsync(
-            "dev",
             "tester",
             [
                 new ImportXmlReceiptBatchDocument("one.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001"))
@@ -115,7 +110,6 @@ public sealed class ImportXmlReceiptBatchTests
         var useCase = CreateUseCase(repository);
 
         var error = await Assert.ThrowsAsync<ImportXmlReceiptBatchValidationException>(() => useCase.ExecuteAsync(
-            "dev",
             "tester",
             [
                 new ImportXmlReceiptBatchDocument("one.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001"))
@@ -152,8 +146,8 @@ public sealed class ImportXmlReceiptBatchTests
         public Task<Supplier?> GetSupplierByFiscalIdAsync(string fiscalId, CancellationToken cancellationToken) =>
             Task.FromResult(Suppliers.FirstOrDefault(x => x.FiscalId == fiscalId));
 
-        public Task<MaterialReceipt?> GetReceiptByReceiptNumberAsync(string tenantCode, string receiptNumber, CancellationToken cancellationToken) =>
-            Task.FromResult(Receipts.FirstOrDefault(x => x.TenantCode == tenantCode && x.ReceiptNumber == receiptNumber));
+        public Task<MaterialReceipt?> GetReceiptByReceiptNumberAsync(string receiptNumber, CancellationToken cancellationToken) =>
+            Task.FromResult(Receipts.FirstOrDefault(x => x.ReceiptNumber == receiptNumber));
 
         public Task AddSupplierAsync(Supplier supplier, CancellationToken cancellationToken)
         {
@@ -167,8 +161,8 @@ public sealed class ImportXmlReceiptBatchTests
             return Task.CompletedTask;
         }
 
-        public Task<List<MaterialReceipt>> ListReceiptsAsync(string tenantCode, CancellationToken cancellationToken) =>
-            Task.FromResult(Receipts.Where(x => x.TenantCode == tenantCode).ToList());
+        public Task<List<MaterialReceipt>> ListReceiptsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(Receipts.ToList());
 
         public Task AddAuditEntryAsync(SupplyAuditEntry entry, CancellationToken cancellationToken) =>
             Task.CompletedTask;
@@ -184,7 +178,7 @@ public sealed class ImportXmlReceiptBatchTests
             return Task.CompletedTask;
         }
 
-        public Task EnqueueAsync(string tenantCode, string eventType, object payload, string correlationId, CancellationToken cancellationToken)
+        public Task EnqueueAsync(string eventType, object payload, string correlationId, CancellationToken cancellationToken)
         {
             OutboxMessages.Add(payload);
             return Task.CompletedTask;

@@ -2,17 +2,16 @@ namespace RailFactory.Iam.Api.Application;
 
 public sealed class GetIamInfo
 {
-    public IamInfoResponse Execute(string environment, string? tenantCode, string? tenantLocale, string? tenantTimeZone)
+    public IamInfoResponse Execute(string environment, string? tenantLocale, string? tenantTimeZone)
     {
         var tenant = new TenantInfoResponse(
-            tenantCode ?? string.Empty,
             tenantLocale ?? string.Empty,
             tenantTimeZone ?? string.Empty);
 
         return new IamInfoResponse(
             Service: "identity-access-management",
             Environment: environment,
-            Capability: "Identity, access, session and authorization boundary",
+            Capability: "Authentication, identity federation and authorization boundary",
             Tenant: tenant);
     }
 }
@@ -24,6 +23,5 @@ public sealed record IamInfoResponse(
     TenantInfoResponse Tenant);
 
 public sealed record TenantInfoResponse(
-    string Code,
     string Locale,
     string TimeZone);

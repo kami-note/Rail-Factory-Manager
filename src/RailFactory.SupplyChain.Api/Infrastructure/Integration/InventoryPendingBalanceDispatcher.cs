@@ -17,7 +17,7 @@ public sealed class InventoryPendingBalanceDispatcher(
         {
             try
             {
-                await DispatchBatchAsync(stoppingToken);
+                await DispatchAllTenantsAsync(stoppingToken);
             }
             catch (Exception ex)
             {
@@ -28,9 +28,37 @@ public sealed class InventoryPendingBalanceDispatcher(
         }
     }
 
-    private async Task DispatchBatchAsync(CancellationToken cancellationToken)
+    private async Task DispatchAllTenantsAsync(CancellationToken cancellationToken)
     {
         using var scope = serviceProvider.CreateScope();
+        var catalogClient = scope.ServiceProvider.GetRequiredService<ITenantCatalogClient>();
+        var activeTenants = await catalogClient.ListAllAsync(cancellationToken);
+
+        foreach (var tenant in activeTenants.Where(x => x.IsActive))
+        {
+            try
+            {
+                await DispatchTenantBatchAsync(tenant, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to dispatch supply outbox messages for tenant {TenantCode}.", tenant.Code);
+            }
+        }
+    }
+
+    private async Task DispatchTenantBatchAsync(TenantResolutionResult tenant, CancellationToken cancellationToken)
+    {
+        using var scope = serviceProvider.CreateScope();
+        
+        // Set tenant context for this scope
+        var contextAccessor = scope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
+        contextAccessor.Current = new RailFactory.BuildingBlocks.Tenancy.TenantContext(
+            tenant.Code,
+            tenant.Locale,
+            tenant.TimeZone,
+            tenant.ConnectionStrings);
+
         var dbContext = scope.ServiceProvider.GetRequiredService<SupplyChainDbContext>();
         var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
         var client = httpClientFactory.CreateClient("inventory-integration");
@@ -73,7 +101,7 @@ public sealed class InventoryPendingBalanceDispatcher(
                     correlationId = message.CorrelationId,
                     payload = new
                     {
-                        payload.TenantCode,
+                        tenantCode = tenant.Code,
                         payload.ReceiptId,
                         payload.ReceiptItemId,
                         payload.ReceiptNumber,
@@ -85,7 +113,7 @@ public sealed class InventoryPendingBalanceDispatcher(
                 })
             };
 
-            request.Headers.Add("X-Tenant-Code", message.TenantCode);
+            request.Headers.Add("X-Tenant-Code", tenant.Code);
 
             HttpResponseMessage response;
             try
@@ -136,7 +164,6 @@ public sealed class InventoryPendingBalanceDispatcher(
         Guid ReceiptId,
         Guid ReceiptItemId,
         string ReceiptNumber,
-        string TenantCode,
         string MaterialCode,
         decimal Quantity,
         string UnitOfMeasure,

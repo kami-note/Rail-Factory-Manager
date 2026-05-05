@@ -2,10 +2,9 @@ namespace RailFactory.Inventory.Api.Application;
 
 public sealed class GetInventoryInfo
 {
-    public InventoryInfoResponse Execute(string environment, string? tenantCode, string? tenantLocale, string? tenantTimeZone)
+    public InventoryInfoResponse Execute(string environment, string? tenantLocale, string? tenantTimeZone)
     {
         var tenant = new TenantInfoResponse(
-            tenantCode ?? string.Empty,
             tenantLocale ?? string.Empty,
             tenantTimeZone ?? string.Empty);
 
@@ -24,6 +23,5 @@ public sealed record InventoryInfoResponse(
     TenantInfoResponse Tenant);
 
 public sealed record TenantInfoResponse(
-    string Code,
     string Locale,
     string TimeZone);

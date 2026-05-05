@@ -11,6 +11,7 @@ internal static class TenantServiceCollectionExtensions
         builder.Services.AddMemoryCache();
         builder.Services.Configure<TenantRoutingOptions>(builder.Configuration.GetSection("TenantRouting"));
         builder.Services.AddScoped<ITenantContextAccessor, TenantContextAccessor>();
+        builder.Services.AddScoped<ITenantConnectionResolver, TenantConnectionResolver>();
         builder.Services.AddHttpClient<ITenantCatalogClient, TenantCatalogHttpClient>(client =>
         {
             client.BaseAddress = new Uri("http://tenant-management");
