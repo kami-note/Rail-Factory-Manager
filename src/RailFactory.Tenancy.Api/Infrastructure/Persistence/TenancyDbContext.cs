@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 
 namespace RailFactory.Tenancy.Api.Infrastructure.Persistence;
 
@@ -17,7 +20,19 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options)
         entity.Property(x => x.Locale).HasColumnName("locale").HasColumnType("text");
         entity.Property(x => x.TimeZone).HasColumnName("time_zone").HasColumnType("text");
         entity.Property(x => x.Status).HasColumnName("status").HasColumnType("text");
-        entity.Property(x => x.ConnectionStrings).HasColumnName("connection_strings").HasColumnType("jsonb");
+        var connectionStringsConverter = new ValueConverter<Dictionary<string, string>, string>(
+            toProvider => JsonSerializer.Serialize(toProvider, (JsonSerializerOptions?)null),
+            fromProvider => JsonSerializer.Deserialize<Dictionary<string, string>>(fromProvider, (JsonSerializerOptions?)null) ?? new Dictionary<string, string>());
+        var connectionStringsComparer = new ValueComparer<Dictionary<string, string>>(
+            (left, right) => JsonSerializer.Serialize(left, (JsonSerializerOptions?)null) == JsonSerializer.Serialize(right, (JsonSerializerOptions?)null),
+            value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null).GetHashCode(),
+            value => value.ToDictionary(entry => entry.Key, entry => entry.Value));
+
+        entity.Property(x => x.ConnectionStrings)
+            .HasColumnName("connection_strings")
+            .HasColumnType("jsonb")
+            .HasConversion(connectionStringsConverter)
+            .Metadata.SetValueComparer(connectionStringsComparer);
         entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
         entity.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp with time zone");
 

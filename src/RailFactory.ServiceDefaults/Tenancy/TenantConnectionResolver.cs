@@ -9,23 +9,21 @@ internal sealed class TenantConnectionResolver(
     public string ResolveConnection(string serviceKey)
     {
         var tenantContext = tenantContextAccessor.Current;
-        
-        // 1. Try to get the connection string from the tenant context (Catalog-driven)
-        if (tenantContext != null && tenantContext.ConnectionStrings.TryGetValue(serviceKey, out var connectionStringValue))
+
+        if (tenantContext is null)
+        {
+            throw new InvalidOperationException(
+                $"Could not resolve connection string for service '{serviceKey}' because tenant context is not available. " +
+                "Ensure tenant resolution was executed before database access.");
+        }
+
+        if (tenantContext.ConnectionStrings.TryGetValue(serviceKey, out var connectionStringValue))
         {
             return ResolveValue(connectionStringValue);
         }
 
-        // 2. Fallback to appsettings.json using the serviceKey as the connection string name
-        var fallback = configuration.GetConnectionString(serviceKey);
-        if (!string.IsNullOrWhiteSpace(fallback))
-        {
-            return fallback;
-        }
-
         throw new InvalidOperationException($"Could not resolve connection string for service '{serviceKey}'. " +
-            $"Ensure it is configured in the Tenant Catalog for tenant '{tenantContext?.TenantCode ?? "unknown"}' " +
-            $"or in the application configuration.");
+            $"Ensure it is configured in the Tenant Catalog for tenant '{tenantContext.TenantCode}'.");
     }
 
     private string ResolveValue(string value)

@@ -15,7 +15,8 @@ namespace RailFactory.Tenancy.Api.Infrastructure.Persistence.Migrations
                 name: "connection_strings",
                 table: "tenants",
                 type: "jsonb",
-                nullable: false);
+                nullable: false,
+                defaultValueSql: "'{}'::jsonb");
         }
 
         /// <inheritdoc />
