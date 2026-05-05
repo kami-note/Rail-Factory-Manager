@@ -24,10 +24,9 @@ public static class SupplyChainEndpoints
         app.MapGet(RootPath, () => Results.Redirect(InfoPath));
         app.MapGet(InfoPath, HandleGetInfo);
         app.MapPost(SuppliersPath, HandleCreateSupplier);
-        app.MapPost(ReceiptsPath, HandleCreateReceipt);
         app.MapGet(ReceiptsPath, HandleListReceipts);
-        app.MapPost(ImportXmlPath, HandleImportXmlReceipt);
-        app.MapPost(ImportXmlBatchPath, HandleImportXmlReceiptBatch);
+        app.MapPost(ImportXmlPath, HandleImportXmlReceipt).DisableAntiforgery();
+        app.MapPost(ImportXmlBatchPath, HandleImportXmlReceiptBatch).DisableAntiforgery();
         app.MapGet(OutboxDeadLettersPath, HandleListOutboxDeadLetters);
         return app;
     }
@@ -58,53 +57,6 @@ public static class SupplyChainEndpoints
 
         var supplier = await createSupplier.ExecuteAsync(request.FiscalId, request.Name, cancellationToken);
         return Results.Created($"{SuppliersPath}/{supplier.Id}", new { supplier.Id, supplier.FiscalId, supplier.Name });
-    }
-
-    private static async Task<IResult> HandleCreateReceipt(
-        HttpContext context,
-        [FromBody] CreateManualReceiptRequest request,
-        CreateManualReceipt createManualReceipt,
-        CancellationToken cancellationToken)
-    {
-        var validation = RequestValidator.Validate(request);
-        if (validation is not null)
-        {
-            return validation;
-        }
-
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
-        var correlationId = context.TraceIdentifier;
-        var userIdentifier = context.User.Identity?.Name ?? "anonymous";
-
-        MaterialReceipt receipt;
-        try
-        {
-            receipt = await createManualReceipt.ExecuteAsync(
-                tenantCode,
-                userIdentifier,
-                request.ReceiptNumber,
-                request.SupplierId,
-                request.DocumentNumber,
-                request.ReceiptDate,
-                request.Items.Select(x => new CreateManualReceiptItemInput(x.MaterialCode, x.ExpectedQuantity, x.UnitOfMeasure)).ToList(),
-                correlationId,
-                cancellationToken);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(
-                title: "Invalid request",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "receipt.invalid_state" });
-        }
-
-        return Results.Created($"{ReceiptsPath}/{receipt.Id}", new { receipt.Id, receipt.ReceiptNumber, Items = receipt.Items.Count });
     }
 
     private static async Task<IResult> HandleListReceipts(
@@ -142,14 +94,13 @@ public static class SupplyChainEndpoints
 
     private static async Task<IResult> HandleImportXmlReceipt(
         HttpContext context,
-        [FromBody] ImportXmlReceiptRequest request,
+        IFormFile file,
         ImportXmlReceipt importXmlReceipt,
         CancellationToken cancellationToken)
     {
-        var validation = RequestValidator.Validate(request);
-        if (validation is not null)
+        if (file is null || file.Length == 0)
         {
-            return validation;
+            return Results.BadRequest(new { code = "receipt.file_required", message = "An XML file is required." });
         }
 
         var tenantCode = context.GetResolvedTenant()?.Code;
@@ -161,10 +112,13 @@ public static class SupplyChainEndpoints
         Guid receiptId;
         try
         {
+            using var reader = new StreamReader(file.OpenReadStream());
+            var xmlContent = await reader.ReadToEndAsync(cancellationToken);
+
             receiptId = await importXmlReceipt.ExecuteAsync(
                 tenantCode,
                 context.User.Identity?.Name ?? "anonymous",
-                request.XmlContent,
+                xmlContent,
                 context.TraceIdentifier,
                 cancellationToken);
         }
@@ -190,14 +144,13 @@ public static class SupplyChainEndpoints
 
     private static async Task<IResult> HandleImportXmlReceiptBatch(
         HttpContext context,
-        [FromBody] ImportXmlReceiptBatchRequest request,
+        IFormFileCollection files,
         ImportXmlReceiptBatch importXmlReceiptBatch,
         CancellationToken cancellationToken)
     {
-        var validation = RequestValidator.Validate(request);
-        if (validation is not null)
+        if (files is null || files.Count == 0)
         {
-            return validation;
+            return Results.BadRequest(new { code = "receipt.files_required", message = "At least one XML file is required." });
         }
 
         var tenantCode = context.GetResolvedTenant()?.Code;
@@ -208,10 +161,18 @@ public static class SupplyChainEndpoints
 
         try
         {
+            var documents = new List<ImportXmlReceiptBatchDocument>();
+            foreach (var file in files)
+            {
+                using var reader = new StreamReader(file.OpenReadStream());
+                var xmlContent = await reader.ReadToEndAsync(cancellationToken);
+                documents.Add(new ImportXmlReceiptBatchDocument(file.FileName, xmlContent));
+            }
+
             var imported = await importXmlReceiptBatch.ExecuteAsync(
                 tenantCode,
                 context.User.Identity?.Name ?? "anonymous",
-                request.Documents.Select(x => new ImportXmlReceiptBatchDocument(x.FileName, x.XmlContent)).ToList(),
+                documents,
                 context.TraceIdentifier,
                 cancellationToken);
 

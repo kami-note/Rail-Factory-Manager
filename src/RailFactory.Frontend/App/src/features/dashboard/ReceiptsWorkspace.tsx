@@ -8,15 +8,13 @@ import {
   Divider, 
   Stack,
   useTheme,
-  useMediaQuery,
-  Card
+  useMediaQuery
 } from '@mui/material';
-import { FileSpreadsheet, Plus, RefreshCcw, X } from 'lucide-react';
+import { FileSpreadsheet, RefreshCcw, X } from 'lucide-react';
 import { ImportXmlForm } from './ImportXmlForm';
-import { NewReceiptForm } from './NewReceiptForm';
 import { ReceiptsList } from './ReceiptsList';
 
-type ReceiptDrawer = 'manual' | 'xml' | null;
+type ReceiptDrawer = 'xml' | null;
 
 type ReceiptsWorkspaceProps = {
   tenantCode: string;
@@ -38,7 +36,7 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
 
   const handleCloseDrawer = () => setDrawer(null);
 
-  const drawerTitle = drawer === 'manual' ? 'NEW MANUAL RECEIPT' : drawer === 'xml' ? 'IMPORT XML BATCH' : '';
+  const drawerTitle = drawer === 'xml' ? 'IMPORT XML BATCH' : '';
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -60,15 +58,6 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
           </Typography>
         </Box>
         <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 'auto' }, justifyContent: 'flex-end' }}>
-          <Button 
-            variant="contained" 
-            size={isTablet ? "medium" : "large"}
-            startIcon={<Plus size={18} />} 
-            onClick={() => setDrawer('manual')}
-            sx={{ flexGrow: { xs: 1, md: 0 }, minWidth: { md: 160 } }}
-          >
-            NEW RECEIPT
-          </Button>
           <Button 
             variant="outlined" 
             size={isTablet ? "medium" : "large"}
@@ -100,7 +89,10 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
         onClose={handleCloseDrawer}
         PaperProps={{
           sx: { 
-            width: isMobile ? '100%' : isTablet ? '80%' : 550, 
+            width:
+              drawer === 'xml'
+                ? (isMobile ? '100%' : isTablet ? '88%' : 760)
+                : (isMobile ? '100%' : isTablet ? '80%' : 550),
             p: 0,
             borderLeft: `5px solid ${theme.palette.primary.main}`
           }
@@ -117,7 +109,6 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
           </Box>
           <Divider />
           <Box sx={{ p: 4, flexGrow: 1, overflow: 'auto' }}>
-            {drawer === 'manual' ? <NewReceiptForm tenantCode={tenantCode} showTitle={false} /> : null}
             {drawer === 'xml' ? <ImportXmlForm tenantCode={tenantCode} showTitle={false} /> : null}
           </Box>
         </Box>

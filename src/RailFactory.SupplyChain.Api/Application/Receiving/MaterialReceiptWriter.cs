@@ -36,7 +36,7 @@ public sealed class MaterialReceiptWriter(
         Guid supplierId,
         string documentNumber,
         DateOnly receiptDate,
-        IReadOnlyCollection<CreateManualReceiptItemInput> items,
+        IReadOnlyCollection<StageReceiptItemInput> items,
         string correlationId,
         CancellationToken cancellationToken)
     {
@@ -86,3 +86,5 @@ public sealed class MaterialReceiptWriter(
             itemCount = receipt.Items.Count
         });
 }
+
+public sealed record StageReceiptItemInput(string MaterialCode, decimal ExpectedQuantity, string UnitOfMeasure);

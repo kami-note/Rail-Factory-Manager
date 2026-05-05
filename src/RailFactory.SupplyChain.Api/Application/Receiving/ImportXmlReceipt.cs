@@ -29,7 +29,7 @@ public sealed class ImportXmlReceipt(
             supplier.Id,
             parsed.DocumentNumber,
             parsed.ReceiptDate,
-            parsed.Items.Select(x => new CreateManualReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure)).ToList(),
+            parsed.Items.Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure)).ToList(),
             correlationId,
             cancellationToken);
 

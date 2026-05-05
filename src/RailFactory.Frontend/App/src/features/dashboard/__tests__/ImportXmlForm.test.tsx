@@ -8,7 +8,7 @@ describe('ImportXmlForm', () => {
     vi.restoreAllMocks();
   });
 
-  it('uses the single XML endpoint for typed XML imports', async () => {
+  it('uses the single XML endpoint when one XML file is selected', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ receiptId: 'receipt-1' })
@@ -16,12 +16,18 @@ describe('ImportXmlForm', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     render(<ImportXmlForm tenantCode="dev" />);
+    const file = new File(['<receipt />'], 'single.xml', { type: 'application/xml' });
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Import XML' })).toBeInTheDocument());
     fireEvent.submit(screen.getByRole('button', { name: 'Import XML' }).closest('form')!);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/supply-chain/receipts/import/xml',
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.any(FormData)
+      })
     );
   });
 
@@ -50,7 +56,10 @@ describe('ImportXmlForm', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/supply-chain/receipts/import/xml/batch',
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.any(FormData)
+      })
     );
   });
 

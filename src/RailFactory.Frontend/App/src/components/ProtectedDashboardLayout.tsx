@@ -57,11 +57,10 @@ export function ProtectedDashboardLayout({
 
   const sidebar = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#ffffff' }}>
-      <Box sx={{ p: 4, mb: 2 }}>
-        <Typography variant="h6" color="primary" sx={{ letterSpacing: '0.1em', fontWeight: 900, fontSize: '0.85rem' }}>
-          RAIL FACTORY
+      <Box sx={{ p: 4, mb: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em' }}>
+          NAVIGATION
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, opacity: 0.6 }}>CONTROL SYSTEM</Typography>
       </Box>
       
       <List disablePadding sx={{ flexGrow: 1 }}>
@@ -96,6 +95,23 @@ export function ProtectedDashboardLayout({
       </List>
 
       <Box sx={{ p: 2 }}>
+        <Box sx={{ px: 2, mb: 2 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, display: 'block', mb: 1, opacity: 0.6 }}>
+            ENVIRONMENT
+          </Typography>
+          <Chip 
+            label={tenantCode.toUpperCase()} 
+            size="small" 
+            sx={{ 
+              borderRadius: 0.5, 
+              bgcolor: 'primary.main', 
+              color: 'white', 
+              fontWeight: 800, 
+              fontSize: '0.65rem',
+              width: '100%'
+            }} 
+          />
+        </Box>
         <Divider sx={{ mb: 2, opacity: 0.5 }} />
         <ListItemButton onClick={onLogout} sx={{ px: 2, borderRadius: 1, color: 'text.secondary' }}>
           <ListItemIcon sx={{ minWidth: 32 }}><LogOut size={16} /></ListItemIcon>
@@ -107,6 +123,81 @@ export function ProtectedDashboardLayout({
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f3f2f1' }}>
+      <AppBar 
+        position="fixed" 
+        elevation={0} 
+        sx={{ 
+          bgcolor: 'primary.main', 
+          borderBottom: '1px solid', 
+          borderColor: 'primary.dark',
+          zIndex: (theme) => theme.zIndex.drawer + 1
+        }}
+      >
+        <Toolbar variant="dense" sx={{ minHeight: 48, justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, md: 4 } }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            {isMobile && (
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{ mr: 1, color: 'white' }}
+              >
+                <Menu size={20} />
+              </IconButton>
+            )}
+            <Stack spacing={0} justifyContent="center">
+              <Typography variant="h6" sx={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', letterSpacing: '0.1em', lineHeight: 1.15 }}>
+                RAIL FACTORY
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, opacity: 0.8, lineHeight: 1.15 }}>
+                CONTROL SYSTEM
+              </Typography>
+            </Stack>
+          </Stack>
+
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Box
+              sx={{
+                height: 24,
+                display: { xs: 'none', sm: 'flex' },
+                alignItems: 'center'
+              }}
+            >
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'white',
+                    fontWeight: 700,
+                    opacity: 0.9,
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: 24
+                  }}
+                >
+                  {userLabel}
+                </Typography>
+                <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: 'white', color: 'primary.main', fontWeight: 800 }}>
+                  {userLabel.charAt(0).toUpperCase()}
+                </Avatar>
+              </Stack>
+            </Box>
+
+            <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.2)', my: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            <Box sx={{ height: 24, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, color: 'white', opacity: 0.8, cursor: 'pointer' }}>
+                <Bell size={16} />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, color: 'white', opacity: 0.8, cursor: 'pointer' }}>
+                <Settings size={16} />
+              </Box>
+            </Box>
+          </Stack>
+        </Toolbar>
+      </AppBar>
+
       {isMobile ? (
         <Drawer
           variant="temporary"
@@ -124,10 +215,13 @@ export function ProtectedDashboardLayout({
           variant="permanent" 
           sx={{ 
             width: drawerWidth, 
+            flexShrink: 0,
             '& .MuiDrawer-paper': { 
               width: drawerWidth, 
               borderRight: '1px solid #edebe9',
-              boxShadow: 'none'
+              boxShadow: 'none',
+              boxSizing: 'border-box',
+              pt: '48px' // AppBar height
             } 
           }}
         >
@@ -135,53 +229,7 @@ export function ProtectedDashboardLayout({
         </Drawer>
       )}
       
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'primary.main', borderBottom: '1px solid', borderColor: 'primary.dark' }}>
-          <Toolbar variant="dense" sx={{ minHeight: 48, justifyContent: 'space-between', px: { xs: 2, md: 4 } }}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              {isMobile && (
-                <IconButton
-                  color="inherit"
-                  aria-label="open drawer"
-                  edge="start"
-                  onClick={handleDrawerToggle}
-                  sx={{ mr: 1, color: 'white' }}
-                >
-                  <Menu size={20} />
-                </IconButton>
-              )}
-              <Typography variant="h6" sx={{ fontSize: '0.85rem', fontWeight: 800, color: 'white' }}>
-                {navItems.find(i => i.href === '/app' ? currentPath === '/app' : currentPath.startsWith(i.href))?.label || 'SYSTEM'}
-              </Typography>
-              <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.2)', my: 1.5, mx: 1 }} />
-              <Chip 
-                label={tenantCode.toUpperCase()} 
-                size="small" 
-                sx={{ 
-                  borderRadius: 0.5, 
-                  bgcolor: 'rgba(255,255,255,0.12)', 
-                  color: 'white', 
-                  fontWeight: 800, 
-                  fontSize: '0.6rem',
-                  border: '1px solid rgba(255,255,255,0.2)'
-                }} 
-              />
-            </Stack>
-
-            <Stack direction="row" spacing={3} alignItems="center">
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ display: { xs: 'none', sm: 'flex' } }}>
-                <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, opacity: 0.9 }}>{userLabel}</Typography>
-                <Avatar sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: 'white', color: 'primary.main', fontWeight: 800 }}>
-                  {userLabel.charAt(0).toUpperCase()}
-                </Avatar>
-              </Stack>
-              <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.2)', my: 1.5, display: { xs: 'none', sm: 'block' } }} />
-              <Bell size={16} color="white" style={{ opacity: 0.8, cursor: 'pointer' }} />
-              <Settings size={16} color="white" style={{ opacity: 0.8, cursor: 'pointer' }} />
-            </Stack>
-          </Toolbar>
-        </AppBar>
-        
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: '48px' }}>
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
           {children}
         </Box>

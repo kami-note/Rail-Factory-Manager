@@ -45,7 +45,7 @@ public sealed class ImportXmlReceiptBatch(
                         document.Parsed.DocumentNumber,
                         document.Parsed.ReceiptDate,
                         document.Parsed.Items
-                            .Select(x => new CreateManualReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure))
+                            .Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure))
                             .ToList(),
                         correlationId,
                         ct);
