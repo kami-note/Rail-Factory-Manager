@@ -5,6 +5,15 @@ using System.Reflection;
 
 namespace RailFactory.Tenancy.Api.Infrastructure;
 
+/// <summary>
+/// Initializes the global Tenant Catalog database schema and performs initial seeding.
+/// </summary>
+/// <remarks>
+/// This initializer manages the shared catalog of tenants. It ensures the migration history 
+/// is aligned with legacy schemas if necessary and applies the latest migrations.
+/// It also seeds the system with initial tenants (e.g., 'dev' and 'acme') to ensure 
+/// the platform is ready for operation immediately after deployment.
+/// </remarks>
 public sealed class TenantCatalogSchemaInitializer(
     IServiceProvider serviceProvider,
     ILogger<TenantCatalogSchemaInitializer> logger) : IHostedService
@@ -14,11 +23,14 @@ public sealed class TenantCatalogSchemaInitializer(
         await using var scope = serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<TenancyDbContext>();
 
+        logger.LogInformation("Initializing tenant catalog schema...");
         await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
+        
         await SeedDevTenantAsync(dbContext, cancellationToken);
+        await SeedAcmeTenantAsync(dbContext, cancellationToken);
 
-        logger.LogInformation("Tenant catalog schema initialized.");
+        logger.LogInformation("Tenant catalog schema initialized successfully.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -52,7 +64,7 @@ public sealed class TenantCatalogSchemaInitializer(
         tableExistsCommand.CommandText = "SELECT to_regclass('public.tenants') IS NOT NULL;";
         var tableExistsResult = await tableExistsCommand.ExecuteScalarAsync(cancellationToken);
         var tenantsTableExists = tableExistsResult is true;
-        if (!tenantsTableExists)
+        if (! tenantsTableExists)
         {
             return;
         }
@@ -79,20 +91,45 @@ public sealed class TenantCatalogSchemaInitializer(
             """);
     }
 
-    private static async Task SeedDevTenantAsync(TenancyDbContext dbContext, CancellationToken cancellationToken)
+    private async Task SeedDevTenantAsync(TenancyDbContext dbContext, CancellationToken cancellationToken)
     {
+        logger.LogInformation("Seeding 'dev' tenant...");
         var tenant = Tenant.RegisterDevTenant();
         tenant.SetConnectionString("iamdb", "tenant-dev-iamdb");
         tenant.SetConnectionString("supplychaindb", "tenant-dev-supplychaindb");
         tenant.SetConnectionString("inventorydb", "tenant-dev-inventorydb");
         tenant.SetConnectionString("productiondb", "tenant-dev-productiondb");
 
+        await UpsertTenantAsync(dbContext, tenant, cancellationToken);
+    }
+
+    private async Task SeedAcmeTenantAsync(TenancyDbContext dbContext, CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Seeding 'acme' tenant...");
+        var tenant = Tenant.Restore(
+            "acme",
+            "Acme Corporation",
+            "en-US",
+            "UTC",
+            TenantStatus.Active);
+
+        tenant.SetConnectionString("iamdb", "tenant-acme-iamdb");
+        tenant.SetConnectionString("supplychaindb", "tenant-acme-supplychaindb");
+        tenant.SetConnectionString("inventorydb", "tenant-acme-inventorydb");
+        tenant.SetConnectionString("productiondb", "tenant-acme-productiondb");
+
+        await UpsertTenantAsync(dbContext, tenant, cancellationToken);
+    }
+
+    private async Task UpsertTenantAsync(TenancyDbContext dbContext, Tenant tenant, CancellationToken cancellationToken)
+    {
         var existing = await dbContext.Tenants
             .SingleOrDefaultAsync(x => x.Code == tenant.Code, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         if (existing is null)
         {
+            logger.LogInformation("Adding new tenant: {TenantCode}", tenant.Code);
             dbContext.Tenants.Add(new TenantRecord
             {
                 Code = tenant.Code,
@@ -107,6 +144,7 @@ public sealed class TenantCatalogSchemaInitializer(
         }
         else
         {
+            logger.LogInformation("Updating existing tenant: {TenantCode}", tenant.Code);
             existing.DisplayName = tenant.DisplayName;
             existing.Locale = tenant.Locale;
             existing.TimeZone = tenant.TimeZone;

@@ -15,7 +15,8 @@ internal static class TenantServiceCollectionExtensions
         builder.Services.AddHttpClient<ITenantCatalogClient, TenantCatalogHttpClient>(client =>
         {
             client.BaseAddress = new Uri("http://tenant-management");
-        });
+        })
+        .AddStandardResilienceHandler();
 
         return builder;
     }

@@ -5,8 +5,11 @@ import { ProtectedDashboardLayout } from './components/ProtectedDashboardLayout'
 import { OverviewPanel } from './features/dashboard/OverviewPanel';
 import { ReceiptsWorkspace } from './features/dashboard/ReceiptsWorkspace';
 import { InventoryStocksPage } from './features/dashboard/InventoryStocksPage';
+import { TenantSelector } from './components/TenantSelector';
 import type { Status } from './features/dashboard/types';
 import { Box, Button, Card, CircularProgress, Container, Typography, Link } from '@mui/material';
+
+const TENANT_STORAGE_KEY = 'rail_factory_tenant_code';
 
 export function App() {
   const navigate = useNavigate();
@@ -14,12 +17,22 @@ export function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  const tenantCode = import.meta.env.VITE_TENANT_CODE ?? 'dev';
+  
+  const [tenantCode, setTenantCode] = useState<string>(() => {
+    return localStorage.getItem(TENANT_STORAGE_KEY) || '';
+  });
+
+  const handleTenantSelected = (code: string) => {
+    setTenantCode(code);
+    localStorage.setItem(TENANT_STORAGE_KEY, code);
+  };
   
   const auth = useAuthSession(tenantCode);
-  const loginHref = buildLoginHref(tenantCode, '/app');
+  const loginHref = tenantCode ? buildLoginHref(tenantCode, '/app') : '#';
 
   useEffect(() => {
+    if (!tenantCode) return;
+
     fetch('/api/status', {
       credentials: 'include',
       headers: {
@@ -46,6 +59,10 @@ export function App() {
     }
   };
 
+  if (location.pathname.startsWith('/app') && !tenantCode) {
+    return <Navigate to="/" replace />;
+  }
+
   if (location.pathname.startsWith('/app') && auth.status === 'loading') {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -62,13 +79,14 @@ export function App() {
         <Card sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h1" gutterBottom>Session expired</Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            This area is protected and requires an active server session.
+            This area is protected and requires an active server session for organization <strong>{tenantCode}</strong>.
           </Typography>
           <Button 
             variant="contained" 
             href={loginHref} 
             fullWidth 
             sx={{ mb: 2 }}
+            disabled={!tenantCode}
             startIcon={<img src="/google-g-logo.png" alt="" style={{ width: 18, height: 18 }} />}
           >
             Sign in with Google
@@ -86,12 +104,20 @@ export function App() {
           <Card sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h1" gutterBottom>Sign In</Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              Access the protected operations dashboard.
+              Select your organization to access the operations dashboard.
             </Typography>
+
+            <TenantSelector 
+              onTenantSelected={handleTenantSelected} 
+              selectedTenantCode={tenantCode} 
+            />
+
             <Button 
               variant="contained" 
               href={loginHref} 
               fullWidth 
+              disabled={!tenantCode}
+              sx={{ mt: 2 }}
               startIcon={<img src="/google-g-logo.png" alt="" style={{ width: 18, height: 18 }} />}
             >
               Sign in with Google
