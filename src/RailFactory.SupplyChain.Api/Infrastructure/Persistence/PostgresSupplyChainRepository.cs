@@ -15,7 +15,10 @@ public sealed class PostgresSupplyChainRepository(SupplyChainDbContext dbContext
         => dbContext.Suppliers.FirstOrDefaultAsync(x => x.FiscalId == fiscalId, cancellationToken);
 
     public Task<MaterialReceipt?> GetReceiptByReceiptNumberAsync(string receiptNumber, CancellationToken cancellationToken)
-        => dbContext.Receipts.FirstOrDefaultAsync(x => x.ReceiptNumber == receiptNumber, cancellationToken);
+        => dbContext.Receipts.Include(x => x.Items).FirstOrDefaultAsync(x => x.ReceiptNumber == receiptNumber, cancellationToken);
+
+    public Task<MaterialReceipt?> GetReceiptByIdAsync(Guid id, CancellationToken cancellationToken)
+        => dbContext.Receipts.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
     public Task AddSupplierAsync(Supplier supplier, CancellationToken cancellationToken)
         => dbContext.Suppliers.AddAsync(supplier, cancellationToken).AsTask();

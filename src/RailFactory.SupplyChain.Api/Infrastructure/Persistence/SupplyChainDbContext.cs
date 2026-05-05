@@ -28,6 +28,9 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
             entity.HasKey(x => x.Id);
             entity.Property(x => x.ReceiptNumber).HasMaxLength(64).IsRequired();
             entity.Property(x => x.DocumentNumber).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.AccessKey).HasMaxLength(44);
+            entity.Property(x => x.TotalValue).HasColumnType("numeric(18,2)");
+            entity.Property(x => x.RawXml).HasColumnType("text");
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.ReceiptId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(x => x.ReceiptNumber).IsUnique();
@@ -40,6 +43,8 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
             entity.Property(x => x.MaterialCode).HasMaxLength(64).IsRequired();
             entity.Property(x => x.ExpectedQuantity).HasColumnType("numeric(18,4)");
             entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.UnitPrice).HasColumnType("numeric(18,2)");
+            entity.Property(x => x.OriginalDescription).HasMaxLength(256);
             entity.HasIndex(x => new { x.ReceiptId, x.MaterialCode });
         });
 

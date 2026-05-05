@@ -41,9 +41,12 @@ public sealed class ImportXmlReceiptBatch(
                         document.Parsed.ReceiptNumber,
                         supplier.Id,
                         document.Parsed.DocumentNumber,
+                        document.Parsed.AccessKey,
+                        document.Parsed.TotalValue,
+                        document.XmlContent,
                         document.Parsed.ReceiptDate,
                         document.Parsed.Items
-                            .Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure))
+                            .Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure, x.UnitPrice, x.OriginalDescription))
                             .ToList(),
                         correlationId,
                         ct);
@@ -102,4 +105,4 @@ public sealed class ImportXmlReceiptBatchValidationException(IReadOnlyCollection
     public IReadOnlyCollection<ImportXmlReceiptBatchError> Errors { get; } = errors;
 }
 
-public sealed record ParsedBatchDocument(string FileName, ParsedReceiptDocument Parsed);
+public sealed record ParsedBatchDocument(string FileName, string XmlContent, ParsedReceiptDocument Parsed);

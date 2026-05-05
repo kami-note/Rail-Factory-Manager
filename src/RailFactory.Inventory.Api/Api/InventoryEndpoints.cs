@@ -54,6 +54,10 @@ public static class InventoryEndpoints
             x.UnitOfMeasure,
             x.Status,
             x.SourceReference,
+            x.LotNumber,
+            x.ExpirationDate,
+            x.SourceType,
+            x.SourceMetadata,
             x.CreatedAt
         }));
     }
@@ -82,7 +86,10 @@ public static class InventoryEndpoints
                     request.Payload.ReceiptNumber,
                     request.Payload.MaterialCode,
                     request.Payload.Quantity,
-                    request.Payload.UnitOfMeasure),
+                    request.Payload.UnitOfMeasure,
+                    request.Payload.UnitPrice,
+                    request.Payload.OriginalDescription,
+                    request.Payload.AccessKey),
                 cancellationToken);
         }
         catch (InvalidOperationException ex)

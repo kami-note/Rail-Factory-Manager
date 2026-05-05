@@ -1,14 +1,73 @@
 namespace RailFactory.Inventory.Api.Domain;
 
+/// <summary>
+/// Represents a stock balance for a specific material in a location.
+/// </summary>
+/// <remarks>
+/// This entity follows a hybrid relational-document model for traceability.
+/// Operational fields (Lot, Expiry) are first-class columns, while
+/// source-specific data (Purchase vs Production) are encapsulated in JSON metadata.
+/// </remarks>
 public sealed class InventoryBalance
 {
+    /// <summary>
+    /// Unique identifier for the balance record.
+    /// </summary>
     public Guid Id { get; private set; }
+
+    /// <summary>
+    /// Unique code for the material (SKU).
+    /// </summary>
     public string MaterialCode { get; private set; }
+
+    /// <summary>
+    /// Unit of measurement (e.g., UN, KG).
+    /// </summary>
     public string UnitOfMeasure { get; private set; }
+
+    /// <summary>
+    /// Current quantity in stock.
+    /// </summary>
     public decimal Quantity { get; private set; }
+
+    /// <summary>
+    /// Current availability status of the balance.
+    /// </summary>
     public InventoryBalanceStatus Status { get; private set; }
+
+    /// <summary>
+    /// Reference to the physical or logical stock location.
+    /// </summary>
     public Guid StockLocationId { get; private set; }
+
+    /// <summary>
+    /// Unique reference to the source transaction (e.g., ReceiptId:ItemId or WorkOrderId).
+    /// </summary>
     public string SourceReference { get; private set; }
+
+    /// <summary>
+    /// Tracking lot or batch number.
+    /// </summary>
+    public string? LotNumber { get; private set; }
+
+    /// <summary>
+    /// Optional expiration date for the material.
+    /// </summary>
+    public DateTimeOffset? ExpirationDate { get; private set; }
+
+    /// <summary>
+    /// The origin type of this balance (e.g., Purchase, Production).
+    /// </summary>
+    public InventorySourceType SourceType { get; private set; }
+
+    /// <summary>
+    /// Rich traceability metadata stored as JSON (e.g., NF-e keys, OP details).
+    /// </summary>
+    public string? SourceMetadata { get; private set; }
+
+    /// <summary>
+    /// Audit timestamp for record creation.
+    /// </summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
     private InventoryBalance()
@@ -24,7 +83,11 @@ public sealed class InventoryBalance
         string unitOfMeasure,
         decimal quantity,
         Guid stockLocationId,
-        string sourceReference)
+        string sourceReference,
+        string? lotNumber,
+        DateTimeOffset? expirationDate,
+        InventorySourceType sourceType,
+        string? sourceMetadata)
     {
         Id = id;
         MaterialCode = materialCode;
@@ -33,15 +96,37 @@ public sealed class InventoryBalance
         Status = InventoryBalanceStatus.Pending;
         StockLocationId = stockLocationId;
         SourceReference = sourceReference;
+        LotNumber = lotNumber;
+        ExpirationDate = expirationDate;
+        SourceType = sourceType;
+        SourceMetadata = sourceMetadata;
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
+    /// <summary>
+    /// Factory method for creating a new pending balance from an external integration.
+    /// </summary>
+    /// <param name="materialCode">Material SKU.</param>
+    /// <param name="unitOfMeasure">Unit of measure.</param>
+    /// <param name="quantity">Initial quantity.</param>
+    /// <param name="stockLocationId">Destination location.</param>
+    /// <param name="sourceReference">Unique source identifier.</param>
+    /// <param name="lotNumber">Optional tracking lot.</param>
+    /// <param name="expirationDate">Optional expiration date.</param>
+    /// <param name="sourceType">Type of origin.</param>
+    /// <param name="sourceMetadata">Optional rich metadata in JSON format.</param>
+    /// <returns>A new <see cref="InventoryBalance"/> in Pending status.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when quantity is not positive.</exception>
     public static InventoryBalance CreatePending(
         string materialCode,
         string unitOfMeasure,
         decimal quantity,
         Guid stockLocationId,
-        string sourceReference)
+        string sourceReference,
+        string? lotNumber,
+        DateTimeOffset? expirationDate,
+        InventorySourceType sourceType,
+        string? sourceMetadata)
     {
         if (quantity <= 0)
         {
@@ -54,6 +139,10 @@ public sealed class InventoryBalance
             unitOfMeasure.Trim(),
             quantity,
             stockLocationId,
-            sourceReference.Trim());
+            sourceReference.Trim(),
+            lotNumber?.Trim(),
+            expirationDate,
+            sourceType,
+            sourceMetadata);
     }
 }

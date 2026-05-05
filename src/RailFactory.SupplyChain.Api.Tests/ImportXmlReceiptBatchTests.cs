@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using RailFactory.SupplyChain.Api.Application.Ports;
 using RailFactory.SupplyChain.Api.Application.Receiving;
 using RailFactory.SupplyChain.Api.Domain;
@@ -82,6 +83,9 @@ public sealed class ImportXmlReceiptBatchTests
             "NFE-35260599999090910270550010000000015180051273",
             existingSupplier.Id,
             "35260599999090910270550010000000015180051273",
+            null,
+            null,
+            null,
             new DateOnly(2026, 5, 3)));
 
         var useCase = CreateUseCase(repository);
@@ -126,7 +130,7 @@ public sealed class ImportXmlReceiptBatchTests
         new(
             new XmlReceiptBatchParser(new BasicXmlNfeProvider()),
             repository,
-            new MaterialReceiptWriter(repository, repository),
+            new MaterialReceiptWriter(repository, repository, NullLogger<MaterialReceiptWriter>.Instance),
             new ImmediateTransactionRunner());
 
     private static string BuildNfe(string accessKey, string materialCode) =>
@@ -148,6 +152,9 @@ public sealed class ImportXmlReceiptBatchTests
 
         public Task<MaterialReceipt?> GetReceiptByReceiptNumberAsync(string receiptNumber, CancellationToken cancellationToken) =>
             Task.FromResult(Receipts.FirstOrDefault(x => x.ReceiptNumber == receiptNumber));
+
+        public Task<MaterialReceipt?> GetReceiptByIdAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult(Receipts.FirstOrDefault(x => x.Id == id));
 
         public Task AddSupplierAsync(Supplier supplier, CancellationToken cancellationToken)
         {
