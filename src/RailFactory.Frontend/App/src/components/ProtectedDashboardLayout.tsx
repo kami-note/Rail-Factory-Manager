@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   Drawer, 
@@ -15,9 +15,10 @@ import {
   alpha,
   useTheme,
   useMediaQuery,
-  Avatar
+  Avatar,
+  IconButton
 } from '@mui/material';
-import { LayoutDashboard, ReceiptText, LogOut, Settings, Bell } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, LogOut, Settings, Bell, Menu } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 const drawerWidth = 220;
@@ -43,6 +44,16 @@ export function ProtectedDashboardLayout({
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const navigateTo = (path: string) => {
+    onNavigate(path);
+    if (isMobile) setMobileOpen(false);
+  };
 
   const sidebar = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#ffffff' }}>
@@ -59,7 +70,7 @@ export function ProtectedDashboardLayout({
           return (
             <ListItemButton
               key={item.href}
-              onClick={() => onNavigate(item.href)}
+              onClick={() => navigateTo(item.href)}
               selected={active}
               sx={{
                 py: 2,
@@ -96,7 +107,19 @@ export function ProtectedDashboardLayout({
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f3f2f1' }}>
-      {!isMobile && (
+      {isMobile ? (
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            '& .MuiDrawer-paper': { width: drawerWidth, borderRight: '1px solid #edebe9' }
+          }}
+        >
+          {sidebar}
+        </Drawer>
+      ) : (
         <Drawer 
           variant="permanent" 
           sx={{ 
@@ -115,11 +138,22 @@ export function ProtectedDashboardLayout({
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'primary.main', borderBottom: '1px solid', borderColor: 'primary.dark' }}>
           <Toolbar variant="dense" sx={{ minHeight: 48, justifyContent: 'space-between', px: { xs: 2, md: 4 } }}>
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center">
+              {isMobile && (
+                <IconButton
+                  color="inherit"
+                  aria-label="open drawer"
+                  edge="start"
+                  onClick={handleDrawerToggle}
+                  sx={{ mr: 1, color: 'white' }}
+                >
+                  <Menu size={20} />
+                </IconButton>
+              )}
               <Typography variant="h6" sx={{ fontSize: '0.85rem', fontWeight: 800, color: 'white' }}>
                 {navItems.find(i => i.href === '/app' ? currentPath === '/app' : currentPath.startsWith(i.href))?.label || 'SYSTEM'}
               </Typography>
-              <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.2)', my: 1.5 }} />
+              <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.2)', my: 1.5, mx: 1 }} />
               <Chip 
                 label={tenantCode.toUpperCase()} 
                 size="small" 
@@ -141,7 +175,7 @@ export function ProtectedDashboardLayout({
                   {userLabel.charAt(0).toUpperCase()}
                 </Avatar>
               </Stack>
-              <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.2)', my: 1.5 }} />
+              <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.2)', my: 1.5, display: { xs: 'none', sm: 'block' } }} />
               <Bell size={16} color="white" style={{ opacity: 0.8, cursor: 'pointer' }} />
               <Settings size={16} color="white" style={{ opacity: 0.8, cursor: 'pointer' }} />
             </Stack>

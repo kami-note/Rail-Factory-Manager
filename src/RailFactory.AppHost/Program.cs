@@ -1,3 +1,5 @@
+using Aspire.Hosting;
+
 const string DefaultTenantCode = "dev";
 const string TenantCatalogCacheTtlSeconds = "60";
 
@@ -145,15 +147,10 @@ static void AddLocalFrontendUi(
 {
     builder.AddExecutable(
             "frontend-ui",
-            "npm",
+            "sh",
             "../RailFactory.Frontend/App",
-            "run",
-            "dev",
-            "--",
-            "--host",
-            "0.0.0.0",
-            "--port",
-            "5082")
+            "-c",
+            "npm run dev -- --host 0.0.0.0 --port 5082")
         .WithReference(frontend)
         .WithEnvironment("VITE_DEV_BFF_TARGET", frontend.GetEndpoint("http"))
         .WithHttpEndpoint(port: 5082, targetPort: 5082, env: "PORT", isProxied: false)

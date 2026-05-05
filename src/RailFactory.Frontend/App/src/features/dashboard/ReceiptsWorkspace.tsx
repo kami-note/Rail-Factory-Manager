@@ -41,47 +41,52 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
   const drawerTitle = drawer === 'manual' ? 'NEW MANUAL RECEIPT' : drawer === 'xml' ? 'IMPORT XML BATCH' : '';
 
   return (
-    <Box sx={{ p: { xs: 1, md: 2 } }}>
-      {/* TOOLBAR INDUSTRIAL */}
-      <Card sx={{ p: 2, mb: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 900 }}>
-              RECEIPTS
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              MANAGE INBOUND MATERIALS
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={2}>
-            <Button 
-              variant="contained" 
-              size={isTablet ? "medium" : "large"}
-              startIcon={<Plus size={24} />} 
-              onClick={() => setDrawer('manual')}
-              sx={{ minWidth: 160 }}
-            >
-              NEW RECEIPT
-            </Button>
-            <Button 
-              variant="outlined" 
-              size={isTablet ? "medium" : "large"}
-              startIcon={<FileSpreadsheet size={24} />} 
-              onClick={() => setDrawer('xml')}
-              sx={{ minWidth: 160, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
-            >
-              IMPORT XML
-            </Button>
-            <IconButton 
-              size="large" 
-              onClick={() => setRefreshKey(current => current + 1)} 
-              sx={{ bgcolor: 'action.hover' }}
-            >
-              <RefreshCcw size={24} />
-            </IconButton>
-          </Stack>
+    <Box sx={{ p: { xs: 2, md: 4 } }}>
+      {/* TOOLBAR INDUSTRIAL: Optimized for space */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'flex-start', md: 'center' }, 
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: 3,
+        mb: 4
+      }}>
+        <Box>
+          <Typography variant="h1" sx={{ fontWeight: 900, mb: 0.5 }}>
+            RECEIPTS
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+            MANAGE INBOUND MATERIALS
+          </Typography>
         </Box>
-      </Card>
+        <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 'auto' }, justifyContent: 'flex-end' }}>
+          <Button 
+            variant="contained" 
+            size={isTablet ? "medium" : "large"}
+            startIcon={<Plus size={18} />} 
+            onClick={() => setDrawer('manual')}
+            sx={{ flexGrow: { xs: 1, md: 0 }, minWidth: { md: 160 } }}
+          >
+            NEW RECEIPT
+          </Button>
+          <Button 
+            variant="outlined" 
+            size={isTablet ? "medium" : "large"}
+            startIcon={<FileSpreadsheet size={18} />} 
+            onClick={() => setDrawer('xml')}
+            sx={{ flexGrow: { xs: 1, md: 0 }, minWidth: { md: 160 }, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
+          >
+            IMPORT XML
+          </Button>
+          <IconButton 
+            size="medium" 
+            onClick={() => setRefreshKey(current => current + 1)} 
+            sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
+          >
+            <RefreshCcw size={18} />
+          </IconButton>
+        </Stack>
+      </Box>
 
       {/* LISTA PRINCIPAL */}
       <Box sx={{ mt: 1 }}>
