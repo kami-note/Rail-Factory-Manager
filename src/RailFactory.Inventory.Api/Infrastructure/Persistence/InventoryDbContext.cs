@@ -30,6 +30,9 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
             entity.Property(x => x.Quantity).HasColumnType("numeric(18,4)");
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.SourceReference).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.LotNumber).HasMaxLength(64);
+            entity.Property(x => x.SourceType).HasConversion<string>().HasMaxLength(24).IsRequired();
+            entity.Property(x => x.SourceMetadata).HasColumnType("jsonb");
             entity.HasIndex(x => x.SourceReference).IsUnique();
         });
 

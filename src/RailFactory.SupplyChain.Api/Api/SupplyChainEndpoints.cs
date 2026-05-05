@@ -3,6 +3,7 @@ using RailFactory.SupplyChain.Api.Api.Requests;
 using RailFactory.SupplyChain.Api.Api.Validation;
 using RailFactory.SupplyChain.Api.Application;
 using RailFactory.SupplyChain.Api.Application.Integration;
+using RailFactory.SupplyChain.Api.Application.Ports;
 using RailFactory.SupplyChain.Api.Application.Receiving;
 using RailFactory.SupplyChain.Api.Application.Suppliers;
 using RailFactory.SupplyChain.Api.Domain;
@@ -17,6 +18,7 @@ public static class SupplyChainEndpoints
     private const string ReceiptsPath = "/receipts";
     private const string ImportXmlPath = "/receipts/import/xml";
     private const string ImportXmlBatchPath = "/receipts/import/xml/batch";
+    private const string ReceiptXmlPath = "/receipts/{id:guid}/xml";
     private const string OutboxDeadLettersPath = "/outbox/dead-letters";
 
     public static WebApplication MapSupplyChainEndpoints(this WebApplication app)
@@ -25,6 +27,7 @@ public static class SupplyChainEndpoints
         app.MapGet(InfoPath, HandleGetInfo);
         app.MapPost(SuppliersPath, HandleCreateSupplier);
         app.MapGet(ReceiptsPath, HandleListReceipts);
+        app.MapGet(ReceiptXmlPath, HandleGetReceiptXml);
         app.MapPost(ImportXmlPath, HandleImportXmlReceipt).DisableAntiforgery();
         app.MapPost(ImportXmlBatchPath, HandleImportXmlReceiptBatch).DisableAntiforgery();
         app.MapGet(OutboxDeadLettersPath, HandleListOutboxDeadLetters);
@@ -75,6 +78,8 @@ public static class SupplyChainEndpoints
             x.Id,
             x.ReceiptNumber,
             x.DocumentNumber,
+            x.AccessKey,
+            x.TotalValue,
             x.ReceiptDate,
             x.Status,
             x.CreatedAt,
@@ -84,7 +89,9 @@ public static class SupplyChainEndpoints
                 i.Id,
                 i.MaterialCode,
                 i.ExpectedQuantity,
-                i.UnitOfMeasure
+                i.UnitOfMeasure,
+                i.UnitPrice,
+                i.OriginalDescription
             })
         });
 
@@ -221,5 +228,31 @@ public static class SupplyChainEndpoints
                 x.LastError
             })
         });
+    }
+
+    private static async Task<IResult> HandleGetReceiptXml(
+        Guid id,
+        HttpContext context,
+        ISupplyChainRepository repository,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        var receipt = await repository.GetReceiptByIdAsync(id, cancellationToken);
+        if (receipt is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(receipt.RawXml))
+        {
+            return Results.NotFound(new { code = "receipt.xml_not_found", message = "Raw XML not available for this receipt." });
+        }
+
+        return Results.Content(receipt.RawXml, "application/xml");
     }
 }

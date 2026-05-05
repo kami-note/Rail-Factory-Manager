@@ -13,7 +13,7 @@ public sealed class XmlReceiptBatchParser(INfeProvider nfeProvider)
         {
             try
             {
-                parsedDocuments.Add(new ParsedBatchDocument(document.FileName, nfeProvider.Parse(document.XmlContent)));
+                parsedDocuments.Add(new ParsedBatchDocument(document.FileName, document.XmlContent, nfeProvider.Parse(document.XmlContent)));
             }
             catch (Exception ex) when (ex is InvalidOperationException or FormatException)
             {

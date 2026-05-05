@@ -42,6 +42,14 @@ public sealed class CreatePendingBalancePayload
     [StringLength(16, MinimumLength = 1)]
     public string UnitOfMeasure { get; init; } = string.Empty;
 
+    [Range(0, double.MaxValue)]
+    public decimal? UnitPrice { get; init; }
+
+    public string? OriginalDescription { get; init; }
+
+    [StringLength(44)]
+    public string? AccessKey { get; init; }
+
     [Required]
     [StringLength(32, MinimumLength = 1)]
     public string Source { get; init; } = string.Empty;

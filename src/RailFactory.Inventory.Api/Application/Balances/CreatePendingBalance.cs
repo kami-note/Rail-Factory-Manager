@@ -18,12 +18,24 @@ public sealed class CreatePendingBalance(IInventoryRepository repository)
             ?? throw new InvalidOperationException("Default stock location was not found.");
 
         var sourceReference = $"{input.ReceiptId}:{input.ReceiptItemId}";
+        var metadataJson = JsonSerializer.Serialize(new
+        {
+            input.UnitPrice,
+            input.OriginalDescription,
+            input.AccessKey,
+            input.ReceiptNumber
+        });
+
         var balance = InventoryBalance.CreatePending(
             input.MaterialCode,
             input.UnitOfMeasure,
             input.Quantity,
             location.Id,
-            sourceReference);
+            sourceReference,
+            null,
+            null,
+            InventorySourceType.Purchase,
+            metadataJson);
 
         await repository.AddBalanceAsync(balance, cancellationToken);
 
@@ -33,7 +45,8 @@ public sealed class CreatePendingBalance(IInventoryRepository repository)
             input.ReceiptItemId,
             input.ReceiptNumber,
             input.CorrelationId,
-            input.EventType
+            input.EventType,
+            input.AccessKey
         });
 
         await repository.AddLedgerEntryAsync(
@@ -58,4 +71,7 @@ public sealed record CreatePendingBalanceInput(
     string ReceiptNumber,
     string MaterialCode,
     decimal Quantity,
-    string UnitOfMeasure);
+    string UnitOfMeasure,
+    decimal? UnitPrice,
+    string? OriginalDescription,
+    string? AccessKey);

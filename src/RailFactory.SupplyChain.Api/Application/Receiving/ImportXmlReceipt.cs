@@ -26,8 +26,11 @@ public sealed class ImportXmlReceipt(
             parsed.ReceiptNumber,
             supplier.Id,
             parsed.DocumentNumber,
+            parsed.AccessKey,
+            parsed.TotalValue,
+            xmlContent,
             parsed.ReceiptDate,
-            parsed.Items.Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure)).ToList(),
+            parsed.Items.Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure, x.UnitPrice, x.OriginalDescription)).ToList(),
             correlationId,
             cancellationToken);
 

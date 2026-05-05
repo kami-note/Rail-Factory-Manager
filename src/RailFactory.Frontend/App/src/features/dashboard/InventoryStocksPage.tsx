@@ -19,6 +19,13 @@ type InventoryStocksPageProps = {
   tenantCode: string;
 };
 
+/**
+ * Displays the current pending inventory balances.
+ * @param tenantCode - The active tenant identifier.
+ * @remarks
+ * This page serves as the primary view for tracking material inbound pending confirmation.
+ * It uses a high-density table to display traceability information including Lot and Expiry.
+ */
 export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
   const [balances, setBalances] = useState<PendingBalance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,10 +93,11 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
             <TableHead>
               <TableRow sx={{ bgcolor: 'background.default' }}>
                 <TableCell sx={{ fontWeight: 700 }}>Material</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Lot / Expiry</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Quantity</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>UoM</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Source Reference</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Source</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Created At</TableCell>
               </TableRow>
             </TableHead>
@@ -97,6 +105,14 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
               {balances.map(balance => (
                 <TableRow key={balance.id} hover>
                   <TableCell sx={{ fontWeight: 600 }}>{balance.materialCode}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{balance.lotNumber || 'N/A'}</Typography>
+                    {balance.expirationDate && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        EXP: {new Date(balance.expirationDate).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell>{balance.quantity}</TableCell>
                   <TableCell>{balance.unitOfMeasure}</TableCell>
                   <TableCell>
@@ -106,7 +122,12 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
                       color={String(balance.status).toLowerCase() === 'pending' ? 'warning' : 'default'}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{balance.sourceReference}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{balance.sourceType}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontFamily: 'monospace', fontSize: '0.65rem' }}>
+                      {balance.sourceReference}
+                    </Typography>
+                  </TableCell>
                   <TableCell>{new Date(balance.createdAt).toLocaleString()}</TableCell>
                 </TableRow>
               ))}

@@ -8,9 +8,11 @@ public interface INfeProvider
 public sealed record ParsedReceiptDocument(
     string ReceiptNumber,
     string DocumentNumber,
+    string? AccessKey,
+    decimal? TotalValue,
     DateOnly ReceiptDate,
     string SupplierFiscalId,
     string SupplierName,
     IReadOnlyCollection<ParsedReceiptItem> Items);
 
-public sealed record ParsedReceiptItem(string MaterialCode, decimal Quantity, string UnitOfMeasure);
+public sealed record ParsedReceiptItem(string MaterialCode, decimal Quantity, string UnitOfMeasure, decimal? UnitPrice, string? OriginalDescription);

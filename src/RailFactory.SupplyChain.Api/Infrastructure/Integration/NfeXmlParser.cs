@@ -15,6 +15,10 @@ internal sealed class NfeXmlParser
             ?? throw new InvalidOperationException("NF-e ide section is required.");
         var emit = infNfe.Elements().FirstOrDefault(x => NfeXmlLocator.HasLocalName(x, "emit"))
             ?? throw new InvalidOperationException("NF-e emit section is required.");
+        var total = infNfe.Elements().FirstOrDefault(x => NfeXmlLocator.HasLocalName(x, "total"))
+            ?? throw new InvalidOperationException("NF-e total section is required.");
+        var icmsTot = total.Elements().FirstOrDefault(x => NfeXmlLocator.HasLocalName(x, "ICMSTot"))
+            ?? throw new InvalidOperationException("NF-e ICMSTot section is required.");
 
         var issuedAt = OptionalChildValue(ide, "dEmi") ?? OptionalChildValue(ide, "dhEmi")
             ?? throw new InvalidOperationException("NF-e issue date is required.");
@@ -36,9 +40,14 @@ internal sealed class NfeXmlParser
             throw new InvalidOperationException("NF-e access key is required.");
         }
 
+        var totalValueStr = OptionalChildValue(icmsTot, "vNF");
+        var totalValue = totalValueStr != null ? ParseDecimal(totalValueStr) : (decimal?)null;
+
         return new ParsedReceiptDocument(
             $"NFE-{accessKey}",
             accessKey,
+            accessKey,
+            totalValue,
             ParseDate(issuedAt),
             supplierFiscalId,
             supplierName,
@@ -50,10 +59,16 @@ internal sealed class NfeXmlParser
         var product = detail.Elements().FirstOrDefault(x => NfeXmlLocator.HasLocalName(x, "prod"))
             ?? throw new InvalidOperationException("NF-e product section is required.");
 
+        var unitPriceStr = OptionalChildValue(product, "vUnCom");
+        var unitPrice = unitPriceStr != null ? ParseDecimal(unitPriceStr) : (decimal?)null;
+        var originalDescription = OptionalChildValue(product, "xProd");
+
         return new ParsedReceiptItem(
             RequiredChildValue(product, "cProd"),
             ParseDecimal(RequiredChildValue(product, "qCom")),
-            RequiredChildValue(product, "uCom"));
+            RequiredChildValue(product, "uCom"),
+            unitPrice,
+            originalDescription);
     }
 
     private static string RequiredChildValue(XElement parent, string localName) =>

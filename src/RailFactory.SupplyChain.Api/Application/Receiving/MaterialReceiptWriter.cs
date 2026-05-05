@@ -6,19 +6,20 @@ namespace RailFactory.SupplyChain.Api.Application.Receiving;
 
 public sealed class MaterialReceiptWriter(
     ISupplyChainRepository repository,
-    ISupplyOutbox outbox)
+    ISupplyOutbox outbox,
+    ILogger<MaterialReceiptWriter> logger)
 {
     public async Task<Supplier> ResolveOrCreateSupplierAsync(
         ParsedReceiptDocument parsed,
         IDictionary<string, Supplier> suppliersByFiscalId,
         CancellationToken cancellationToken)
     {
-        if (suppliersByFiscalId.TryGetValue(parsed.SupplierFiscalId, out var cachedSupplier))
+        if (suppliersByFiscalId.TryGetValue(parsed.SupplierFiscalId, out var supplier))
         {
-            return cachedSupplier;
+            return supplier;
         }
 
-        var supplier = await repository.GetSupplierByFiscalIdAsync(parsed.SupplierFiscalId, cancellationToken);
+        supplier = await repository.GetSupplierByFiscalIdAsync(parsed.SupplierFiscalId, cancellationToken);
         if (supplier is null)
         {
             supplier = Supplier.Create(parsed.SupplierFiscalId, parsed.SupplierName);
@@ -34,6 +35,9 @@ public sealed class MaterialReceiptWriter(
         string receiptNumber,
         Guid supplierId,
         string documentNumber,
+        string? accessKey,
+        decimal? totalValue,
+        string? rawXml,
         DateOnly receiptDate,
         IReadOnlyCollection<StageReceiptItemInput> items,
         string correlationId,
@@ -45,10 +49,10 @@ public sealed class MaterialReceiptWriter(
             throw new ReceiptAlreadyExistsException(receiptNumber);
         }
 
-        var receipt = MaterialReceipt.Create(receiptNumber, supplierId, documentNumber, receiptDate);
+        var receipt = MaterialReceipt.Create(receiptNumber, supplierId, documentNumber, accessKey, totalValue, rawXml, receiptDate);
         foreach (var item in items)
         {
-            receipt.AddItem(item.MaterialCode, item.ExpectedQuantity, item.UnitOfMeasure);
+            receipt.AddItem(item.MaterialCode, item.UnitOfMeasure, item.ExpectedQuantity, item.UnitPrice, item.OriginalDescription);
         }
 
         await repository.AddReceiptAsync(receipt, cancellationToken);
@@ -66,6 +70,9 @@ public sealed class MaterialReceiptWriter(
                 materialCode = item.MaterialCode,
                 quantity = item.ExpectedQuantity,
                 unitOfMeasure = item.UnitOfMeasure,
+                unitPrice = item.UnitPrice,
+                originalDescription = item.OriginalDescription,
+                accessKey = receipt.AccessKey,
                 source = "supply-chain"
             };
 
@@ -85,4 +92,4 @@ public sealed class MaterialReceiptWriter(
         });
 }
 
-public sealed record StageReceiptItemInput(string MaterialCode, decimal ExpectedQuantity, string UnitOfMeasure);
+public sealed record StageReceiptItemInput(string MaterialCode, decimal ExpectedQuantity, string UnitOfMeasure, decimal? UnitPrice, string? OriginalDescription);

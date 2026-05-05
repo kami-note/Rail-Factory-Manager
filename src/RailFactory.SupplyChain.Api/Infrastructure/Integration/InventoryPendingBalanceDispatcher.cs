@@ -108,6 +108,9 @@ public sealed class InventoryPendingBalanceDispatcher(
                         payload.MaterialCode,
                         payload.Quantity,
                         payload.UnitOfMeasure,
+                        payload.UnitPrice,
+                        payload.OriginalDescription,
+                        payload.AccessKey,
                         source = string.IsNullOrWhiteSpace(payload.Source) ? "supply-chain" : payload.Source
                     }
                 })
@@ -167,5 +170,8 @@ public sealed class InventoryPendingBalanceDispatcher(
         string MaterialCode,
         decimal Quantity,
         string UnitOfMeasure,
+        decimal? UnitPrice,
+        string? OriginalDescription,
+        string? AccessKey,
         string? Source);
 }

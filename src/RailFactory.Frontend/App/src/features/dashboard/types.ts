@@ -11,6 +11,8 @@ export type Receipt = {
   id: string;
   receiptNumber: string;
   documentNumber: string;
+  accessKey?: string;
+  totalValue?: number;
   receiptDate: string;
   status: string;
   createdAt: string;
@@ -30,5 +32,9 @@ export type PendingBalance = {
   unitOfMeasure: string;
   status: string;
   sourceReference: string;
+  lotNumber?: string;
+  expirationDate?: string;
+  sourceType: string;
+  sourceMetadata?: string;
   createdAt: string;
 };
