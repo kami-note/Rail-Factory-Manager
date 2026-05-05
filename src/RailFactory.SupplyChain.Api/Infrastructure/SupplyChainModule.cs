@@ -37,7 +37,6 @@ public static class SupplyChainModule
         services.AddScoped<MaterialReceiptWriter>();
         services.AddScoped<XmlReceiptBatchParser>();
         services.AddScoped<CreateSupplier>();
-        services.AddScoped<CreateManualReceipt>();
         services.AddScoped<ImportXmlReceipt>();
         services.AddScoped<ImportXmlReceiptBatch>();
         services.AddScoped<ListReceipts>();

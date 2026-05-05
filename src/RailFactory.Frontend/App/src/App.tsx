@@ -115,7 +115,6 @@ export function App() {
           <Routes>
             <Route index element={<OverviewPanel status={status} statusError={statusError} onNavigate={(path) => navigate(path)} />} />
             <Route path="receipts" element={<ReceiptsWorkspace tenantCode={tenantCode} />} />
-            <Route path="new-receipt" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="manual" />} />
             <Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>
