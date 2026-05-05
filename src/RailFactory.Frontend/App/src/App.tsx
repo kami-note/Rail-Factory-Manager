@@ -4,6 +4,7 @@ import { buildLoginHref, logout, useAuthSession } from './auth';
 import { ProtectedDashboardLayout } from './components/ProtectedDashboardLayout';
 import { OverviewPanel } from './features/dashboard/OverviewPanel';
 import { ReceiptsWorkspace } from './features/dashboard/ReceiptsWorkspace';
+import { InventoryStocksPage } from './features/dashboard/InventoryStocksPage';
 import type { Status } from './features/dashboard/types';
 import { Box, Button, Card, CircularProgress, Container, Typography, Link } from '@mui/material';
 
@@ -116,6 +117,7 @@ export function App() {
             <Route index element={<OverviewPanel status={status} statusError={statusError} onNavigate={(path) => navigate(path)} />} />
             <Route path="receipts" element={<ReceiptsWorkspace tenantCode={tenantCode} />} />
             <Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />
+            <Route path="inventory" element={<InventoryStocksPage tenantCode={tenantCode} />} />
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>
         </ProtectedDashboardLayout>

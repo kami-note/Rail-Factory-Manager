@@ -3,6 +3,8 @@ namespace Microsoft.Extensions.Hosting;
 public sealed class TenantRoutingOptions
 {
     public int CatalogCacheTtlSeconds { get; init; } = 60;
+    public string? DefaultTenantCode { get; init; }
+    public string? ServiceKey { get; init; }
 }
 
 public interface ITenantContextAccessor

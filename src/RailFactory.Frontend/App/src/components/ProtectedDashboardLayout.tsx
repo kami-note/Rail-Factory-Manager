@@ -18,13 +18,14 @@ import {
   Avatar,
   IconButton
 } from '@mui/material';
-import { LayoutDashboard, ReceiptText, LogOut, Settings, Bell, Menu } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 const drawerWidth = 220;
 const navItems = [
   { href: '/app', label: 'OVERVIEW', icon: <LayoutDashboard size={18} /> },
   { href: '/app/receipts', label: 'RECEIPTS', icon: <ReceiptText size={18} /> },
+  { href: '/app/inventory', label: 'INVENTORY', icon: <Boxes size={18} /> },
 ];
 
 export function ProtectedDashboardLayout({

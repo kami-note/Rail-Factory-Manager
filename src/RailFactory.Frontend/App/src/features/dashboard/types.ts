@@ -22,3 +22,13 @@ export type Supplier = {
   fiscalId: string;
   name: string;
 };
+
+export type PendingBalance = {
+  id: string;
+  materialCode: string;
+  quantity: number;
+  unitOfMeasure: string;
+  status: string;
+  sourceReference: string;
+  createdAt: string;
+};
