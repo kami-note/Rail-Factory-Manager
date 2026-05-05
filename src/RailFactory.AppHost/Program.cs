@@ -42,10 +42,14 @@ static AppHostInfrastructure AddInfrastructure(
 
     return new AppHostInfrastructure(
         TenantCatalogDb: postgres.AddDatabase("tenantcatalog"),
-        TenantDevIamDb: postgres.AddDatabase("tenant-dev-iamdb", "iamdb"),
-        TenantDevSupplyChainDb: postgres.AddDatabase("tenant-dev-supplychaindb", "supplychaindb"),
-        TenantDevInventoryDb: postgres.AddDatabase("tenant-dev-inventorydb", "inventorydb"),
-        TenantDevProductionDb: postgres.AddDatabase("tenant-dev-productiondb", "productiondb"),
+        TenantDevIamDb: postgres.AddDatabase("tenant-dev-iamdb"),
+        TenantDevSupplyChainDb: postgres.AddDatabase("tenant-dev-supplychaindb"),
+        TenantDevInventoryDb: postgres.AddDatabase("tenant-dev-inventorydb"),
+        TenantDevProductionDb: postgres.AddDatabase("tenant-dev-productiondb"),
+        TenantAcmeIamDb: postgres.AddDatabase("tenant-acme-iamdb"),
+        TenantAcmeSupplyChainDb: postgres.AddDatabase("tenant-acme-supplychaindb"),
+        TenantAcmeInventoryDb: postgres.AddDatabase("tenant-acme-inventorydb"),
+        TenantAcmeProductionDb: postgres.AddDatabase("tenant-acme-productiondb"),
         Redis: redis,
         RabbitMq: builder.AddRabbitMQ("rabbitmq"));
 }
@@ -61,6 +65,10 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(infra.TenantDevSupplyChainDb)
         .WithReference(infra.TenantDevInventoryDb)
         .WithReference(infra.TenantDevProductionDb)
+        .WithReference(infra.TenantAcmeIamDb)
+        .WithReference(infra.TenantAcmeSupplyChainDb)
+        .WithReference(infra.TenantAcmeInventoryDb)
+        .WithReference(infra.TenantAcmeProductionDb)
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("TenantRouting__CatalogCacheTtlSeconds", TenantCatalogCacheTtlSeconds)
         .WaitFor(infra.TenantCatalogDb);
@@ -69,6 +77,7 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(tenantManagement)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevIamDb)
+        .WithReference(infra.TenantAcmeIamDb)
         .WithReference(infra.Redis)
         .WithEnvironment("TenantRouting__ServiceKey", "iamdb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
@@ -84,6 +93,7 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(tenantManagement)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevInventoryDb)
+        .WithReference(infra.TenantAcmeInventoryDb)
         .WithEnvironment("TenantRouting__ServiceKey", "inventorydb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WaitFor(infra.TenantCatalogDb)
@@ -95,6 +105,7 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(inventory)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevSupplyChainDb)
+        .WithReference(infra.TenantAcmeSupplyChainDb)
         .WithEnvironment("TenantRouting__ServiceKey", "supplychaindb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WaitFor(infra.TenantCatalogDb)
@@ -106,6 +117,7 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(tenantManagement)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevProductionDb)
+        .WithReference(infra.TenantAcmeProductionDb)
         .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "productiondb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
@@ -175,6 +187,10 @@ file sealed record AppHostInfrastructure(
     IResourceBuilder<PostgresDatabaseResource> TenantDevSupplyChainDb,
     IResourceBuilder<PostgresDatabaseResource> TenantDevInventoryDb,
     IResourceBuilder<PostgresDatabaseResource> TenantDevProductionDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantAcmeIamDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantAcmeSupplyChainDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantAcmeInventoryDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantAcmeProductionDb,
     IResourceBuilder<RedisResource> Redis,
     IResourceBuilder<RabbitMQServerResource> RabbitMq);
 

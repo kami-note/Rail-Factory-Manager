@@ -1,46 +1,90 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
 using System.Reflection;
 
 namespace RailFactory.Iam.Api.Infrastructure.Auth;
 
+/// <summary>
+/// Initializes the IAM database schema for all active tenants.
+/// </summary>
+/// <remarks>
+/// This initializer iterates over all tenants in the catalog and applies EF Core migrations.
+/// It uses a <see cref="SemaphoreSlim"/> to limit concurrent database migrations,
+/// ensuring stability and preventing connection pool exhaustion during startup.
+/// Resilience is handled by the underlying <see cref="ITenantCatalogClient"/>'s resilience policies.
+/// </remarks>
 public sealed class IamLocalUsersSchemaInitializer(
     IServiceProvider serviceProvider,
     ILogger<IamLocalUsersSchemaInitializer> logger) : IHostedService
 {
+    private static readonly SemaphoreSlim MigrationSemaphore = new(5);
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        logger.LogInformation("Starting IAM multi-tenant schema initialization...");
+        
         await using var scope = serviceProvider.CreateAsyncScope();
-        await EnsureDefaultTenantContextAsync(scope.ServiceProvider, cancellationToken);
-        var dbContext = scope.ServiceProvider.GetRequiredService<IamAuthDbContext>();
+        var catalogClient = scope.ServiceProvider.GetRequiredService<ITenantCatalogClient>();
+        var tenantContextAccessor = scope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
 
-        await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
-        await dbContext.Database.MigrateAsync(cancellationToken);
-        logger.LogInformation("IAM local users schema initialized.");
+        var allTenants = await catalogClient.ListAllAsync(cancellationToken);
+        var activeTenants = allTenants.Where(t => t.Found && t.IsActive).ToList();
+
+        if (!activeTenants.Any())
+        {
+            logger.LogWarning("No active tenants found in catalog for IAM migration.");
+            return;
+        }
+
+        var migrationTasks = activeTenants.Select(tenant => MigrateTenantAsync(tenant, tenantContextAccessor, cancellationToken));
+        await Task.WhenAll(migrationTasks);
+
+        logger.LogInformation("IAM multi-tenant schema initialization completed.");
+    }
+
+    private async Task MigrateTenantAsync(
+        TenantResolutionResult tenant, 
+        ITenantContextAccessor tenantContextAccessor, 
+        CancellationToken cancellationToken)
+    {
+        await MigrationSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            logger.LogInformation("Migrating IAM database for tenant: {TenantCode}", tenant.Code);
+            
+            // Set context for this tenant so DbContext can resolve the correct connection string
+            // We use a local-only assignment here, but because we create a NEW scope below, 
+            // the DbContext in that scope will read from this accessor if it's Scoped.
+            // NOTE: In parallel execution, we must ensure the ITenantContextAccessor is handled correctly.
+            // Since ITenantContextAccessor is Scoped, we need to set it WITHIN the scope we are using.
+            
+            using var tenantScope = serviceProvider.CreateScope();
+            var scopedContextAccessor = tenantScope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
+            scopedContextAccessor.Current = new TenantContext(
+                tenant.Code, 
+                tenant.Locale, 
+                tenant.TimeZone, 
+                tenant.ConnectionStrings);
+
+            var dbContext = tenantScope.ServiceProvider.GetRequiredService<IamAuthDbContext>();
+
+            await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
+            await dbContext.Database.MigrateAsync(cancellationToken);
+            
+            logger.LogInformation("IAM database for tenant {TenantCode} initialized successfully.", tenant.Code);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to migrate IAM database for tenant: {TenantCode}", tenant.Code);
+        }
+        finally
+        {
+            MigrationSemaphore.Release();
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private static async Task EnsureDefaultTenantContextAsync(IServiceProvider services, CancellationToken cancellationToken)
-    {
-        var options = services.GetRequiredService<IOptions<TenantRoutingOptions>>().Value;
-        if (string.IsNullOrWhiteSpace(options.DefaultTenantCode))
-        {
-            throw new InvalidOperationException("TenantRouting:DefaultTenantCode is required for IAM schema initialization.");
-        }
-
-        var catalogClient = services.GetRequiredService<ITenantCatalogClient>();
-        var tenant = await catalogClient.ResolveAsync(options.DefaultTenantCode, cancellationToken);
-        if (!tenant.Found || !tenant.IsActive)
-        {
-            throw new InvalidOperationException($"Default tenant '{options.DefaultTenantCode}' was not found or is inactive.");
-        }
-
-        var tenantContextAccessor = services.GetRequiredService<ITenantContextAccessor>();
-        tenantContextAccessor.Current = new TenantContext(tenant.Code, tenant.Locale, tenant.TimeZone, tenant.ConnectionStrings);
-    }
 
     private static async Task AlignLegacySchemaWithMigrationHistoryAsync(
         IamAuthDbContext dbContext,
