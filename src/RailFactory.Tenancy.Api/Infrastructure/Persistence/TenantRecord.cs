@@ -7,6 +7,7 @@ public sealed class TenantRecord
     public required string Locale { get; set; }
     public required string TimeZone { get; set; }
     public required string Status { get; set; }
+    public Dictionary<string, string> ConnectionStrings { get; set; } = new();
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

@@ -13,6 +13,12 @@ public interface ITenantContextAccessor
 public interface ITenantCatalogClient
 {
     Task<TenantResolutionResult> ResolveAsync(string tenantCode, CancellationToken cancellationToken);
+    Task<IReadOnlyList<TenantResolutionResult>> ListAllAsync(CancellationToken cancellationToken);
+}
+
+public interface ITenantConnectionResolver
+{
+    string ResolveConnection(string serviceKey);
 }
 
 public sealed record TenantResolutionResult(
@@ -20,13 +26,17 @@ public sealed record TenantResolutionResult(
     string Code,
     string Locale,
     string TimeZone,
-    bool IsActive)
+    bool IsActive,
+    IReadOnlyDictionary<string, string>? ConnectionStrings = null)
 {
+    public IReadOnlyDictionary<string, string> ConnectionStrings { get; init; } = ConnectionStrings ?? new Dictionary<string, string>();
+
     public static TenantResolutionResult NotFound { get; } =
-        new(false, string.Empty, string.Empty, string.Empty, false);
+        new(false, string.Empty, string.Empty, string.Empty, false, new Dictionary<string, string>());
 }
 
 public sealed record TenantInfoDto(
     string Code,
     string Locale,
-    string TimeZone);
+    string TimeZone,
+    IReadOnlyDictionary<string, string> ConnectionStrings);

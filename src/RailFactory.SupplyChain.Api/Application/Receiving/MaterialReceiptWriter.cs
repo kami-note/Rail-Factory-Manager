@@ -30,7 +30,6 @@ public sealed class MaterialReceiptWriter(
     }
 
     public async Task<MaterialReceipt> StageReceiptAsync(
-        string tenantCode,
         string userIdentifier,
         string receiptNumber,
         Guid supplierId,
@@ -40,13 +39,13 @@ public sealed class MaterialReceiptWriter(
         string correlationId,
         CancellationToken cancellationToken)
     {
-        var existingReceipt = await repository.GetReceiptByReceiptNumberAsync(tenantCode, receiptNumber, cancellationToken);
+        var existingReceipt = await repository.GetReceiptByReceiptNumberAsync(receiptNumber, cancellationToken);
         if (existingReceipt is not null)
         {
             throw new ReceiptAlreadyExistsException(receiptNumber);
         }
 
-        var receipt = MaterialReceipt.Create(receiptNumber, supplierId, documentNumber, receiptDate, tenantCode);
+        var receipt = MaterialReceipt.Create(receiptNumber, supplierId, documentNumber, receiptDate);
         foreach (var item in items)
         {
             receipt.AddItem(item.MaterialCode, item.ExpectedQuantity, item.UnitOfMeasure);
@@ -54,7 +53,7 @@ public sealed class MaterialReceiptWriter(
 
         await repository.AddReceiptAsync(receipt, cancellationToken);
         await repository.AddAuditEntryAsync(
-            SupplyAuditEntry.Create(tenantCode, "receipt_created", userIdentifier, BuildAuditMetadata(receipt)),
+            SupplyAuditEntry.Create("receipt_created", userIdentifier, BuildAuditMetadata(receipt)),
             cancellationToken);
 
         foreach (var item in receipt.Items)
@@ -64,14 +63,13 @@ public sealed class MaterialReceiptWriter(
                 receiptId = receipt.Id,
                 receiptItemId = item.Id,
                 receiptNumber = receipt.ReceiptNumber,
-                tenantCode,
                 materialCode = item.MaterialCode,
                 quantity = item.ExpectedQuantity,
                 unitOfMeasure = item.UnitOfMeasure,
                 source = "supply-chain"
             };
 
-            await outbox.EnqueueAsync(tenantCode, "supply.receipt_item_registered", payload, correlationId, cancellationToken);
+            await outbox.EnqueueAsync("supply.receipt_item_registered", payload, correlationId, cancellationToken);
         }
 
         return receipt;

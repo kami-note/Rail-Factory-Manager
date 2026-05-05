@@ -41,6 +41,11 @@ app.MapGet("/tenants/{code}", async ([AsParameters] GetTenantByCodeRequest reque
         ? Results.Ok(result.Value)
         : ToHttpResult(result.Error);
 });
+app.MapGet("/tenants", async (ListTenants listTenants, CancellationToken cancellationToken) =>
+{
+    var result = await listTenants.ExecuteAsync(cancellationToken);
+    return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
+});
 
 app.Run();
 

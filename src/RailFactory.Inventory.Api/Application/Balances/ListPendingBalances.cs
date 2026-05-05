@@ -5,6 +5,6 @@ namespace RailFactory.Inventory.Api.Application.Balances;
 
 public sealed class ListPendingBalances(IInventoryRepository repository)
 {
-    public Task<List<InventoryBalance>> ExecuteAsync(string tenantCode, CancellationToken cancellationToken)
-        => repository.ListPendingBalancesAsync(tenantCode, cancellationToken);
+    public Task<List<InventoryBalance>> ExecuteAsync(CancellationToken cancellationToken)
+        => repository.ListPendingBalancesAsync(cancellationToken);
 }

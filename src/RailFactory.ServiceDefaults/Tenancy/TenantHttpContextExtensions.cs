@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -15,7 +16,11 @@ public static class TenantHttpContextExtensions
 
         var locale = context.Items[TenantConstants.TenantLocaleItemName] as string ?? string.Empty;
         var timeZone = context.Items[TenantConstants.TenantTimeZoneItemName] as string ?? string.Empty;
-        return new TenantInfoDto(tenantCode, locale, timeZone);
+        
+        var connectionStrings = context.RequestServices.GetService<ITenantContextAccessor>()?.Current?.ConnectionStrings 
+                               ?? new Dictionary<string, string>();
+
+        return new TenantInfoDto(tenantCode, locale, timeZone, connectionStrings);
     }
 
     public static string? ReadTenantCodeHeader(this HttpContext context)

@@ -4,18 +4,29 @@ namespace RailFactory.Tenancy.Api.Domain;
 
 public sealed class Tenant : AggregateRoot<string>
 {
+    private readonly Dictionary<string, string> _connectionStrings = new();
+
     private Tenant(
         string code,
         string displayName,
         string locale,
         string timeZone,
-        TenantStatus status)
+        TenantStatus status,
+        IReadOnlyDictionary<string, string>? connectionStrings = null)
         : base(code)
     {
         DisplayName = displayName;
         Locale = locale;
         TimeZone = timeZone;
         Status = status;
+
+        if (connectionStrings != null)
+        {
+            foreach (var kvp in connectionStrings)
+            {
+                _connectionStrings[kvp.Key] = kvp.Value;
+            }
+        }
     }
 
     public string Code => Id;
@@ -28,7 +39,17 @@ public sealed class Tenant : AggregateRoot<string>
 
     public TenantStatus Status { get; }
 
+    public IReadOnlyDictionary<string, string> ConnectionStrings => _connectionStrings.AsReadOnly();
+
     public bool IsActive => Status == TenantStatus.Active;
+
+    public void SetConnectionString(string serviceName, string connectionString)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        _connectionStrings[serviceName] = connectionString;
+    }
 
     public static Tenant RegisterDevTenant()
     {
@@ -52,8 +73,9 @@ public sealed class Tenant : AggregateRoot<string>
         string displayName,
         string locale,
         string timeZone,
-        TenantStatus status)
+        TenantStatus status,
+        IReadOnlyDictionary<string, string>? connectionStrings = null)
     {
-        return new Tenant(code, displayName, locale, timeZone, status);
+        return new Tenant(code, displayName, locale, timeZone, status, connectionStrings);
     }
 }

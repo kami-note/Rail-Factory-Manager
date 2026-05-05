@@ -33,6 +33,7 @@ public sealed class GetTenantByCode
             tenant.DisplayName,
             tenant.Locale,
             tenant.TimeZone,
-            tenant.Status.ToString()));
+            tenant.Status.ToString(),
+            tenant.ConnectionStrings));
     }
 }

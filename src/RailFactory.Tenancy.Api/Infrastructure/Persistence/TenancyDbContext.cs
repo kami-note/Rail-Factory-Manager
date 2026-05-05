@@ -17,6 +17,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options)
         entity.Property(x => x.Locale).HasColumnName("locale").HasColumnType("text");
         entity.Property(x => x.TimeZone).HasColumnName("time_zone").HasColumnType("text");
         entity.Property(x => x.Status).HasColumnName("status").HasColumnType("text");
+        entity.Property(x => x.ConnectionStrings).HasColumnName("connection_strings").HasColumnType("jsonb");
         entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
         entity.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp with time zone");
 

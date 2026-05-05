@@ -82,6 +82,11 @@ public sealed class TenantCatalogSchemaInitializer(
     private static async Task SeedDevTenantAsync(TenancyDbContext dbContext, CancellationToken cancellationToken)
     {
         var tenant = Tenant.RegisterDevTenant();
+        tenant.SetConnectionString("iamdb", "tenant-dev-iamdb");
+        tenant.SetConnectionString("supplychaindb", "tenant-dev-supplychaindb");
+        tenant.SetConnectionString("inventorydb", "tenant-dev-inventorydb");
+        tenant.SetConnectionString("productiondb", "tenant-dev-productiondb");
+
         var existing = await dbContext.Tenants
             .SingleOrDefaultAsync(x => x.Code == tenant.Code, cancellationToken);
 
@@ -95,6 +100,7 @@ public sealed class TenantCatalogSchemaInitializer(
                 Locale = tenant.Locale,
                 TimeZone = tenant.TimeZone,
                 Status = tenant.Status.ToString(),
+                ConnectionStrings = tenant.ConnectionStrings.ToDictionary(x => x.Key, x => x.Value),
                 CreatedAt = now,
                 UpdatedAt = now
             });
@@ -105,6 +111,7 @@ public sealed class TenantCatalogSchemaInitializer(
             existing.Locale = tenant.Locale;
             existing.TimeZone = tenant.TimeZone;
             existing.Status = tenant.Status.ToString();
+            existing.ConnectionStrings = tenant.ConnectionStrings.ToDictionary(x => x.Key, x => x.Value);
             existing.UpdatedAt = now;
         }
 

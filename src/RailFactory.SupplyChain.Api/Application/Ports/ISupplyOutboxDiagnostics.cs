@@ -3,7 +3,6 @@ namespace RailFactory.SupplyChain.Api.Application.Ports;
 public interface ISupplyOutboxDiagnostics
 {
     Task<IReadOnlyList<SupplyOutboxDeadLetterInfo>> ListDeadLettersAsync(
-        string tenantCode,
         int take,
         CancellationToken cancellationToken);
 }

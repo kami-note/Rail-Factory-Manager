@@ -10,11 +10,13 @@ public static class IamModule
 {
     public static IServiceCollection AddIamModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var iamConnectionString = ResolveIamConnectionString(configuration)
-            ?? throw new InvalidOperationException(
-                "IAM database connection string is required. Configure ConnectionStrings:iamdb or ConnectionStrings:tenant-dev-iamdb.");
+        services.AddDbContext<IamAuthDbContext>((sp, options) =>
+        {
+            var resolver = sp.GetRequiredService<ITenantConnectionResolver>();
+            var connectionString = resolver.ResolveConnection("iamdb");
+            options.UseNpgsql(connectionString);
+        });
 
-        services.AddDbContext<IamAuthDbContext>(options => options.UseNpgsql(iamConnectionString));
         services.AddHostedService<IamLocalUsersSchemaInitializer>();
         services.AddScoped<IIamLocalUserRepository, PostgresIamLocalUserRepository>();
 
@@ -24,16 +26,5 @@ public static class IamModule
         services.AddScoped<UpsertLocalUserFromExternalLogin>();
         services.AddScoped<IExternalIdentityProvider, GoogleExternalIdentityProvider>();
         return services;
-    }
-
-    private static string? ResolveIamConnectionString(IConfiguration configuration)
-    {
-        var primary = configuration.GetConnectionString("iamdb");
-        if (!string.IsNullOrWhiteSpace(primary))
-        {
-            return primary;
-        }
-
-        return configuration.GetConnectionString("tenant-dev-iamdb");
     }
 }

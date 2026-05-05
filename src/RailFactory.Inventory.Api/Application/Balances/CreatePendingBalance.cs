@@ -13,13 +13,12 @@ public sealed class CreatePendingBalance(IInventoryRepository repository)
             return false;
         }
 
-        await repository.EnsureDefaultLocationAsync(input.TenantCode, cancellationToken);
-        var location = await repository.FindDefaultLocationAsync(input.TenantCode, cancellationToken)
+        await repository.EnsureDefaultLocationAsync(cancellationToken);
+        var location = await repository.FindDefaultLocationAsync(cancellationToken)
             ?? throw new InvalidOperationException("Default stock location was not found.");
 
         var sourceReference = $"{input.ReceiptId}:{input.ReceiptItemId}";
         var balance = InventoryBalance.CreatePending(
-            input.TenantCode,
             input.MaterialCode,
             input.UnitOfMeasure,
             input.Quantity,
@@ -38,11 +37,11 @@ public sealed class CreatePendingBalance(IInventoryRepository repository)
         });
 
         await repository.AddLedgerEntryAsync(
-            InventoryLedgerEntry.Create(balance.Id, input.TenantCode, "pending_balance_created", input.Quantity, detailsJson),
+            InventoryLedgerEntry.Create(balance.Id, "pending_balance_created", input.Quantity, detailsJson),
             cancellationToken);
 
         await repository.AddIntegrationMessageAsync(
-            InventoryIntegrationMessage.Create(input.EventId, input.TenantCode, input.EventType),
+            InventoryIntegrationMessage.Create(input.EventId, input.EventType),
             cancellationToken);
 
         await repository.SaveChangesAsync(cancellationToken);
@@ -54,7 +53,6 @@ public sealed record CreatePendingBalanceInput(
     Guid EventId,
     string EventType,
     string CorrelationId,
-    string TenantCode,
     Guid ReceiptId,
     Guid ReceiptItemId,
     string ReceiptNumber,

@@ -5,4 +5,5 @@ public sealed record TenantDetails(
     string DisplayName,
     string Locale,
     string TimeZone,
-    string Status);
+    string Status,
+    IReadOnlyDictionary<string, string> ConnectionStrings);

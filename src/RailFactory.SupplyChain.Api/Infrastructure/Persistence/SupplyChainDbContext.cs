@@ -28,10 +28,9 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
             entity.HasKey(x => x.Id);
             entity.Property(x => x.ReceiptNumber).HasMaxLength(64).IsRequired();
             entity.Property(x => x.DocumentNumber).HasMaxLength(64).IsRequired();
-            entity.Property(x => x.TenantCode).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.ReceiptId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(x => new { x.TenantCode, x.ReceiptNumber }).IsUnique();
+            entity.HasIndex(x => x.ReceiptNumber).IsUnique();
         });
 
         modelBuilder.Entity<MaterialReceiptItem>(entity =>
@@ -48,7 +47,6 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
         {
             entity.ToTable("supply_audit_entries");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.TenantCode).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Action).HasMaxLength(64).IsRequired();
             entity.Property(x => x.UserIdentifier).HasMaxLength(256).IsRequired();
             entity.Property(x => x.MetadataJson).HasColumnType("jsonb").IsRequired();
@@ -58,7 +56,6 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
         {
             entity.ToTable("supply_outbox_messages");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.TenantCode).HasMaxLength(32).IsRequired();
             entity.Property(x => x.EventType).HasMaxLength(128).IsRequired();
             entity.Property(x => x.CorrelationId).HasMaxLength(128).IsRequired();
             entity.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();

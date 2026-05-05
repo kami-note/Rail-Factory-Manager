@@ -9,7 +9,6 @@ public sealed class ImportXmlReceipt(
     MaterialReceiptWriter receiptWriter)
 {
     public async Task<Guid> ExecuteAsync(
-        string tenantCode,
         string userIdentifier,
         string xmlContent,
         string correlationId,
@@ -23,7 +22,6 @@ public sealed class ImportXmlReceipt(
             cancellationToken);
 
         var receipt = await receiptWriter.StageReceiptAsync(
-            tenantCode,
             userIdentifier,
             parsed.ReceiptNumber,
             supplier.Id,

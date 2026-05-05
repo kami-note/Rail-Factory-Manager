@@ -47,7 +47,7 @@ internal sealed class TenantResolutionMiddleware(
             return;
         }
 
-        var tenantContext = new TenantContext(result.Code, result.Locale, result.TimeZone);
+        var tenantContext = new TenantContext(result.Code, result.Locale, result.TimeZone, result.ConnectionStrings);
         var tenantContextAccessor = context.RequestServices.GetRequiredService<ITenantContextAccessor>();
         tenantContextAccessor.Current = tenantContext;
 

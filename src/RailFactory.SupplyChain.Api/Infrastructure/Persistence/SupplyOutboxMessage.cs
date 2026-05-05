@@ -12,7 +12,6 @@ public sealed class SupplyOutboxMessage
     private const int MaxErrorLength = 2000;
 
     public Guid Id { get; private set; }
-    public string TenantCode { get; private set; }
     public string EventType { get; private set; }
     public string CorrelationId { get; private set; }
     public string PayloadJson { get; private set; }
@@ -26,16 +25,14 @@ public sealed class SupplyOutboxMessage
 
     private SupplyOutboxMessage()
     {
-        TenantCode = string.Empty;
         EventType = string.Empty;
         CorrelationId = string.Empty;
         PayloadJson = string.Empty;
     }
 
-    public SupplyOutboxMessage(Guid id, string tenantCode, string eventType, string correlationId, string payloadJson)
+    public SupplyOutboxMessage(Guid id, string eventType, string correlationId, string payloadJson)
     {
         Id = id;
-        TenantCode = tenantCode;
         EventType = eventType;
         CorrelationId = correlationId;
         PayloadJson = payloadJson;

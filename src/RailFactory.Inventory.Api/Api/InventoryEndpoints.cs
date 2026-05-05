@@ -28,7 +28,6 @@ public static class InventoryEndpoints
 
         var response = getInventoryInfo.Execute(
             environment.EnvironmentName,
-            tenant?.Code,
             tenant?.Locale,
             tenant?.TimeZone);
 
@@ -46,7 +45,7 @@ public static class InventoryEndpoints
             return TenantHttpResults.CodeRequired();
         }
 
-        var balances = await listPendingBalances.ExecuteAsync(tenantCode, cancellationToken);
+        var balances = await listPendingBalances.ExecuteAsync(cancellationToken);
         return Results.Ok(balances.Select(x => new
         {
             x.Id,
@@ -78,7 +77,6 @@ public static class InventoryEndpoints
                     request.EventId,
                     request.EventType,
                     request.CorrelationId,
-                    request.Payload.TenantCode,
                     request.Payload.ReceiptId,
                     request.Payload.ReceiptItemId,
                     request.Payload.ReceiptNumber,
