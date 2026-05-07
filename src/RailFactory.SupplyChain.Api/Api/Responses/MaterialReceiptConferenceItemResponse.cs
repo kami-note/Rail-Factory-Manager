@@ -7,4 +7,5 @@ public record MaterialReceiptConferenceItemResponse(
     Guid Id,
     string MaterialCode,
     string UnitOfMeasure,
-    string? OriginalDescription);
+    string? OriginalDescription,
+    string? ImageUrl = null);

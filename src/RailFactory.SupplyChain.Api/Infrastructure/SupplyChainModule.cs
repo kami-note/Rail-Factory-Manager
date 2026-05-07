@@ -13,6 +13,7 @@ public static class SupplyChainModule
 {
     public static IServiceCollection AddSupplyChainModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddMemoryCache();
         services.AddDbContext<SupplyChainDbContext>((sp, options) =>
         {
             var resolver = sp.GetRequiredService<ITenantConnectionResolver>();
@@ -30,6 +31,7 @@ public static class SupplyChainModule
         });
 
         services.AddScoped<ISupplyChainRepository, PostgresSupplyChainRepository>();
+        services.AddScoped<IInventoryMaterialService, InventoryMaterialService>();
         services.AddScoped<ISupplyOutbox, SupplyOutboxStore>();
         services.AddScoped<ISupplyOutboxDiagnostics, PostgresSupplyOutboxDiagnostics>();
         services.AddScoped<ISupplyChainTransactionRunner, EfSupplyChainTransactionRunner>();

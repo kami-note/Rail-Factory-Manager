@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Inventory.Api.Application.Ports;
 using RailFactory.Inventory.Api.Domain;
 
@@ -38,6 +39,15 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
 
     public Task<InventoryBalance?> GetBalanceBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken)
         => dbContext.Balances.FirstOrDefaultAsync(x => x.SourceReference == sourceReference, cancellationToken);
+
+    public Task<InventoryBalance?> GetLatestBalanceByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken)
+    {
+        var code = MaterialCode.From(materialCode);
+        return dbContext.Balances
+            .Where(x => x.MaterialCode == code)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 
     public Task<List<InventoryLedgerEntry>> GetLedgerEntriesByBalanceIdAsync(Guid balanceId, CancellationToken cancellationToken)
         => dbContext.LedgerEntries

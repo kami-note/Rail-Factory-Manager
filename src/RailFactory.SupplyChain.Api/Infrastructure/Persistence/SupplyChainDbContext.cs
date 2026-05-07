@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.SupplyChain.Api.Domain;
 
 namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence;
@@ -17,7 +18,12 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
         {
             entity.ToTable("suppliers");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.FiscalId).HasMaxLength(32).IsRequired();
+            
+            entity.Property(x => x.FiscalId)
+                .HasConversion(v => v.Value, v => FiscalId.From(v))
+                .HasMaxLength(32)
+                .IsRequired();
+
             entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
             entity.HasIndex(x => x.FiscalId).IsUnique();
         });
@@ -40,7 +46,12 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
         {
             entity.ToTable("material_receipt_items");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.MaterialCode).HasMaxLength(64).IsRequired();
+
+            entity.Property(x => x.MaterialCode)
+                .HasConversion(v => v.Value, v => MaterialCode.From(v))
+                .HasMaxLength(64)
+                .IsRequired();
+
             entity.Property(x => x.ExpectedQuantity).HasColumnType("numeric(18,4)");
             entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();
             entity.Property(x => x.UnitPrice).HasColumnType("numeric(18,2)");

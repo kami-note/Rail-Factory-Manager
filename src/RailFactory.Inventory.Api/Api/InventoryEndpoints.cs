@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Inventory.Api.Api.Requests;
+using RailFactory.Inventory.Api.Api.Responses;
 using RailFactory.Inventory.Api.Application;
 using RailFactory.Inventory.Api.Application.Balances;
 using RailFactory.Inventory.Api.Application.Materials;
+using RailFactory.Inventory.Api.Application.Ports;
 
 namespace RailFactory.Inventory.Api.Api;
 
@@ -24,6 +26,7 @@ public static class InventoryEndpoints
         app.MapGet(BalanceDetailsPath, HandleGetBalanceDetails);
         app.MapGet(PendingBalancesPath, HandleListPendingBalances);
         app.MapPut("/api/inventory/materials/{materialCode}/image", HandleUpdateMaterialImage);
+        app.MapPost("/internal/materials", HandleGetInternalMaterials);
         app.MapPost(InternalPendingBalancesPath, HandleCreatePendingBalance);
         app.MapPost(InternalConfirmedBalancesPath, HandleConfirmInventoryBalance);
 
@@ -40,7 +43,39 @@ public static class InventoryEndpoints
         return updated ? Results.NoContent() : Results.NotFound();
     }
 
-    private static IResult HandleGetInventoryInfo(
+    private static async Task<IResult> HandleGetInternalMaterials(
+        [FromBody] GetInternalMaterialsRequest request,
+        [FromHeader(Name = "X-Internal-Key")] string? apiKey,
+        IConfiguration configuration,
+        IMaterialRepository repository,
+        CancellationToken cancellationToken)
+    {
+        var expectedKey = configuration["InternalApiKey"];
+        if (string.IsNullOrWhiteSpace(expectedKey) || apiKey != expectedKey)
+        {
+            return Results.Unauthorized();
+        }
+
+        if (request.MaterialCodes == null || !request.MaterialCodes.Any())
+        {
+            return Results.Ok(Enumerable.Empty<InternalMaterialResponse>());
+        }
+
+        if (request.MaterialCodes.Count() > 100)
+        {
+            return Results.BadRequest(new { code = "batch_too_large", message = "Maximum 100 codes per request." });
+        }
+
+        var materials = await repository.GetByCodesAsync(request.MaterialCodes, cancellationToken);
+        var response = materials.Select(m => new InternalMaterialResponse(
+            m.Key,
+            m.Value.OfficialName,
+            m.Value.ImageUrl));
+
+        return Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleGetInventoryInfo(
         [FromServices] IWebHostEnvironment env,
         [FromServices] ITenantContextAccessor tenantContext,
         GetInventoryInfo getInventoryInfo)

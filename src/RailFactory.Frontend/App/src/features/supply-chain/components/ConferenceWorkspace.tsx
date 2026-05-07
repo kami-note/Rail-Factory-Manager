@@ -166,11 +166,18 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: Conferen
               <TableRow key={item.id}>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <MaterialAvatar materialCode={item.materialCode} description={item.originalDescription} size={32} />
+                    <MaterialAvatar 
+                      materialCode={item.materialCode} 
+                      description={item.originalDescription} 
+                      imageUrl={item.imageUrl}
+                      size={32} 
+                    />
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.materialCode}</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
                         {item.originalDescription || 'No description'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
+                        SKU: {item.materialCode}
                       </Typography>
                     </Box>
                   </Box>

@@ -1,4 +1,5 @@
 using RailFactory.BuildingBlocks.Domain;
+using RailFactory.BuildingBlocks.Tenancy;
 
 namespace RailFactory.Inventory.Api.Domain;
 
@@ -15,7 +16,7 @@ public sealed class Material : AggregateRoot<Guid>
     /// <summary>
     /// Unique business identifier (e.g., SKU, Internal Part Number).
     /// </summary>
-    public string MaterialCode { get; private set; }
+    public MaterialCode MaterialCode { get; private set; }
 
     /// <summary>
     /// Nomenclatura Comum do Mercosul (Mercosur Common Nomenclature).
@@ -55,13 +56,13 @@ public sealed class Material : AggregateRoot<Guid>
     // Private parameterless constructor for EF Core compatibility
     private Material() : base(Guid.Empty)
     {
-        MaterialCode = string.Empty;
+        MaterialCode = default!;
         OfficialName = string.Empty;
         Description = string.Empty;
         Status = MaterialStatus.Draft;
     }
 
-    private Material(Guid id, string materialCode, string officialName, string description, MaterialCategory category, MaterialStatus status, string? imageUrl, string? ncm, string? gtin)
+    private Material(Guid id, MaterialCode materialCode, string officialName, string description, MaterialCategory category, MaterialStatus status, string? imageUrl, string? ncm, string? gtin)
         : base(id)
     {
         MaterialCode = materialCode;
@@ -77,15 +78,6 @@ public sealed class Material : AggregateRoot<Guid>
     /// <summary>
     /// Factory method to create a new Material instance.
     /// </summary>
-    /// <param name="materialCode">Unique material identifier.</param>
-    /// <param name="officialName">Standardized name.</param>
-    /// <param name="description">Detailed description.</param>
-    /// <param name="category">Material category.</param>
-    /// <param name="status">Initial validation status.</param>
-    /// <param name="imageUrl">Optional image URL.</param>
-    /// <param name="ncm">Optional NCM code.</param>
-    /// <param name="gtin">Optional GTIN/EAN code.</param>
-    /// <returns>A new <see cref="Material"/> instance.</returns>
     public static Material Create(
         string materialCode, 
         string officialName, 
@@ -96,10 +88,18 @@ public sealed class Material : AggregateRoot<Guid>
         string? ncm = null,
         string? gtin = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(materialCode);
         ArgumentException.ThrowIfNullOrWhiteSpace(officialName);
 
-        return new Material(Guid.NewGuid(), materialCode.Trim(), officialName.Trim(), description.Trim(), category, status, imageUrl?.Trim(), ncm?.Trim(), gtin?.Trim());
+        return new Material(
+            Guid.NewGuid(), 
+            MaterialCode.From(materialCode), 
+            officialName.Trim(), 
+            description.Trim(), 
+            category, 
+            status, 
+            imageUrl?.Trim(), 
+            ncm?.Trim(), 
+            gtin?.Trim());
     }
 
     /// <summary>

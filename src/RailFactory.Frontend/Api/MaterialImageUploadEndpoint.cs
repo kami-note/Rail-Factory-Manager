@@ -13,12 +13,12 @@ internal static class MaterialImageUploadEndpoint
     public static async Task<IResult> HandlePost(
         [AsParameters] UploadMaterialImageRoute route,
         HttpContext httpContext,
-        IWebHostEnvironment environment,
+        IImageStorage storage,
         IHttpClientFactory httpClientFactory,
         CancellationToken cancellationToken)
     {
         var tenantCode = httpContext.ReadTenantCodeHeader();
-        if (string.IsNullOrWhiteSpace(tenantCode))
+        if (string.IsNullOrWhiteSpace(tenantCode) || !Regex.IsMatch(tenantCode, "^[A-Za-z0-9_-]+$"))
         {
             return TenantHttpResults.CodeRequired();
         }
@@ -51,17 +51,10 @@ internal static class MaterialImageUploadEndpoint
             return Results.BadRequest(new { code = "material.code_invalid", message = "Material code is invalid." });
         }
 
-        var targetRoot = Path.Combine(environment.ContentRootPath, "App", "public", "materials");
-        Directory.CreateDirectory(targetRoot);
         var fileName = $"{normalizedCode}{extension}";
-        var fullPath = Path.Combine(targetRoot, fileName);
-
-        await using (var stream = File.Create(fullPath))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        var imageUrl = $"/materials/{fileName}";
+        
+        using var stream = file.OpenReadStream();
+        var imageUrl = await storage.SaveAsync(tenantCode, fileName, stream, cancellationToken);
 
         using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/inventory/materials/{Uri.EscapeDataString(route.MaterialCode)}/image");
         request.Headers.TryAddWithoutValidation(TenantConstants.TenantCodeHeaderName, tenantCode);

@@ -17,4 +17,5 @@ public record PendingBalanceListItemResponse(
     string? SupplierName,
     DateTimeOffset CreatedAt,
     string? Ncm,
-    string? Gtin);
+    string? Gtin,
+    string? MaterialImageUrl = null);
