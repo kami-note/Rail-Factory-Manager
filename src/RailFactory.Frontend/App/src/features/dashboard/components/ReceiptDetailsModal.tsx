@@ -33,7 +33,6 @@ type MaterialReceiptDetails = {
   receiptNumber: string;
   status: string;
   supplier?: {
-    id: string;
     name: string;
     taxId: string;
   };

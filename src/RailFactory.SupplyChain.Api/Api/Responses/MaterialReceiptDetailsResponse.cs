@@ -10,14 +10,13 @@ public record MaterialReceiptDetailsResponse(
     MaterialReceiptSupplierResponse? Supplier,
     DateTime IssuedAt,
     MaterialReceiptAuditResponse Audit,
-    bool CanStartConference,
     List<MaterialReceiptItemResponse> Items,
     List<MaterialReceiptTimelineResponse> Timeline);
 
 /// <summary>
 /// Supplier information for the receipt.
 /// </summary>
-public record MaterialReceiptSupplierResponse(Guid Id, string Name, string TaxId);
+public record MaterialReceiptSupplierResponse(string Name, string TaxId);
 
 /// <summary>
 /// Audit information for the receipt.

@@ -11,8 +11,7 @@ public record InventoryBalanceDetailsResponse(
     string Status,
     InventoryBalanceQuantitiesResponse Quantities,
     InventoryBalanceTraceabilityResponse Traceability,
-    List<InventoryBalanceLedgerResponse> Ledger,
-    InventoryBalanceAuditResponse Audit);
+    List<InventoryBalanceLedgerResponse> Ledger);
 
 /// <summary>
 /// Structured metadata for the material associated with the balance.
@@ -46,8 +45,3 @@ public record InventoryBalanceTraceabilityResponse(
 /// Ledger entry for the balance history.
 /// </summary>
 public record InventoryBalanceLedgerResponse(DateTimeOffset OccurredAt, decimal QuantityChange, string NewStatus, string Reason, string User);
-
-/// <summary>
-/// Audit timestamps and ownership.
-/// </summary>
-public record InventoryBalanceAuditResponse(DateTimeOffset? LastBlockedAt, string? LastBlockedBy, DateTimeOffset? ReleasedAt, string? ReleasedBy);

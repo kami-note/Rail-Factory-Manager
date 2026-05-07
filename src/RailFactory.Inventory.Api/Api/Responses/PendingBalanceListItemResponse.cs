@@ -15,7 +15,6 @@ public record PendingBalanceListItemResponse(
     string? ExpirationDate,
     string SourceType,
     string? SupplierName,
-    string? SourceMetadata,
     DateTimeOffset CreatedAt,
     string? Ncm,
     string? Gtin);

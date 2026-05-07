@@ -19,9 +19,7 @@ public static class GatewayEndpoints
         return Results.Ok(new
         {
             service = "gateway",
-            purpose = "YARP entry point for Rail-Factory Fork APIs",
-            tenant = "dev",
-            routes = GatewayRoutes
+            status = "healthy"
         });
     }
 }

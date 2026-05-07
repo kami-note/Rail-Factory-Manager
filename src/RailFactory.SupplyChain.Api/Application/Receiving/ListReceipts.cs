@@ -21,9 +21,7 @@ public sealed class ListReceipts(ISupplyChainRepository repository)
             DocumentNumber: x.DocumentNumber,
             AccessKey: x.AccessKey,
             TotalValue: x.TotalValue,
-            ReceiptDate: x.ReceiptDate,
             Status: x.Status.ToString(),
-            CreatedAt: x.CreatedAt,
             ItemCount: x.Items.Count
         )).ToList();
     }

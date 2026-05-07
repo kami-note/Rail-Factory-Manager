@@ -67,7 +67,6 @@ public sealed class ListPendingBalances(
                 x.ExpirationDate?.ToString("yyyy-MM-dd"),
                 x.SourceType.ToString(),
                 supplierName,
-                x.SourceMetadata,
                 x.CreatedAt,
                 material?.Ncm ?? ncm,
                 material?.Gtin ?? gtin

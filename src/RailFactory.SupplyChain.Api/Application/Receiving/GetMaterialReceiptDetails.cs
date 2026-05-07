@@ -31,7 +31,6 @@ public sealed class GetMaterialReceiptDetails(ISupplyChainRepository repository)
             ReceiptNumber: receipt.ReceiptNumber,
             Status: receipt.Status.ToString(),
             Supplier: supplier is null ? null : new MaterialReceiptSupplierResponse(
-                Id: supplier.Id,
                 Name: supplier.Name,
                 TaxId: supplier.FiscalId),
             IssuedAt: receipt.ReceiptDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
@@ -40,7 +39,6 @@ public sealed class GetMaterialReceiptDetails(ISupplyChainRepository repository)
                 CreatedBy: firstEntry?.UserIdentifier ?? "System",
                 ConferenceStartedAt: startEntry?.CreatedAt,
                 ConferenceStartedBy: startEntry?.UserIdentifier),
-            CanStartConference: receipt.Status == MaterialReceiptStatus.Registered,
             Items: receipt.Items.Select(i => new MaterialReceiptItemResponse(
                 Id: i.Id,
                 MaterialCode: i.MaterialCode,

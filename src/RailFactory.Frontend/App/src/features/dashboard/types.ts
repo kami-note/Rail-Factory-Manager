@@ -4,7 +4,6 @@ export type Status = {
   tenant: {
     code: string;
   };
-  gateway: unknown;
 };
 
 export type Receipt = {
@@ -15,7 +14,6 @@ export type Receipt = {
   totalValue?: number;
   status: string;
   itemCount: number;
-  createdAt: string;
 };
 
 export type PendingBalance = {
@@ -31,7 +29,6 @@ export type PendingBalance = {
   sourceType: string;
   supplierName?: string;
   materialImageUrl?: string;
-  sourceMetadata?: string;
   createdAt: string;
   ncm?: string;
   gtin?: string;

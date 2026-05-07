@@ -130,7 +130,7 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
     }
   };
 
-  const status = details ? getStatusMapping(details.status) : null;
+  const balanceStatus = details ? getStatusMapping(details.status) : null;
 
   return (
     <ResponsiveCenteredModal 
@@ -177,12 +177,24 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
             </Box>
 
             <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                {details.material.officialName}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
-                SKU: {details.materialCode} | CAT: {details.material.category} | STATUS: {details.material.status}
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                    {details.material.officialName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
+                    SKU: {details.materialCode} | CAT: {details.material.category} | STATUS: {details.material.status}
+                  </Typography>
+                </Box>
+                {balanceStatus && (
+                  <Chip 
+                    label={balanceStatus.label} 
+                    color={balanceStatus.color as any} 
+                    size="small" 
+                    sx={{ fontWeight: 700 }} 
+                  />
+                )}
+              </Box>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
                 NCM: {details.material.ncm || '---'} | GTIN: {details.material.gtin || '---'}
               </Typography>

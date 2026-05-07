@@ -11,7 +11,6 @@ public sealed class GetSupplyChainInfo
         return new SupplyChainInfoResponse(
             Service: "supply-chain",
             Environment: environment,
-            Capability: "Receiving, supplier collaboration and inbound material boundary",
             Tenant: tenant);
     }
 }
@@ -19,7 +18,6 @@ public sealed class GetSupplyChainInfo
 public sealed record SupplyChainInfoResponse(
     string Service,
     string Environment,
-    string Capability,
     TenantInfoResponse Tenant);
 
 public sealed record TenantInfoResponse(
