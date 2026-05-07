@@ -33,6 +33,18 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
     public Task AddLedgerEntryAsync(InventoryLedgerEntry entry, CancellationToken cancellationToken)
         => dbContext.LedgerEntries.AddAsync(entry, cancellationToken).AsTask();
 
+    public Task<InventoryBalance?> GetBalanceByIdAsync(Guid id, CancellationToken cancellationToken)
+        => dbContext.Balances.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    public Task<InventoryBalance?> GetBalanceBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken)
+        => dbContext.Balances.FirstOrDefaultAsync(x => x.SourceReference == sourceReference, cancellationToken);
+
+    public Task<List<InventoryLedgerEntry>> GetLedgerEntriesByBalanceIdAsync(Guid balanceId, CancellationToken cancellationToken)
+        => dbContext.LedgerEntries
+            .Where(x => x.BalanceId == balanceId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public Task<List<InventoryBalance>> ListPendingBalancesAsync(CancellationToken cancellationToken)
         => dbContext.Balances
             .AsNoTracking()

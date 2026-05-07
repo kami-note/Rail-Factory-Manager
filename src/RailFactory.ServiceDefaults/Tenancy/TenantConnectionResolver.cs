@@ -32,7 +32,7 @@ internal sealed class TenantConnectionResolver(
         if (value.StartsWith("ConnectionStrings:", StringComparison.OrdinalIgnoreCase))
         {
             var key = value.Substring("ConnectionStrings:".Length);
-            return configuration.GetConnectionString(key) 
+            return configuration.GetConnectionString(key)
                 ?? throw new InvalidOperationException($"Catalog pointed to connection string '{key}', but it was not found in configuration.");
         }
 

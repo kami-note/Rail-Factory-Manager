@@ -13,21 +13,15 @@ export type Receipt = {
   documentNumber: string;
   accessKey?: string;
   totalValue?: number;
-  receiptDate: string;
   status: string;
-  createdAt: string;
   itemCount: number;
-};
-
-export type Supplier = {
-  id: string;
-  fiscalId: string;
-  name: string;
+  createdAt: string;
 };
 
 export type PendingBalance = {
   id: string;
   materialCode: string;
+  materialName: string;
   quantity: number;
   unitOfMeasure: string;
   status: string;
@@ -35,6 +29,16 @@ export type PendingBalance = {
   lotNumber?: string;
   expirationDate?: string;
   sourceType: string;
+  supplierName?: string;
   sourceMetadata?: string;
   createdAt: string;
+  ncm?: string;
+  gtin?: string;
+};
+
+export type ConferenceItem = {
+  id: string;
+  materialCode: string;
+  unitOfMeasure: string;
+  originalDescription?: string;
 };

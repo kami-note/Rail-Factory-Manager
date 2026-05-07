@@ -145,4 +145,30 @@ public sealed class InventoryBalance
             sourceType,
             sourceMetadata);
     }
+
+    /// <summary>
+    /// Confirms a pending balance with actual conference data.
+    /// </summary>
+    /// <param name="quantity">Actual quantity counted.</param>
+    /// <param name="lotNumber">Tracking lot confirmed.</param>
+    /// <param name="expirationDate">Expiration date confirmed.</param>
+    /// <param name="isApproved">Whether the balance is approved for use.</param>
+    /// <exception cref="InvalidOperationException">Thrown if balance is not Pending.</exception>
+    public void Confirm(decimal quantity, string? lotNumber, DateTimeOffset? expirationDate, bool isApproved)
+    {
+        if (Status != InventoryBalanceStatus.Pending)
+        {
+            throw new InvalidOperationException($"Cannot confirm balance in status '{Status}'. Only 'Pending' balances can be confirmed.");
+        }
+
+        if (quantity < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(quantity), "Confirmed quantity cannot be negative.");
+        }
+
+        Quantity = quantity;
+        LotNumber = lotNumber?.Trim();
+        ExpirationDate = expirationDate;
+        Status = isApproved ? InventoryBalanceStatus.Available : InventoryBalanceStatus.Blocked;
+    }
 }

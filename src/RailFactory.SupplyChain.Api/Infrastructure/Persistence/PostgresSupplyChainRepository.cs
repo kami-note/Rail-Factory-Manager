@@ -36,6 +36,12 @@ public sealed class PostgresSupplyChainRepository(SupplyChainDbContext dbContext
     public Task AddAuditEntryAsync(SupplyAuditEntry entry, CancellationToken cancellationToken)
         => dbContext.AuditEntries.AddAsync(entry, cancellationToken).AsTask();
 
+    public Task<List<SupplyAuditEntry>> GetAuditEntriesByReceiptIdAsync(Guid receiptId, CancellationToken cancellationToken)
+        => dbContext.AuditEntries
+            .Where(x => EF.Functions.JsonContains(x.MetadataJson, "{\"receiptId\": \"" + receiptId + "\"}"))
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try

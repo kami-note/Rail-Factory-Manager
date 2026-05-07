@@ -28,6 +28,15 @@ const navItems = [
   { href: '/app/inventory', label: 'INVENTORY', icon: <Boxes size={18} /> },
 ];
 
+type ProtectedDashboardLayoutProps = {
+  tenantCode: string;
+  userLabel: string;
+  currentPath: string;
+  onNavigate: (path: string) => void;
+  onLogout: () => Promise<void>;
+  children: ReactNode;
+};
+
 export function ProtectedDashboardLayout({
   tenantCode,
   userLabel,
@@ -35,20 +44,13 @@ export function ProtectedDashboardLayout({
   onNavigate,
   onLogout,
   children
-}: {
-  tenantCode: string;
-  userLabel: string;
-  currentPath: string;
-  onNavigate: (path: string) => void;
-  onLogout: () => Promise<void>;
-  children: ReactNode;
-}) {
+}: ProtectedDashboardLayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+    setMobileOpen((open) => !open);
   };
 
   const navigateTo = (path: string) => {
@@ -88,7 +90,7 @@ export function ProtectedDashboardLayout({
               <ListItemIcon sx={{ minWidth: 32 }}>{item.icon}</ListItemIcon>
               <ListItemText 
                 primary={item.label} 
-                slotProps={{ primary: { variant: 'caption', fontWeight: active ? 800 : 600 } }}
+                slotProps={{ primary: { variant: 'caption', sx: { fontWeight: active ? 800 : 600 } } }}
               />
             </ListItemButton>
           );
@@ -116,7 +118,7 @@ export function ProtectedDashboardLayout({
         <Divider sx={{ mb: 2, opacity: 0.5 }} />
         <ListItemButton onClick={onLogout} sx={{ px: 2, borderRadius: 1, color: 'text.secondary' }}>
           <ListItemIcon sx={{ minWidth: 32 }}><LogOut size={16} /></ListItemIcon>
-          <ListItemText primary="SIGN OUT" slotProps={{ primary: { variant: 'caption', fontWeight: 700 } }} />
+          <ListItemText primary="SIGN OUT" slotProps={{ primary: { variant: 'caption', sx: { fontWeight: 700 } } }} />
         </ListItemButton>
       </Box>
     </Box>
@@ -135,7 +137,7 @@ export function ProtectedDashboardLayout({
         }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 48, justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, md: 4 } }}>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             {isMobile && (
               <IconButton
                 color="inherit"
@@ -147,7 +149,7 @@ export function ProtectedDashboardLayout({
                 <Menu size={20} />
               </IconButton>
             )}
-            <Stack spacing={0} justifyContent="center">
+            <Stack spacing={0} sx={{ justifyContent: 'center' }}>
               <Typography variant="h6" sx={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', letterSpacing: '0.1em', lineHeight: 1.15 }}>
                 RAIL FACTORY
               </Typography>
@@ -157,7 +159,7 @@ export function ProtectedDashboardLayout({
             </Stack>
           </Stack>
 
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
             <Box
               sx={{
                 height: 24,
@@ -165,7 +167,7 @@ export function ProtectedDashboardLayout({
                 alignItems: 'center'
               }}
             >
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                 <Typography
                   variant="caption"
                   sx={{

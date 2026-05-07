@@ -19,7 +19,7 @@ public sealed class SupplyChainSchemaInitializer(IServiceProvider serviceProvide
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Starting SupplyChain multi-tenant schema initialization...");
-        
+
         await using var scope = serviceProvider.CreateAsyncScope();
         var catalogClient = scope.ServiceProvider.GetRequiredService<ITenantCatalogClient>();
 
@@ -44,19 +44,19 @@ public sealed class SupplyChainSchemaInitializer(IServiceProvider serviceProvide
         try
         {
             logger.LogInformation("Migrating SupplyChain database for tenant: {TenantCode}", tenant.Code);
-            
+
             using var tenantScope = serviceProvider.CreateScope();
             var scopedContextAccessor = tenantScope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
             scopedContextAccessor.Current = new TenantContext(
-                tenant.Code, 
-                tenant.Locale, 
-                tenant.TimeZone, 
+                tenant.Code,
+                tenant.Locale,
+                tenant.TimeZone,
                 tenant.ConnectionStrings);
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<SupplyChainDbContext>();
 
             await dbContext.Database.MigrateAsync(cancellationToken);
-            
+
             logger.LogInformation("SupplyChain database for tenant {TenantCode} initialized successfully.", tenant.Code);
         }
         catch (Exception ex)

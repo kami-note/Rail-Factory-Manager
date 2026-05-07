@@ -27,7 +27,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, color, h
       borderRight: hasDivider ? '1px solid #f3f2f1' : 0,
       '&:last-of-type': { borderRight: 0 }
     }}>
-      <Stack direction="row" spacing={2} alignItems="center">
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
         <Box sx={{ color: color }}>{icon}</Box>
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, textTransform: 'uppercase' }}>

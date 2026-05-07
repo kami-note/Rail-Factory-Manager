@@ -23,7 +23,7 @@ public sealed class IamLocalUsersSchemaInitializer(
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Starting IAM multi-tenant schema initialization...");
-        
+
         await using var scope = serviceProvider.CreateAsyncScope();
         var catalogClient = scope.ServiceProvider.GetRequiredService<ITenantCatalogClient>();
         var tenantContextAccessor = scope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
@@ -44,34 +44,34 @@ public sealed class IamLocalUsersSchemaInitializer(
     }
 
     private async Task MigrateTenantAsync(
-        TenantResolutionResult tenant, 
-        ITenantContextAccessor tenantContextAccessor, 
+        TenantResolutionResult tenant,
+        ITenantContextAccessor tenantContextAccessor,
         CancellationToken cancellationToken)
     {
         await MigrationSemaphore.WaitAsync(cancellationToken);
         try
         {
             logger.LogInformation("Migrating IAM database for tenant: {TenantCode}", tenant.Code);
-            
+
             // Set context for this tenant so DbContext can resolve the correct connection string
             // We use a local-only assignment here, but because we create a NEW scope below, 
             // the DbContext in that scope will read from this accessor if it's Scoped.
             // NOTE: In parallel execution, we must ensure the ITenantContextAccessor is handled correctly.
             // Since ITenantContextAccessor is Scoped, we need to set it WITHIN the scope we are using.
-            
+
             using var tenantScope = serviceProvider.CreateScope();
             var scopedContextAccessor = tenantScope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
             scopedContextAccessor.Current = new TenantContext(
-                tenant.Code, 
-                tenant.Locale, 
-                tenant.TimeZone, 
+                tenant.Code,
+                tenant.Locale,
+                tenant.TimeZone,
                 tenant.ConnectionStrings);
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<IamAuthDbContext>();
 
             await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
             await dbContext.Database.MigrateAsync(cancellationToken);
-            
+
             logger.LogInformation("IAM database for tenant {TenantCode} initialized successfully.", tenant.Code);
         }
         catch (Exception ex)

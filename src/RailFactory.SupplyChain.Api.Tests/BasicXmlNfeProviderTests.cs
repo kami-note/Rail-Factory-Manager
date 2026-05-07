@@ -11,6 +11,11 @@ public sealed class BasicXmlNfeProviderTests
         const string xml = """
             <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
                 <infNFe Id="NFe35080599999090910270550010000000015180051273" versao="1.10">
+                    <total>
+                        <ICMSTot>
+                            <vNF>6000000.00</vNF>
+                        </ICMSTot>
+                    </total>
                     <ide>
                         <serie>1</serie>
                         <nNF>1</nNF>
@@ -78,8 +83,18 @@ public sealed class BasicXmlNfeProviderTests
 
         Assert.Equal("NFE-35260599999090910270550010000000015180051273", parsed.ReceiptNumber);
         Assert.Equal("35260599999090910270550010000000015180051273", parsed.DocumentNumber);
+        Assert.Equal("Purchase", parsed.OperationNature);
         Assert.Equal(new DateOnly(2026, 5, 3), parsed.ReceiptDate);
-        Assert.Collection(parsed.Items, item => Assert.Equal("MAT-001", item.MaterialCode));
+        Assert.Collection(parsed.Items, item =>
+        {
+            Assert.Equal("MAT-001", item.MaterialCode);
+            Assert.Equal("Material MAT-001", item.OriginalDescription);
+            Assert.Equal(1.0000000000m, item.UnitPrice);
+            Assert.Equal(10.00m, item.TotalPrice);
+            Assert.Equal("01012100", item.Ncm);
+            Assert.Equal("5102", item.Cfop);
+            Assert.Equal("SEM GTIN", item.Ean);
+        });
     }
 
     [Fact]

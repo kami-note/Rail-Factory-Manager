@@ -48,6 +48,7 @@ internal sealed class NfeXmlParser
             accessKey,
             accessKey,
             totalValue,
+            OptionalChildValue(ide, "natOp"),
             ParseDate(issuedAt),
             supplierFiscalId,
             supplierName,
@@ -61,14 +62,23 @@ internal sealed class NfeXmlParser
 
         var unitPriceStr = OptionalChildValue(product, "vUnCom");
         var unitPrice = unitPriceStr != null ? ParseDecimal(unitPriceStr) : (decimal?)null;
+        var totalPriceStr = OptionalChildValue(product, "vProd");
+        var totalPrice = totalPriceStr != null ? ParseDecimal(totalPriceStr) : (decimal?)null;
         var originalDescription = OptionalChildValue(product, "xProd");
+        var purchaseOrderItem = OptionalChildValue(product, "nItemPed");
 
         return new ParsedReceiptItem(
             RequiredChildValue(product, "cProd"),
             ParseDecimal(RequiredChildValue(product, "qCom")),
             RequiredChildValue(product, "uCom"),
             unitPrice,
-            originalDescription);
+            totalPrice,
+            originalDescription,
+            OptionalChildValue(product, "NCM"),
+            OptionalChildValue(product, "CFOP"),
+            OptionalChildValue(product, "cEAN"),
+            OptionalChildValue(product, "xPed"),
+            int.TryParse(purchaseOrderItem, out var parsedItem) ? parsedItem : null);
     }
 
     private static string RequiredChildValue(XElement parent, string localName) =>

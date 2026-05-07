@@ -1,0 +1,228 @@
+import React, { useEffect, useState } from 'react';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow, 
+  Paper, 
+  TextField, 
+  CircularProgress,
+  Alert,
+  Stack,
+  IconButton
+} from '@mui/material';
+import { ChevronLeft, Save } from 'lucide-react';
+import type { ConferenceItem } from './types';
+import { buildTenantHeaders, fetchJsonOrThrow } from '../../lib/http';
+import { MaterialAvatar } from '../../components/common/MaterialAvatar';
+
+type ConferenceWorkspaceProps = {
+  /** The identifier for the material receipt to be conferred. */
+  receiptId: string;
+  /** The active tenant identifier. */
+  tenantCode: string;
+  /** Callback to close the workspace. */
+  onClose: () => void;
+};
+
+type CountedResult = {
+  itemId: string;
+  countedQuantity: number;
+  confirmedLotNumber: string;
+  confirmedExpirationDate: string;
+};
+
+/**
+ * Renders the Blind Conference workspace for physical material counting.
+ * @param props - Component properties.
+ * @remarks
+ * Architectural Invariant: This component implements the "Blind Conference" rule (RN-05).
+ * It receives material codes but DOES NOT display expected quantities from the fiscal document,
+ * forcing the operator to perform an unbiased physical count.
+ */
+export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: ConferenceWorkspaceProps) {
+  const [items, setItems] = useState<ConferenceItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [counts, setCounts] = useState<Record<string, CountedResult>>({});
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchJsonOrThrow<ConferenceItem[]>(
+          `/api/supply-chain/receipts/${receiptId}/conference/items`,
+          {
+            headers: buildTenantHeaders(tenantCode),
+            credentials: 'include'
+          },
+          'Failed to load conference items'
+        );
+
+        setItems(data);
+        const initialCounts: Record<string, CountedResult> = {};
+        data.forEach(item => {
+          initialCounts[item.id] = {
+            itemId: item.id,
+            countedQuantity: 0,
+            confirmedLotNumber: '',
+            confirmedExpirationDate: ''
+          };
+        });
+        setCounts(initialCounts);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchItems();
+  }, [receiptId, tenantCode]);
+
+  const handleInputChange = (itemId: string, field: keyof CountedResult, value: string | number) => {
+    setCounts(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        results: Object.values(counts).map(c => ({
+          itemId: c.itemId,
+          countedQuantity: Number(c.countedQuantity),
+          confirmedLotNumber: c.confirmedLotNumber || null,
+          confirmedExpirationDate: c.confirmedExpirationDate ? new Date(c.confirmedExpirationDate).toISOString() : null
+        }))
+      };
+
+      await fetchJsonOrThrow(
+        `/api/supply-chain/receipts/${receiptId}/conference/close`,
+        {
+          method: 'POST',
+          headers: {
+            ...buildTenantHeaders(tenantCode),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          credentials: 'include'
+        },
+        'Failed to close conference'
+      );
+
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert('Error saving conference.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}><CircularProgress size={32} /></Box>;
+  if (error) return <Alert severity="error">{error}</Alert>;
+
+  return (
+    <Box>
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <IconButton onClick={onClose} size="small">
+          <ChevronLeft />
+        </IconButton>
+        <Typography variant="h2" sx={{ fontWeight: 800 }}>
+          BLIND CONFERENCE
+        </Typography>
+      </Box>
+
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Enter the actual quantities, lot numbers, and expiration dates as counted in the physical material.
+      </Alert>
+
+      <TableContainer component={Paper} variant="outlined">
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'background.default' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Material</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Counted Qty</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>UoM</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Lot Number</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Expiration Date</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.map(item => (
+              <TableRow key={item.id}>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <MaterialAvatar materialCode={item.materialCode} description={item.originalDescription} size={32} />
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.materialCode}</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.originalDescription || 'No description'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    type="number"
+                    size="small"
+                    value={counts[item.id].countedQuantity}
+                    onChange={(e) => handleInputChange(item.id, 'countedQuantity', e.target.value)}
+                    sx={{ width: 100 }}
+                  />
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>{item.unitOfMeasure}</TableCell>
+                <TableCell>
+                  <TextField
+                    size="small"
+                    value={counts[item.id].confirmedLotNumber}
+                    onChange={(e) => handleInputChange(item.id, 'confirmedLotNumber', e.target.value)}
+                    placeholder="Lot #"
+                  />
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    type="date"
+                    size="small"
+                    value={counts[item.id].confirmedExpirationDate}
+                    onChange={(e) => handleInputChange(item.id, 'confirmedExpirationDate', e.target.value)}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Stack direction="row" spacing={2} sx={{ mt: 4, justifyContent: 'flex-end' }}>
+        <Button variant="outlined" onClick={onClose} disabled={saving}>
+          CANCEL
+        </Button>
+        <Button 
+          variant="contained" 
+          startIcon={saving ? <CircularProgress size={20} /> : <Save size={18} />}
+          onClick={handleSave}
+          disabled={saving}
+          sx={{ px: 4 }}
+        >
+          {saving ? 'SAVING...' : 'FINISH CONFERENCE'}
+        </Button>
+      </Stack>
+    </Box>
+  );
+}
+

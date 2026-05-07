@@ -9,7 +9,8 @@
     "noEmit": true,
     "strict": true,
     "target": "ES2022",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "skipLibCheck": true
   },
   "include": ["src", "vite.config.ts"]
 }

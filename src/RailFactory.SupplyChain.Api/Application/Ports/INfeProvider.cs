@@ -10,9 +10,21 @@ public sealed record ParsedReceiptDocument(
     string DocumentNumber,
     string? AccessKey,
     decimal? TotalValue,
+    string? OperationNature,
     DateOnly ReceiptDate,
     string SupplierFiscalId,
     string SupplierName,
     IReadOnlyCollection<ParsedReceiptItem> Items);
 
-public sealed record ParsedReceiptItem(string MaterialCode, decimal Quantity, string UnitOfMeasure, decimal? UnitPrice, string? OriginalDescription);
+public sealed record ParsedReceiptItem(
+    string MaterialCode,
+    decimal Quantity,
+    string UnitOfMeasure,
+    decimal? UnitPrice,
+    decimal? TotalPrice,
+    string? OriginalDescription,
+    string? Ncm,
+    string? Cfop,
+    string? Ean,
+    string? PurchaseOrderNumber,
+    int? PurchaseOrderItemNumber);

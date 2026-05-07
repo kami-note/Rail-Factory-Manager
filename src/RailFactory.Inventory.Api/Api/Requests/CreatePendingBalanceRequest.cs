@@ -50,6 +50,12 @@ public sealed class CreatePendingBalancePayload
     [StringLength(44)]
     public string? AccessKey { get; init; }
 
+    public string? SupplierName { get; init; }
+
+    public string? Ncm { get; init; }
+
+    public string? Gtin { get; init; }
+
     [Required]
     [StringLength(32, MinimumLength = 1)]
     public string Source { get; init; } = string.Empty;

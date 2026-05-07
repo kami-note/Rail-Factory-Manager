@@ -13,7 +13,9 @@ import {
   Paper,
   Divider
 } from '@mui/material';
-import { FileText, UploadCloud, X } from 'lucide-react';
+import { FileText, UploadCloud, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { buildTenantHeaders, fetchJsonOrThrow } from '../../lib/http';
+import { FiscalDocumentPreview, ParsedReceiptDocument } from './FiscalDocumentPreview';
 
 type ImportXmlFormProps = {
   tenantCode: string;
@@ -24,64 +26,100 @@ type SelectedXmlFile = {
   file: File;
 };
 
+type BatchError = {
+  fileName: string;
+  message: string;
+};
+
 export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormProps) {
   const [files, setFiles] = useState<SelectedXmlFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [previewData, setPreviewData] = useState<ParsedReceiptDocument | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [batchErrors, setBatchErrors] = useState<BatchError[]>([]);
 
-  const importXml = async (file: File) => {
+  const getPreview = async (file: File) => {
+    setLoading(true);
+    setError(null);
+    setBatchErrors([]);
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/api/supply-chain/receipts/import/xml', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'X-Tenant-Code': tenantCode
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      const problem = await response.json().catch(() => null) as { detail?: string; title?: string } | null;
-      throw new Error(problem?.detail ?? problem?.title ?? `XML import failed: ${response.status}`);
+    try {
+      const data = await fetchJsonOrThrow<ParsedReceiptDocument>(
+        '/api/supply-chain/receipts/import/xml/preview',
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: buildTenantHeaders(tenantCode),
+          body: formData
+        },
+        'Failed to parse XML for preview'
+      );
+      setPreviewData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error previewing XML.');
+    } finally {
+      setLoading(false);
     }
-
-    return (await response.json()) as { receiptId?: string; id?: string };
   };
 
-  const importXmlBatch = async (documents: SelectedXmlFile[]) => {
-    const formData = new FormData();
-    for (const document of documents) {
-      formData.append('files', document.file);
+  const confirmImport = async () => {
+    if (files.length === 0) return;
+    setLoading(true);
+    setError(null);
+    setBatchErrors([]);
+
+    try {
+      if (files.length === 1) {
+        const formData = new FormData();
+        formData.append('file', files[0].file);
+
+        const data = await fetchJsonOrThrow<{ receiptId?: string; id?: string }>(
+          '/api/supply-chain/receipts/import/xml',
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildTenantHeaders(tenantCode),
+            body: formData
+          },
+          'XML import failed'
+        );
+        setResult(`XML imported successfully. Receipt ID: ${data.receiptId ?? data.id}`);
+        setPreviewData(null);
+        setFiles([]);
+      } else {
+        const formData = new FormData();
+        for (const f of files) {
+          formData.append('files', f.file);
+        }
+
+        const response = await fetch('/api/supply-chain/receipts/import/xml/batch', {
+          method: 'POST',
+          credentials: 'include',
+          headers: buildTenantHeaders(tenantCode),
+          body: formData
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          if (data?.errors) {
+            setBatchErrors(data.errors);
+            throw new Error('Batch import failed with validation errors.');
+          }
+          throw new Error(data?.detail ?? 'Batch import failed');
+        }
+
+        setResult(`${data.imported?.length ?? 0} files imported in batch.`);
+        setFiles([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error importing XML.');
+    } finally {
+      setLoading(false);
     }
-
-    const response = await fetch('/api/supply-chain/receipts/import/xml/batch', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'X-Tenant-Code': tenantCode
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      const problem = await response.json().catch(() => null) as {
-        detail?: string;
-        title?: string;
-        errors?: { fileName?: string; message?: string }[];
-      } | null;
-      const batchErrors = problem?.errors
-        ?.map(item => `${item.fileName ?? 'XML'}: ${item.message ?? 'Invalid XML.'}`)
-        .join('\n');
-
-      throw new Error(batchErrors ?? problem?.detail ?? problem?.title ?? `XML batch import failed: ${response.status}`);
-    }
-
-    return (await response.json()) as {
-      imported?: { fileName: string; receiptId: string; receiptNumber: string; documentNumber: string }[];
-    };
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,34 +128,12 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
     
     setError(null);
     setResult(null);
+    setPreviewData(null);
+    setBatchErrors([]);
     setFiles(selectedFiles.map(file => ({ file })));
-  };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setResult(null);
-    setError(null);
-    setLoading(true);
-
-    try {
-      if (files.length > 1) {
-        const data = await importXmlBatch(files);
-        const imported = data.imported ?? [];
-        setResult(`${imported.length} XML files imported. Receipts: ${imported.map(x => x.receiptNumber).join(', ')}`);
-        return;
-      }
-
-      const selectedFile = files[0]?.file;
-      if (!selectedFile) {
-        throw new Error('An XML file is required.');
-      }
-
-      const data = await importXml(selectedFile);
-      setResult(`XML imported. Receipt: ${data.receiptId ?? data.id}`);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Unexpected XML import error.');
-    } finally {
-      setLoading(false);
+    if (selectedFiles.length === 1) {
+      getPreview(selectedFiles[0]);
     }
   };
 
@@ -125,10 +141,12 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
     setFiles([]);
     setResult(null);
     setError(null);
+    setPreviewData(null);
+    setBatchErrors([]);
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
+    <Box>
       {showTitle && (
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>
           Import receipt XML
@@ -136,64 +154,95 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
       )}
 
       <Stack spacing={3}>
-        <Paper
-          variant="outlined"
-          sx={{
-            p: 3,
-            textAlign: 'center',
-            cursor: 'pointer',
-            borderStyle: 'dashed',
-            borderWidth: 2,
-            bgcolor: 'background.default',
-            '&:hover': {
-              borderColor: 'primary.main',
-              bgcolor: 'action.hover'
-            },
-            position: 'relative'
-          }}
-          component="label"
-        >
-          <input
-            type="file"
-            accept=".xml,text/xml,application/xml"
-            multiple
-            hidden
-            onChange={handleFileChange}
-          />
-          <UploadCloud size={32} color="currentColor" />
-          <Typography variant="body1" sx={{ fontWeight: 600, mt: 1 }}>
-            Upload XML files
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Single invoice or batch import
-          </Typography>
-        </Paper>
+        {!previewData && !result && (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 3,
+              textAlign: 'center',
+              cursor: 'pointer',
+              borderStyle: 'dashed',
+              borderWidth: 2,
+              bgcolor: 'background.default',
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: 'action.hover'
+              },
+              position: 'relative'
+            }}
+            component="label"
+          >
+            <input
+              type="file"
+              accept=".xml,text/xml,application/xml"
+              multiple
+              hidden
+              onChange={handleFileChange}
+            />
+            <UploadCloud size={32} color="currentColor" />
+            <Typography variant="body1" sx={{ fontWeight: 600, mt: 1 }}>
+              Upload XML files
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Single invoice or batch import
+            </Typography>
+          </Paper>
+        )}
 
-        {files.length > 0 && (
+        {loading && !previewData && (
+          <Box sx={{ textAlign: 'center', p: 4 }}>
+            <CircularProgress size={32} />
+            <Typography variant="body2" sx={{ mt: 1 }}>Processing document...</Typography>
+          </Box>
+        )}
+
+        {previewData && (
           <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                PREVIEW
+              </Typography>
+              <Button size="small" variant="outlined" color="error" onClick={removeFiles} startIcon={<X size={14} />}>
+                Cancel
+              </Button>
+            </Box>
+            
+            <FiscalDocumentPreview data={previewData} />
+
+            <Button 
+              fullWidth 
+              variant="contained" 
+              size="large"
+              color="success"
+              onClick={confirmImport}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle size={20} />}
+              sx={{ mt: 4, py: 1.5, fontWeight: 900 }}
+            >
+              {loading ? 'CONFIRMING...' : 'CONFIRM AND IMPORT TO INVENTORY'}
+            </Button>
+          </Box>
+        )}
+
+        {files.length > 1 && !result && (
+          <Box>
+             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                SELECTED FILES ({files.length})
+                BATCH FILES ({files.length})
               </Typography>
               <Button size="small" onClick={removeFiles} startIcon={<X size={14} />}>
                 Clear
               </Button>
             </Box>
             <Paper variant="outlined">
-              <List disablePadding sx={{ maxHeight: 200, overflow: 'auto' }}>
+               <List disablePadding sx={{ maxHeight: 200, overflow: 'auto' }}>
                 {files.map((file, index) => (
-                  <React.Fragment key={`${file.file.name}-${index}`}>
+                  <React.Fragment key={index}>
                     <ListItem>
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <FileText size={18} />
-                      </ListItemIcon>
+                      <ListItemIcon sx={{ minWidth: 32 }}><FileText size={18} /></ListItemIcon>
                       <ListItemText 
                         primary={file.file.name} 
-                        secondary={`${Math.max(1, Math.round(file.file.size / 1024))} KB`}
-                        slotProps={{
-                          primary: { variant: 'body2', fontWeight: 600 },
-                          secondary: { variant: 'caption' }
-                        }}
+                        slotProps={{ primary: { variant: 'body2', sx: { fontWeight: 600 } } }} 
                       />
                     </ListItem>
                     {index < files.length - 1 && <Divider />}
@@ -201,22 +250,36 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
                 ))}
               </List>
             </Paper>
+            <Button 
+              fullWidth 
+              variant="contained" 
+              onClick={confirmImport}
+              disabled={loading}
+              sx={{ mt: 2 }}
+            >
+              {loading ? 'Importing Batch...' : `Import ${files.length} files`}
+            </Button>
           </Box>
         )}
-
-        <Stack spacing={2}>
-          <Button 
-            type="submit" 
-            variant="contained" 
-            disabled={loading || files.length === 0}
-            startIcon={loading ? <CircularProgress size={20} /> : null}
-          >
-            {loading ? 'Importing...' : files.length > 1 ? `Import ${files.length} files` : 'Import XML'}
-          </Button>
-          
-          {result && <Alert severity="success">{result}</Alert>}
-          {error && <Alert severity="error" sx={{ whiteSpace: 'pre-line' }}>{error}</Alert>}
-        </Stack>
+        
+        {result && (
+          <Box sx={{ textAlign: 'center', p: 2 }}>
+            <Alert severity="success" sx={{ mb: 3 }}>{result}</Alert>
+            <Button variant="outlined" onClick={removeFiles}>Import another</Button>
+          </Box>
+        )}
+        
+        {(error || batchErrors.length > 0) && (
+          <Stack spacing={1}>
+            {error && <Alert severity="error" sx={{ whiteSpace: 'pre-line' }}>{error}</Alert>}
+            {batchErrors.map((err, i) => (
+              <Alert key={i} severity="error" icon={<AlertCircle size={18} />} sx={{ '& .MuiAlert-message': { width: '100%' } }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, display: 'block' }}>{err.fileName}</Typography>
+                <Typography variant="body2">{err.message}</Typography>
+              </Alert>
+            ))}
+          </Stack>
+        )}
       </Stack>
     </Box>
   );

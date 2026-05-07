@@ -130,7 +130,7 @@ public sealed class ImportXmlReceiptBatchTests
         new(
             new XmlReceiptBatchParser(new BasicXmlNfeProvider()),
             repository,
-            new MaterialReceiptWriter(repository, repository, NullLogger<MaterialReceiptWriter>.Instance),
+            new MaterialReceiptWriter(repository, repository),
             new ImmediateTransactionRunner());
 
     private static string BuildNfe(string accessKey, string materialCode) =>
@@ -173,6 +173,9 @@ public sealed class ImportXmlReceiptBatchTests
 
         public Task AddAuditEntryAsync(SupplyAuditEntry entry, CancellationToken cancellationToken) =>
             Task.CompletedTask;
+
+        public Task<List<SupplyAuditEntry>> GetAuditEntriesByReceiptIdAsync(Guid receiptId, CancellationToken cancellationToken) =>
+            Task.FromResult(new List<SupplyAuditEntry>());
 
         public Task SaveChangesAsync(CancellationToken cancellationToken)
         {

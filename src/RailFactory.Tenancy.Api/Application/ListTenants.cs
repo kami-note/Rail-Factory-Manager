@@ -7,7 +7,7 @@ public sealed class ListTenants(ITenantRepository tenants)
     public async Task<Result<IReadOnlyList<TenantDetails>>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var allTenants = await tenants.ListTenantsAsync(cancellationToken);
-        
+
         var details = allTenants.Select(tenant => new TenantDetails(
             tenant.Code,
             tenant.DisplayName,

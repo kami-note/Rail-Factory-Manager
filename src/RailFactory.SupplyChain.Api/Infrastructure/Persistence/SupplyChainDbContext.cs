@@ -45,6 +45,9 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
             entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();
             entity.Property(x => x.UnitPrice).HasColumnType("numeric(18,2)");
             entity.Property(x => x.OriginalDescription).HasMaxLength(256);
+            entity.Property(x => x.CountedQuantity).HasColumnType("numeric(18,4)");
+            entity.Property(x => x.ConfirmedLotNumber).HasMaxLength(64);
+            entity.Property(x => x.ConfirmedExpirationDate);
             entity.HasIndex(x => new { x.ReceiptId, x.MaterialCode });
         });
 

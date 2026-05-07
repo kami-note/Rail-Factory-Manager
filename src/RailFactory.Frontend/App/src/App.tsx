@@ -8,15 +8,16 @@ import { InventoryStocksPage } from './features/dashboard/InventoryStocksPage';
 import { TenantSelector } from './components/TenantSelector';
 import type { Status } from './features/dashboard/types';
 import { Box, Button, Card, CircularProgress, Container, Typography, Link } from '@mui/material';
+import { buildTenantHeaders, fetchJsonOrThrow } from './lib/http';
 
 const TENANT_STORAGE_KEY = 'rail_factory_tenant_code';
 
 export function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isProtectedRoute = location.pathname.startsWith('/app');
   const [status, setStatus] = useState<Status | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
-  const [logoutError, setLogoutError] = useState<string | null>(null);
   
   const [tenantCode, setTenantCode] = useState<string>(() => {
     return localStorage.getItem(TENANT_STORAGE_KEY) || '';
@@ -29,41 +30,44 @@ export function App() {
   
   const auth = useAuthSession(tenantCode);
   const loginHref = tenantCode ? buildLoginHref(tenantCode, '/app') : '#';
+  const navigateTo = (path: string) => navigate(path);
 
   useEffect(() => {
     if (!tenantCode) return;
 
-    fetch('/api/status', {
-      credentials: 'include',
-      headers: {
-        'X-Tenant-Code': tenantCode
+    const loadStatus = async () => {
+      try {
+        const response = await fetchJsonOrThrow<Status>(
+          '/api/status',
+          {
+            credentials: 'include',
+            headers: buildTenantHeaders(tenantCode)
+          },
+          'Status request failed'
+        );
+        setStatus(response);
+      } catch (requestError) {
+        setStatusError(requestError instanceof Error ? requestError.message : 'Status request failed.');
       }
-    })
-      .then(async response => {
-        if (!response.ok) {
-          throw new Error(`Status request failed: ${response.status}`);
-        }
-        return response.json() as Promise<Status>;
-      })
-      .then(setStatus)
-      .catch((requestError: Error) => setStatusError(requestError.message));
+    };
+
+    void loadStatus();
   }, [tenantCode]);
 
   const handleLogout = async () => {
     try {
-      setLogoutError(null);
       await logout(tenantCode);
-      navigate('/');
+      navigateTo('/');
     } catch (requestError) {
-      setLogoutError(requestError instanceof Error ? requestError.message : 'Logout failed.');
+      console.error(requestError instanceof Error ? requestError.message : 'Logout failed.');
     }
   };
 
-  if (location.pathname.startsWith('/app') && !tenantCode) {
+  if (isProtectedRoute && !tenantCode) {
     return <Navigate to="/" replace />;
   }
 
-  if (location.pathname.startsWith('/app') && auth.status === 'loading') {
+  if (isProtectedRoute && auth.status === 'loading') {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <CircularProgress size={40} sx={{ mb: 2 }} />
@@ -73,7 +77,7 @@ export function App() {
     );
   }
 
-  if (location.pathname.startsWith('/app') && auth.status !== 'authenticated') {
+  if (isProtectedRoute && auth.status !== 'authenticated') {
     return (
       <Container maxWidth="sm" sx={{ py: 8 }}>
         <Card sx={{ p: 4, textAlign: 'center' }}>
@@ -132,15 +136,12 @@ export function App() {
         <ProtectedDashboardLayout
           tenantCode={tenantCode}
           userLabel={auth.session?.user?.email ?? auth.session?.user?.name ?? 'authenticated'}
-          environmentLabel={status?.environment ?? 'loading'}
-          serviceLabel={status?.service ?? 'loading'}
           currentPath={location.pathname}
-          onNavigate={(path) => navigate(path)}
+          onNavigate={navigateTo}
           onLogout={handleLogout}
-          logoutError={logoutError}
         >
           <Routes>
-            <Route index element={<OverviewPanel status={status} statusError={statusError} onNavigate={(path) => navigate(path)} />} />
+            <Route index element={<OverviewPanel status={status} statusError={statusError} onNavigate={navigateTo} />} />
             <Route path="receipts" element={<ReceiptsWorkspace tenantCode={tenantCode} />} />
             <Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />
             <Route path="inventory" element={<InventoryStocksPage tenantCode={tenantCode} />} />

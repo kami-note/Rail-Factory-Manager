@@ -76,6 +76,22 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Cfop")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ConfirmedExpirationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConfirmedLotNumber")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<decimal?>("CountedQuantity")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("Ean")
+                        .HasColumnType("text");
+
                     b.Property<decimal>("ExpectedQuantity")
                         .HasColumnType("numeric(18,4)");
 
@@ -83,6 +99,9 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Ncm")
+                        .HasColumnType("text");
 
                     b.Property<string>("OriginalDescription")
                         .HasMaxLength(256)
