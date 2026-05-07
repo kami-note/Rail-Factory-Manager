@@ -1,3 +1,5 @@
+using RailFactory.BuildingBlocks.Domain;
+
 namespace RailFactory.SupplyChain.Api.Domain;
 
 /// <summary>
@@ -8,13 +10,8 @@ namespace RailFactory.SupplyChain.Api.Domain;
 /// serving as the source of truth for physical inbound operations.
 /// It supports both manual entry and automated NF-e (XML) parsing.
 /// </remarks>
-public sealed class MaterialReceipt
+public sealed class MaterialReceipt : AggregateRoot<Guid>
 {
-    /// <summary>
-    /// Unique identifier for the receipt.
-    /// </summary>
-    public Guid Id { get; private set; }
-
     /// <summary>
     /// Human-readable receipt number (e.g., NFE prefix for fiscal documents).
     /// </summary>
@@ -66,6 +63,7 @@ public sealed class MaterialReceipt
     public List<MaterialReceiptItem> Items { get; private set; }
 
     private MaterialReceipt()
+        : base(Guid.Empty)
     {
         ReceiptNumber = string.Empty;
         DocumentNumber = string.Empty;
@@ -81,8 +79,8 @@ public sealed class MaterialReceipt
         decimal? totalValue,
         string? rawXml,
         DateOnly receiptDate)
+        : base(id)
     {
-        Id = id;
         ReceiptNumber = receiptNumber;
         SupplierId = supplierId;
         DocumentNumber = documentNumber;

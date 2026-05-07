@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Inventory.Api.Api.Requests;
-using RailFactory.Inventory.Api.Api.Validation;
 using RailFactory.Inventory.Api.Application;
 using RailFactory.Inventory.Api.Application.Balances;
 using RailFactory.Inventory.Api.Application.Materials;
@@ -142,5 +141,3 @@ public static class InventoryEndpoints
         }
     }
 }
-
-public sealed record UpdateMaterialImageRequest(string ImageUrl);

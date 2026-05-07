@@ -1,3 +1,5 @@
+using RailFactory.BuildingBlocks.Domain;
+
 namespace RailFactory.Inventory.Api.Domain;
 
 /// <summary>
@@ -8,13 +10,8 @@ namespace RailFactory.Inventory.Api.Domain;
 /// Operational fields (Lot, Expiry) are first-class columns, while
 /// source-specific data (Purchase vs Production) are encapsulated in JSON metadata.
 /// </remarks>
-public sealed class InventoryBalance
+public sealed class InventoryBalance : AggregateRoot<Guid>
 {
-    /// <summary>
-    /// Unique identifier for the balance record.
-    /// </summary>
-    public Guid Id { get; private set; }
-
     /// <summary>
     /// Unique code for the material (SKU).
     /// </summary>
@@ -71,6 +68,7 @@ public sealed class InventoryBalance
     public DateTimeOffset CreatedAt { get; private set; }
 
     private InventoryBalance()
+        : base(Guid.Empty)
     {
         MaterialCode = string.Empty;
         UnitOfMeasure = string.Empty;
@@ -88,8 +86,8 @@ public sealed class InventoryBalance
         DateTimeOffset? expirationDate,
         InventorySourceType sourceType,
         string? sourceMetadata)
+        : base(id)
     {
-        Id = id;
         MaterialCode = materialCode;
         UnitOfMeasure = unitOfMeasure;
         Quantity = quantity;

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using RailFactory.Inventory.Api.Api.Responses;
 using RailFactory.Inventory.Api.Application.Ports;
 using RailFactory.Inventory.Api.Domain;
 
@@ -74,20 +75,3 @@ public sealed class ListPendingBalances(
         }).ToList();
     }
 }
-
-public record PendingBalanceListItemResponse(
-    Guid Id,
-    string MaterialCode,
-    string MaterialName,
-    decimal Quantity,
-    string UnitOfMeasure,
-    string Status,
-    string SourceReference,
-    string? LotNumber,
-    string? ExpirationDate,
-    string SourceType,
-    string? SupplierName,
-    string? SourceMetadata,
-    DateTimeOffset CreatedAt,
-    string? Ncm,
-    string? Gtin);

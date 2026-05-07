@@ -25,4 +25,31 @@ public sealed class PostgresSupplyOutboxDiagnostics(SupplyChainDbContext dbConte
                 x.LastError))
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<int> ReplayDeadLettersAsync(
+        IEnumerable<Guid>? messageIds,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.OutboxMessages
+            .Where(x => x.Status == SupplyOutboxMessageStatus.DeadLetter);
+
+        if (messageIds?.Any() == true)
+        {
+            query = query.Where(x => messageIds.Contains(x.Id));
+        }
+
+        var messages = await query.ToListAsync(cancellationToken);
+        if (messages.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var message in messages)
+        {
+            message.ResetForReplay();
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return messages.Count;
+    }
 }

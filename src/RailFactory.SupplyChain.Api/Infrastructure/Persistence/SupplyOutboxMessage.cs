@@ -65,6 +65,14 @@ public sealed class SupplyOutboxMessage
         DeadLetteredAt = DateTimeOffset.UtcNow;
     }
 
+    public void ResetForReplay()
+    {
+        Status = SupplyOutboxMessageStatus.Pending;
+        AttemptCount = 0;
+        DeadLetteredAt = null;
+        LastError = null;
+    }
+
     private static string TrimError(string error) =>
         error.Length <= MaxErrorLength ? error : error[..MaxErrorLength];
 }
