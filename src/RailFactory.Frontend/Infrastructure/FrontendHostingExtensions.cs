@@ -8,6 +8,7 @@ public static class FrontendHostingExtensions
     public const string GatewayClientName = "gateway";
     private const string GatewayBaseAddress = "http://gateway";
     private const string UiDistRelativePath = "App/dist";
+    private const string UiPublicRelativePath = "App/public";
 
     public static WebApplicationBuilder AddFrontendHosting(this WebApplicationBuilder builder)
     {
@@ -55,7 +56,18 @@ public static class FrontendHostingExtensions
     public static FrontendStaticUiState UseFrontendStaticUi(this WebApplication app)
     {
         var uiDistDirectory = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, UiDistRelativePath));
+        var uiPublicDirectory = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, UiPublicRelativePath));
         var hasUiDist = Directory.Exists(uiDistDirectory);
+        var hasUiPublic = Directory.Exists(uiPublicDirectory);
+
+        if (hasUiPublic)
+        {
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(uiPublicDirectory),
+                RequestPath = ""
+            });
+        }
 
         if (!hasUiDist)
         {

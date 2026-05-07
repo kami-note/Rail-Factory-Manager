@@ -13,10 +13,16 @@ internal sealed class TenantResolutionMiddleware(
     public async Task InvokeAsync(HttpContext context, ILogger<TenantResolutionMiddleware> logger)
     {
         var path = context.Request.Path;
-        var isGoogleOAuthPath = path.StartsWithSegments("/auth/google", StringComparison.OrdinalIgnoreCase);
-        var isGoogleOAuthCallbackPath = path.StartsWithSegments("/auth/google/callback", StringComparison.OrdinalIgnoreCase);
+        var isGoogleOAuthPath = path.StartsWithSegments("/auth/google", StringComparison.OrdinalIgnoreCase) ||
+                               path.StartsWithSegments("/api/iam/auth/google", StringComparison.OrdinalIgnoreCase);
+        var isGoogleOAuthCallbackPath = path.StartsWithSegments("/auth/google/callback", StringComparison.OrdinalIgnoreCase) ||
+                                        path.StartsWithSegments("/api/iam/auth/google/callback", StringComparison.OrdinalIgnoreCase);
+        var isTenancyDiscoveryPath = path.StartsWithSegments("/api/tenancy", StringComparison.OrdinalIgnoreCase) || 
+                                     path.StartsWithSegments("/tenants", StringComparison.OrdinalIgnoreCase);
+        var isStatusPath = path.StartsWithSegments("/api/status", StringComparison.OrdinalIgnoreCase) ||
+                           path.StartsWithSegments("/info", StringComparison.OrdinalIgnoreCase);
 
-        if (isGoogleOAuthCallbackPath)
+        if (isGoogleOAuthCallbackPath || isTenancyDiscoveryPath || isStatusPath)
         {
             await next(context);
             return;

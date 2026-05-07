@@ -23,11 +23,18 @@ internal sealed class LegacyReceiptXmlParser
             ParseDecimal(RequiredValue(item, "quantity")),
             RequiredValue(item, "uom"),
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null)).ToList();
 
         return new ParsedReceiptDocument(
             RequiredValue(root, "receiptNumber"),
             RequiredValue(root, "documentNumber"),
+            null,
             null,
             null,
             ParseDate(RequiredValue(root, "receiptDate")),

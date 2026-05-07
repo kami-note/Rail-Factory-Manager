@@ -10,6 +10,7 @@ public static class FrontendEndpoints
     private const string AuthSessionPath = "/api/auth/session";
     private const string AuthCsrfPath = "/api/auth/csrf";
     private const string AuthLogoutPath = "/api/auth/logout";
+    private const string MaterialImageUploadPath = "/api/materials/{materialCode}/image";
 
     public static WebApplication MapFrontendEndpoints(this WebApplication app, FrontendHostingExtensions.FrontendStaticUiState staticUi)
     {
@@ -18,6 +19,7 @@ public static class FrontendEndpoints
         app.MapGet(AuthSessionPath, FrontendAuthSessionEndpoint.HandleGet);
         app.MapGet(AuthCsrfPath, FrontendCsrfEndpoint.HandleGet);
         app.MapPost(AuthLogoutPath, FrontendLogoutEndpoint.HandlePost);
+        app.MapPost(MaterialImageUploadPath, MaterialImageUploadEndpoint.HandlePost).DisableAntiforgery();
         app.MapGet(StatusPath, FrontendStatusEndpoint.HandleGet);
         app.MapReverseProxy();
 

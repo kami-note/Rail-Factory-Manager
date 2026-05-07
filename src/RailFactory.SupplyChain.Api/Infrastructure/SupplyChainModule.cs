@@ -42,6 +42,9 @@ public static class SupplyChainModule
         services.AddScoped<ImportXmlReceipt>();
         services.AddScoped<ImportXmlReceiptBatch>();
         services.AddScoped<ListReceipts>();
+        services.AddScoped<GetMaterialReceiptDetails>();
+        services.AddScoped<StartMaterialReceiptConference>();
+        services.AddScoped<CloseMaterialReceiptConference>();
         services.AddScoped<ListSupplyOutboxDeadLetters>();
 
         return services;

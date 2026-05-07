@@ -26,7 +26,7 @@ public sealed class TenantCatalogSchemaInitializer(
         logger.LogInformation("Initializing tenant catalog schema...");
         await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
-        
+
         await SeedDevTenantAsync(dbContext, cancellationToken);
         await SeedAcmeTenantAsync(dbContext, cancellationToken);
 
@@ -64,7 +64,7 @@ public sealed class TenantCatalogSchemaInitializer(
         tableExistsCommand.CommandText = "SELECT to_regclass('public.tenants') IS NOT NULL;";
         var tableExistsResult = await tableExistsCommand.ExecuteScalarAsync(cancellationToken);
         var tenantsTableExists = tableExistsResult is true;
-        if (! tenantsTableExists)
+        if (!tenantsTableExists)
         {
             return;
         }

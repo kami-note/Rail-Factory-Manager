@@ -1,42 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
   Button, 
   IconButton, 
-  Drawer, 
-  Divider, 
-  Stack,
-  useTheme,
-  useMediaQuery
+  Stack
 } from '@mui/material';
-import { FileSpreadsheet, RefreshCcw, X } from 'lucide-react';
+import { FileSpreadsheet, RefreshCcw } from 'lucide-react';
+import { ResponsiveCenteredModal } from '../../components/ResponsiveCenteredModal';
 import { ImportXmlForm } from './ImportXmlForm';
 import { ReceiptsList } from './ReceiptsList';
-
-type ReceiptDrawer = 'xml' | null;
+import { ConferenceWorkspace } from './ConferenceWorkspace';
 
 type ReceiptsWorkspaceProps = {
   tenantCode: string;
-  requestedDrawer?: ReceiptDrawer;
+  requestedDrawer?: 'xml' | null;
 };
 
 export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: ReceiptsWorkspaceProps) {
-  const [drawer, setDrawer] = useState<ReceiptDrawer>(requestedDrawer);
   const [refreshKey, setRefreshKey] = useState(0);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  const [activeConferenceReceiptId, setActiveConferenceReceiptId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isImportXmlRoute = location.pathname.endsWith('/import-xml');
+  const isXmlModalOpen = requestedDrawer === 'xml' && isImportXmlRoute;
 
-  useEffect(() => {
-    if (requestedDrawer) {
-      setDrawer(requestedDrawer);
+  const handleCloseModal = () => {
+    if (isImportXmlRoute) {
+      navigate('/app/receipts', { replace: true });
     }
-  }, [requestedDrawer]);
+  };
 
-  const handleCloseDrawer = () => setDrawer(null);
+  const handleOpenXmlModal = () => {
+    if (!isImportXmlRoute) {
+      navigate('/app/import-xml');
+    }
+  };
 
-  const drawerTitle = drawer === 'xml' ? 'IMPORT XML BATCH' : '';
+  if (activeConferenceReceiptId) {
+    return (
+      <Box sx={{ p: { xs: 2, md: 4 } }}>
+        <ConferenceWorkspace 
+          receiptId={activeConferenceReceiptId} 
+          tenantCode={tenantCode} 
+          onClose={() => {
+            setActiveConferenceReceiptId(null);
+            setRefreshKey(prev => prev + 1);
+          }} 
+        />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -60,9 +75,9 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
         <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 'auto' }, justifyContent: 'flex-end' }}>
           <Button 
             variant="outlined" 
-            size={isTablet ? "medium" : "large"}
+            size="large"
             startIcon={<FileSpreadsheet size={18} />} 
-            onClick={() => setDrawer('xml')}
+            onClick={handleOpenXmlModal}
             sx={{ flexGrow: { xs: 1, md: 0 }, minWidth: { md: 160 }, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
           >
             IMPORT XML
@@ -79,40 +94,20 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
 
       {/* LISTA PRINCIPAL */}
       <Box sx={{ mt: 1 }}>
-        <ReceiptsList tenantCode={tenantCode} refreshKey={refreshKey} />
+        <ReceiptsList 
+          tenantCode={tenantCode} 
+          refreshKey={refreshKey} 
+          onStartConference={(id) => setActiveConferenceReceiptId(id)}
+        />
       </Box>
 
-      {/* DRAWER PARA ENTRADA DE DADOS */}
-      <Drawer
-        anchor="right"
-        open={drawer !== null}
-        onClose={handleCloseDrawer}
-        PaperProps={{
-          sx: { 
-            width:
-              drawer === 'xml'
-                ? (isMobile ? '100%' : isTablet ? '88%' : 760)
-                : (isMobile ? '100%' : isTablet ? '80%' : 550),
-            p: 0,
-            borderLeft: `5px solid ${theme.palette.primary.main}`
-          }
-        }}
+      <ResponsiveCenteredModal
+        open={isXmlModalOpen}
+        onClose={handleCloseModal}
+        title="IMPORT XML BATCH"
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f8f9fa' }}>
-            <Typography variant="h5" sx={{ fontWeight: 900 }}>
-              {drawerTitle}
-            </Typography>
-            <IconButton onClick={handleCloseDrawer} size="large" sx={{ color: 'text.primary' }}>
-              <X size={32} />
-            </IconButton>
-          </Box>
-          <Divider />
-          <Box sx={{ p: 4, flexGrow: 1, overflow: 'auto' }}>
-            {drawer === 'xml' ? <ImportXmlForm tenantCode={tenantCode} showTitle={false} /> : null}
-          </Box>
-        </Box>
-      </Drawer>
+        <ImportXmlForm tenantCode={tenantCode} showTitle={false} />
+      </ResponsiveCenteredModal>
     </Box>
   );
 }

@@ -40,13 +40,14 @@ public sealed class ImportXmlReceiptBatch(
                         userIdentifier,
                         document.Parsed.ReceiptNumber,
                         supplier.Id,
+                        supplier.Name,
                         document.Parsed.DocumentNumber,
                         document.Parsed.AccessKey,
                         document.Parsed.TotalValue,
                         document.XmlContent,
                         document.Parsed.ReceiptDate,
                         document.Parsed.Items
-                            .Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure, x.UnitPrice, x.OriginalDescription))
+                            .Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure, x.UnitPrice, x.OriginalDescription, x.Ncm, x.Ean))
                             .ToList(),
                         correlationId,
                         ct);

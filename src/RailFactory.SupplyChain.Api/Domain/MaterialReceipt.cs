@@ -133,13 +133,55 @@ public sealed class MaterialReceipt
     /// <summary>
     /// Adds an item to the receipt.
     /// </summary>
-    /// <param name="materialCode">Unique material identifier.</param>
-    /// <param name="unitOfMeasure">Unit of measurement (e.g., UN, KG).</param>
-    /// <param name="expectedQuantity">The quantity expected based on the document.</param>
-    /// <param name="unitPrice">Optional unit price for inventory costing.</param>
-    /// <param name="originalDescription">Optional description as found in the original document.</param>
-    public void AddItem(string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice = null, string? originalDescription = null)
+    public void AddItem(string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice = null, string? originalDescription = null, string? ncm = null, string? cfop = null, string? ean = null)
     {
-        Items.Add(MaterialReceiptItem.Create(Id, materialCode, unitOfMeasure, expectedQuantity, unitPrice, originalDescription));
+        Items.Add(MaterialReceiptItem.Create(Id, materialCode, unitOfMeasure, expectedQuantity, unitPrice, originalDescription, ncm, cfop, ean));
+    }
+
+    /// <summary>
+    /// Starts the blind conference process for this receipt.
+    /// </summary>
+    /// <remarks>
+    /// Invariant: Only receipts in 'Registered' status can be started.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when status is not Registered.</exception>
+    public void StartConference()
+    {
+        if (Status != MaterialReceiptStatus.Registered)
+        {
+            throw new InvalidOperationException($"Cannot start conference for receipt in status '{Status}'. Only 'Registered' receipts can be started.");
+        }
+
+        Status = MaterialReceiptStatus.InConference;
+    }
+
+    /// <summary>
+    /// Closes the conference process and evaluates divergences.
+    /// </summary>
+    /// <param name="results">The counted results for each item.</param>
+    /// <exception cref="InvalidOperationException">Thrown if status is not InConference.</exception>
+    public void CloseConference(IReadOnlyCollection<CountedItemResult> results)
+    {
+        if (Status != MaterialReceiptStatus.InConference)
+        {
+            throw new InvalidOperationException($"Cannot close conference for receipt in status '{Status}'. Only 'InConference' receipts can be closed.");
+        }
+
+        foreach (var result in results)
+        {
+            var item = Items.FirstOrDefault(x => x.Id == result.ItemId)
+                ?? throw new InvalidOperationException($"Item with ID '{result.ItemId}' not found in this receipt.");
+
+            item.RecordConference(result.CountedQuantity, result.ConfirmedLotNumber, result.ConfirmedExpirationDate);
+        }
+
+        Status = Items.Any(x => x.HasDivergence)
+            ? MaterialReceiptStatus.Divergent
+            : MaterialReceiptStatus.Approved;
     }
 }
+
+/// <summary>
+/// Domain result record for conference counting.
+/// </summary>
+public record CountedItemResult(Guid ItemId, decimal CountedQuantity, string? ConfirmedLotNumber, DateTimeOffset? ConfirmedExpirationDate);

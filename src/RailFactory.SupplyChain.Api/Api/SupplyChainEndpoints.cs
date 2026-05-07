@@ -16,9 +16,14 @@ public static class SupplyChainEndpoints
     private const string InfoPath = "/info";
     private const string SuppliersPath = "/suppliers";
     private const string ReceiptsPath = "/receipts";
+    private const string ReceiptDetailsPath = "/receipts/{id:guid}";
     private const string ImportXmlPath = "/receipts/import/xml";
+    private const string ImportXmlPreviewPath = "/receipts/import/xml/preview";
     private const string ImportXmlBatchPath = "/receipts/import/xml/batch";
     private const string ReceiptXmlPath = "/receipts/{id:guid}/xml";
+    private const string StartConferencePath = "/receipts/{id:guid}/conference/start";
+    private const string CloseConferencePath = "/receipts/{id:guid}/conference/close";
+    private const string ConferenceItemsPath = "/receipts/{id:guid}/conference/items";
     private const string OutboxDeadLettersPath = "/outbox/dead-letters";
 
     public static WebApplication MapSupplyChainEndpoints(this WebApplication app)
@@ -27,8 +32,13 @@ public static class SupplyChainEndpoints
         app.MapGet(InfoPath, HandleGetInfo);
         app.MapPost(SuppliersPath, HandleCreateSupplier);
         app.MapGet(ReceiptsPath, HandleListReceipts);
+        app.MapGet(ReceiptDetailsPath, HandleGetReceiptDetails);
         app.MapGet(ReceiptXmlPath, HandleGetReceiptXml);
+        app.MapPost(StartConferencePath, HandleStartConference);
+        app.MapPost(CloseConferencePath, HandleCloseConference);
+        app.MapGet(ConferenceItemsPath, HandleGetConferenceItems);
         app.MapPost(ImportXmlPath, HandleImportXmlReceipt).DisableAntiforgery();
+        app.MapPost(ImportXmlPreviewPath, HandlePreviewXmlReceipt).DisableAntiforgery();
         app.MapPost(ImportXmlBatchPath, HandleImportXmlReceiptBatch).DisableAntiforgery();
         app.MapGet(OutboxDeadLettersPath, HandleListOutboxDeadLetters);
         return app;
@@ -83,19 +93,156 @@ public static class SupplyChainEndpoints
             x.ReceiptDate,
             x.Status,
             x.CreatedAt,
-            itemCount = x.Items.Count,
-            items = x.Items.Select(i => new
-            {
-                i.Id,
-                i.MaterialCode,
-                i.ExpectedQuantity,
-                i.UnitOfMeasure,
-                i.UnitPrice,
-                i.OriginalDescription
-            })
+            itemCount = x.Items.Count
         });
 
         return Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleGetReceiptDetails(
+        Guid id,
+        HttpContext context,
+        GetMaterialReceiptDetails getDetails,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        var result = await getDetails.ExecuteAsync(id, cancellationToken);
+        return result is not null ? Results.Ok(result) : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandlePreviewXmlReceipt(
+        HttpContext context,
+        IFormFile file,
+        INfeProvider nfeProvider,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return Results.BadRequest(new { code = "receipt.file_required", message = "An XML file is required." });
+        }
+
+        try
+        {
+            using var reader = new StreamReader(file.OpenReadStream());
+            var xmlContent = await reader.ReadToEndAsync(cancellationToken);
+            var parsed = nfeProvider.Parse(xmlContent);
+
+            return Results.Ok(parsed);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            return Results.Problem(
+                title: "Invalid fiscal document",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?> { ["code"] = "receipt.invalid_xml" });
+        }
+    }
+
+    private static async Task<IResult> HandleStartConference(
+        Guid id,
+        HttpContext context,
+        StartMaterialReceiptConference startConference,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        try
+        {
+            var receipt = await startConference.ExecuteAsync(
+                id,
+                context.User.Identity?.Name ?? "anonymous",
+                cancellationToken);
+
+            return Results.Ok(new { receiptId = receipt.Id, status = receipt.Status.ToString() });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(
+                title: "Invalid request",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?> { ["code"] = "receipt.invalid_status" });
+        }
+    }
+
+    private static async Task<IResult> HandleGetConferenceItems(
+        Guid id,
+        HttpContext context,
+        ISupplyChainRepository repository,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        var receipt = await repository.GetReceiptByIdAsync(id, cancellationToken);
+        if (receipt is null)
+        {
+            return Results.NotFound();
+        }
+
+        // Blind conference: DO NOT return ExpectedQuantity
+        var response = receipt.Items.Select(i => new
+        {
+            i.Id,
+            i.MaterialCode,
+            i.UnitOfMeasure,
+            i.OriginalDescription
+        });
+
+        return Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleCloseConference(
+        Guid id,
+        [FromBody] CloseConferenceRequest request,
+        HttpContext context,
+        CloseMaterialReceiptConference closeConference,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        try
+        {
+            var results = request.Results.Select(x => new CloseConferenceItemInput(
+                x.ItemId,
+                x.CountedQuantity,
+                x.ConfirmedLotNumber,
+                x.ConfirmedExpirationDate)).ToList();
+
+            var receipt = await closeConference.ExecuteAsync(
+                id,
+                context.User.Identity?.Name ?? "anonymous",
+                results,
+                context.TraceIdentifier,
+                cancellationToken);
+
+            return Results.Ok(new { receiptId = receipt.Id, status = receipt.Status.ToString() });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(
+                title: "Invalid request",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?> { ["code"] = "receipt.invalid_status" });
+        }
     }
 
     private static async Task<IResult> HandleImportXmlReceipt(
@@ -256,3 +403,6 @@ public static class SupplyChainEndpoints
         return Results.Content(receipt.RawXml, "application/xml");
     }
 }
+
+public sealed record CloseConferenceRequest(IReadOnlyCollection<CountedResultRequest> Results);
+public sealed record CountedResultRequest(Guid ItemId, decimal CountedQuantity, string? ConfirmedLotNumber, DateTimeOffset? ConfirmedExpirationDate);

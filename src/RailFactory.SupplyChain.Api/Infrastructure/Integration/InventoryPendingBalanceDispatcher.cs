@@ -50,8 +50,7 @@ public sealed class InventoryPendingBalanceDispatcher(
     private async Task DispatchTenantBatchAsync(TenantResolutionResult tenant, CancellationToken cancellationToken)
     {
         using var scope = serviceProvider.CreateScope();
-        
-        // Set tenant context for this scope
+
         var contextAccessor = scope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
         contextAccessor.Current = new RailFactory.BuildingBlocks.Tenancy.TenantContext(
             tenant.Code,
@@ -71,85 +70,136 @@ public sealed class InventoryPendingBalanceDispatcher(
 
         foreach (var message in pendingMessages)
         {
-            PendingBalanceRequestedPayload? payload;
-            try
+            if (message.EventType == "supply.receipt_item_registered")
             {
-                payload = JsonSerializer.Deserialize<PendingBalanceRequestedPayload>(
-                    message.PayloadJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                await HandleRegisteredEventAsync(message, tenant, client, cancellationToken);
             }
-            catch (JsonException ex)
+            else if (message.EventType == "supply.receipt_item_conferred")
             {
-                logger.LogError(ex, "Invalid outbox payload for message {MessageId}.", message.Id);
-                message.MarkDeadLetter($"Invalid JSON payload: {ex.Message}");
-                continue;
+                await HandleConferredEventAsync(message, tenant, client, cancellationToken);
             }
-
-            if (payload is null)
+            else
             {
-                logger.LogError("Invalid outbox payload for message {MessageId}.", message.Id);
-                message.MarkDeadLetter("Invalid JSON payload: payload was null.");
-                continue;
+                logger.LogWarning("Unknown event type {EventType} in supply outbox.", message.EventType);
+                message.MarkDeadLetter($"Unknown event type: {message.EventType}");
             }
-
-            var request = new HttpRequestMessage(HttpMethod.Post, "/internal/pending-balances")
-            {
-                Content = JsonContent.Create(new
-                {
-                    eventId = message.Id,
-                    eventType = message.EventType,
-                    correlationId = message.CorrelationId,
-                    payload = new
-                    {
-                        tenantCode = tenant.Code,
-                        payload.ReceiptId,
-                        payload.ReceiptItemId,
-                        payload.ReceiptNumber,
-                        payload.MaterialCode,
-                        payload.Quantity,
-                        payload.UnitOfMeasure,
-                        payload.UnitPrice,
-                        payload.OriginalDescription,
-                        payload.AccessKey,
-                        source = string.IsNullOrWhiteSpace(payload.Source) ? "supply-chain" : payload.Source
-                    }
-                })
-            };
-
-            request.Headers.Add("X-Tenant-Code", tenant.Code);
-
-            HttpResponseMessage response;
-            try
-            {
-                response = await client.SendAsync(request, cancellationToken);
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-            {
-                logger.LogWarning(ex, "Inventory integration request failed for outbox message {MessageId}.", message.Id);
-                MarkTransientFailure(message, ex.Message);
-                continue;
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("Inventory integration returned status code {StatusCode} for outbox message {MessageId}.", response.StatusCode, message.Id);
-                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                {
-                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                    message.MarkDeadLetter($"Inventory returned 400 Bad Request. Body: {errorBody}");
-                }
-                else
-                {
-                    MarkTransientFailure(message, $"Inventory returned {(int)response.StatusCode} {response.StatusCode}.");
-                }
-
-                continue;
-            }
-
-            message.MarkDispatched();
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task HandleRegisteredEventAsync(SupplyOutboxMessage message, TenantResolutionResult tenant, HttpClient client, CancellationToken cancellationToken)
+    {
+        var payload = DeserializePayload<PendingBalanceRequestedPayload>(message);
+        if (payload is null) return;
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/internal/pending-balances")
+        {
+            Content = JsonContent.Create(new
+            {
+                eventId = message.Id,
+                eventType = message.EventType,
+                correlationId = message.CorrelationId,
+                payload = new
+                {
+                    tenantCode = tenant.Code,
+                    payload.ReceiptId,
+                    payload.ReceiptItemId,
+                    payload.ReceiptNumber,
+                    payload.SupplierName,
+                    payload.MaterialCode,
+                    payload.Quantity,
+                    payload.UnitOfMeasure,
+                    payload.UnitPrice,
+                    payload.OriginalDescription,
+                    payload.AccessKey,
+                    source = string.IsNullOrWhiteSpace(payload.Source) ? "supply-chain" : payload.Source
+                }
+            })
+        };
+
+        await SendIntegrationRequestAsync(message, request, tenant.Code, client, cancellationToken);
+    }
+
+    private async Task HandleConferredEventAsync(SupplyOutboxMessage message, TenantResolutionResult tenant, HttpClient client, CancellationToken cancellationToken)
+    {
+        var payload = DeserializePayload<BalanceConfirmationPayload>(message);
+        if (payload is null) return;
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/internal/confirmed-balances")
+        {
+            Content = JsonContent.Create(new
+            {
+                eventId = message.Id,
+                eventType = message.EventType,
+                correlationId = message.CorrelationId,
+                payload = new
+                {
+                    tenantCode = tenant.Code,
+                    payload.ReceiptId,
+                    payload.ReceiptItemId,
+                    status = payload.ReceiptStatus,
+                    isApproved = payload.IsItemApproved,
+                    payload.CountedQuantity,
+                    payload.LotNumber,
+                    payload.ExpirationDate,
+                    source = string.IsNullOrWhiteSpace(payload.Source) ? "supply-chain" : payload.Source
+                }
+            })
+        };
+
+        await SendIntegrationRequestAsync(message, request, tenant.Code, client, cancellationToken);
+    }
+
+    private T? DeserializePayload<T>(SupplyOutboxMessage message) where T : class
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<T>(
+                message.PayloadJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Invalid outbox payload for message {MessageId}.", message.Id);
+            message.MarkDeadLetter($"Invalid JSON payload: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task SendIntegrationRequestAsync(SupplyOutboxMessage message, HttpRequestMessage request, string tenantCode, HttpClient client, CancellationToken cancellationToken)
+    {
+        request.Headers.Add("X-Tenant-Code", tenantCode);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await client.SendAsync(request, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            logger.LogWarning(ex, "Inventory integration request failed for outbox message {MessageId}.", message.Id);
+            MarkTransientFailure(message, ex.Message);
+            return;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogWarning("Inventory integration returned status code {StatusCode} for outbox message {MessageId}.", response.StatusCode, message.Id);
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                message.MarkDeadLetter($"Inventory returned 400 Bad Request. Body: {errorBody}");
+            }
+            else
+            {
+                MarkTransientFailure(message, $"Inventory returned {(int)response.StatusCode} {response.StatusCode}.");
+            }
+
+            return;
+        }
+
+        message.MarkDispatched();
     }
 
     private static void MarkTransientFailure(SupplyOutboxMessage message, string error)
@@ -173,5 +223,16 @@ public sealed class InventoryPendingBalanceDispatcher(
         decimal? UnitPrice,
         string? OriginalDescription,
         string? AccessKey,
+        string? Source,
+        string? SupplierName);
+
+    private sealed record BalanceConfirmationPayload(
+        Guid ReceiptId,
+        Guid ReceiptItemId,
+        string ReceiptStatus,
+        bool IsItemApproved,
+        decimal CountedQuantity,
+        string? LotNumber,
+        DateTimeOffset? ExpirationDate,
         string? Source);
 }

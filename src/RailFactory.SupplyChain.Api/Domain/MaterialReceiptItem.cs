@@ -21,6 +21,21 @@ public sealed class MaterialReceiptItem
     public string MaterialCode { get; private set; }
 
     /// <summary>
+    /// Nomenclatura Comum do Mercosul (Mercosur Common Nomenclature).
+    /// </summary>
+    public string? Ncm { get; private set; }
+
+    /// <summary>
+    /// Código Fiscal de Operações e Prestações (Tax Operation Code).
+    /// </summary>
+    public string? Cfop { get; private set; }
+
+    /// <summary>
+    /// Global Trade Item Number (Barcode/EAN).
+    /// </summary>
+    public string? Ean { get; private set; }
+
+    /// <summary>
     /// The quantity of material expected as per the document.
     /// </summary>
     public decimal ExpectedQuantity { get; private set; }
@@ -40,13 +55,28 @@ public sealed class MaterialReceiptItem
     /// </summary>
     public string? OriginalDescription { get; private set; }
 
+    /// <summary>
+    /// The actual quantity counted during physical conference.
+    /// </summary>
+    public decimal? CountedQuantity { get; private set; }
+
+    /// <summary>
+    /// The lot number confirmed by the operator during conference.
+    /// </summary>
+    public string? ConfirmedLotNumber { get; private set; }
+
+    /// <summary>
+    /// The expiration date confirmed by the operator during conference.
+    /// </summary>
+    public DateTimeOffset? ConfirmedExpirationDate { get; private set; }
+
     private MaterialReceiptItem()
     {
         MaterialCode = string.Empty;
         UnitOfMeasure = string.Empty;
     }
 
-    private MaterialReceiptItem(Guid id, Guid receiptId, string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription)
+    private MaterialReceiptItem(Guid id, Guid receiptId, string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription, string? ncm, string? cfop, string? ean)
     {
         Id = id;
         ReceiptId = receiptId;
@@ -55,20 +85,15 @@ public sealed class MaterialReceiptItem
         ExpectedQuantity = expectedQuantity;
         UnitPrice = unitPrice;
         OriginalDescription = originalDescription;
+        Ncm = ncm;
+        Cfop = cfop;
+        Ean = ean;
     }
 
     /// <summary>
     /// Factory method for creating a new receipt item.
     /// </summary>
-    /// <param name="receiptId">Parent receipt reference.</param>
-    /// <param name="materialCode">Material SKU.</param>
-    /// <param name="unitOfMeasure">Unit of measure.</param>
-    /// <param name="expectedQuantity">Expected quantity.</param>
-    /// <param name="unitPrice">Optional unit price.</param>
-    /// <param name="originalDescription">Optional original description.</param>
-    /// <returns>A new <see cref="MaterialReceiptItem"/> instance.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when quantity is not positive.</exception>
-    public static MaterialReceiptItem Create(Guid receiptId, string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription)
+    public static MaterialReceiptItem Create(Guid receiptId, string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription, string? ncm = null, string? cfop = null, string? ean = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(materialCode);
         ArgumentException.ThrowIfNullOrWhiteSpace(unitOfMeasure);
@@ -77,6 +102,26 @@ public sealed class MaterialReceiptItem
             throw new ArgumentOutOfRangeException(nameof(expectedQuantity), "Expected quantity must be greater than zero.");
         }
 
-        return new MaterialReceiptItem(Guid.NewGuid(), receiptId, materialCode.Trim(), unitOfMeasure.Trim(), expectedQuantity, unitPrice, originalDescription?.Trim());
+        return new MaterialReceiptItem(Guid.NewGuid(), receiptId, materialCode.Trim(), unitOfMeasure.Trim(), expectedQuantity, unitPrice, originalDescription?.Trim(), ncm?.Trim(), cfop?.Trim(), ean?.Trim());
     }
+
+    /// <summary>
+    /// Records the results of a physical conference for this item.
+    /// </summary>
+    public void RecordConference(decimal quantity, string? lotNumber, DateTimeOffset? expirationDate)
+    {
+        if (quantity < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(quantity), "Counted quantity cannot be negative.");
+        }
+
+        CountedQuantity = quantity;
+        ConfirmedLotNumber = lotNumber?.Trim();
+        ConfirmedExpirationDate = expirationDate;
+    }
+
+    /// <summary>
+    /// Checks if there is a quantity divergence between expected and counted.
+    /// </summary>
+    public bool HasDivergence => CountedQuantity.HasValue && CountedQuantity != ExpectedQuantity;
 }

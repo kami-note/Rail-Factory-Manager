@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Card, CircularProgress, FormControl, InputLabel, MenuItem, Select, Typography, Alert } from '@mui/material';
+import { Box, CircularProgress, FormControl, InputLabel, MenuItem, Select, Typography, Alert } from '@mui/material';
+import { fetchJsonOrThrow } from '../lib/http';
 
 interface Tenant {
   code: string;
@@ -21,23 +22,22 @@ export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/tenancy/tenants?t=${Date.now()}`)
-      .then(async response => {
-        if (!response.ok) {
-          throw new Error(`Failed to load organizations: ${response.status}`);
-        }
-        const data = await response.json() as Tenant[];
-        console.log('Loaded tenants:', data);
-        return data;
-      })
-      .then(data => {
+    const loadTenants = async () => {
+      try {
+        const data = await fetchJsonOrThrow<Tenant[]>(
+          `/api/tenancy/tenants?t=${Date.now()}`,
+          {},
+          'Failed to load organizations'
+        );
         setTenants(data);
+      } catch (requestError) {
+        setError(requestError instanceof Error ? requestError.message : 'Failed to load organizations.');
+      } finally {
         setLoading(false);
-      })
-      .catch((err: Error) => {
-        setError(err.message);
-        setLoading(false);
-      });
+      }
+    };
+
+    void loadTenants();
   }, []);
 
   if (loading) {

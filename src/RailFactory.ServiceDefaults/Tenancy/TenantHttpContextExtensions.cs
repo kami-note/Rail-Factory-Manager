@@ -16,8 +16,8 @@ public static class TenantHttpContextExtensions
 
         var locale = context.Items[TenantConstants.TenantLocaleItemName] as string ?? string.Empty;
         var timeZone = context.Items[TenantConstants.TenantTimeZoneItemName] as string ?? string.Empty;
-        
-        var connectionStrings = context.RequestServices.GetService<ITenantContextAccessor>()?.Current?.ConnectionStrings 
+
+        var connectionStrings = context.RequestServices.GetService<ITenantContextAccessor>()?.Current?.ConnectionStrings
                                ?? new Dictionary<string, string>();
 
         return new TenantInfoDto(tenantCode, locale, timeZone, connectionStrings);

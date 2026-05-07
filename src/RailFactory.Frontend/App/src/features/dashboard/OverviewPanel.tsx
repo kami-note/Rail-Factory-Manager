@@ -11,6 +11,7 @@ import {
   TableHead, 
   TableRow, 
   Stack,
+  Chip,
   useTheme,
   useMediaQuery
 } from '@mui/material';
@@ -20,6 +21,14 @@ import { StatCard } from '../../components/common/StatCard';
 import { ModuleHeader } from '../../components/common/ModuleHeader';
 import { productionLines, activityLogs } from './mocks';
 
+/**
+ * Renders the main dashboard overview panel.
+ * @param status - The current system status information.
+ * @param onNavigate - Navigation callback for quick actions.
+ * @remarks
+ * This panel provides a high-level summary of factory KPIs, production lines, and recent logs.
+ * Note: Production monitoring currently utilizes mock data as defined in the P1/P2 development phase.
+ */
 export function OverviewPanel({
   status,
   onNavigate
@@ -31,6 +40,17 @@ export function OverviewPanel({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
+
+  /**
+   * Returns a semantic color for a given priority level.
+   */
+  const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'high': return 'error';
+      case 'medium': return 'warning';
+      default: return 'default';
+    }
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#ffffff' }}>
@@ -54,7 +74,8 @@ export function OverviewPanel({
 
       {/* QUICK ACTIONS FOR TABLET/DESKTOP */}
       {!isSmall && (
-        <Box sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'flex-end', bgcolor: '#faf9f8', borderBottom: '1px solid #edebe9' }}>
+        <Box sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'flex-end', bgcolor: '#faf9f8', borderBottom: '1px solid #edebe9', gap: 2, alignItems: 'center' }}>
+          <Chip label="DEMO MODE: MOCK DATA" size="small" variant="outlined" color="warning" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
           <Button 
             variant="contained" 
             disableElevation
@@ -76,8 +97,8 @@ export function OverviewPanel({
               <TableHead>
                 <TableRow>
                   <TableCell>ID</TableCell>
-                  <TableCell>PRODUCT SPECIFICATION</TableCell>
                   <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>PRIORITY</TableCell>
+                  <TableCell>PRODUCT SPECIFICATION</TableCell>
                   <TableCell>STATUS</TableCell>
                 </TableRow>
               </TableHead>
@@ -85,12 +106,18 @@ export function OverviewPanel({
                 {productionLines.map((row, idx) => (
                   <TableRow key={row.id} sx={{ bgcolor: idx % 2 === 0 ? '#ffffff' : '#faf9f8' }}>
                     <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{row.id}</TableCell>
-                    <TableCell sx={{ color: 'text.primary', fontWeight: 500 }}>{row.product}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, display: { xs: 'none', sm: 'table-cell' } }}>
-                      {row.priority.toUpperCase()}
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      <Chip 
+                        label={row.priority.toUpperCase()} 
+                        size="small" 
+                        color={getPriorityColor(row.priority) as any}
+                        variant="filled"
+                        sx={{ fontSize: '0.65rem', fontWeight: 900, height: 20 }}
+                      />
                     </TableCell>
+                    <TableCell sx={{ color: 'text.primary', fontWeight: 600 }}>{row.product}</TableCell>
                     <TableCell>
-                      <Stack direction="row" spacing={2} alignItems="center">
+                      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                         <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: row.color }} />
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>{row.status}</Typography>
                       </Stack>
@@ -101,6 +128,7 @@ export function OverviewPanel({
             </Table>
           </TableContainer>
         </Grid>
+
 
         <Grid size={{ xs: 12, lg: 4 }} sx={{ display: 'flex', flexDirection: 'column' }}>
           <ModuleHeader label="ACTIVITY LOG" icon={<History size={14} />} />
