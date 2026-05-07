@@ -18,7 +18,7 @@ public sealed class ListPendingBalances(
         if (balances.Count == 0) return [];
 
         // ELITE FIX: Bulk fetch materials to eliminate N+1 query pattern.
-        var materialCodes = balances.Select(x => x.MaterialCode).Distinct();
+        var materialCodes = balances.Select(x => x.MaterialCode.Value).Distinct();
         var materials = await materialRepository.GetByCodesAsync(materialCodes, cancellationToken);
 
         return balances.Select(x =>
@@ -26,6 +26,7 @@ public sealed class ListPendingBalances(
             string? supplierName = null;
             string? ncm = null;
             string? gtin = null;
+            string? originalDescription = null;
 
             if (!string.IsNullOrWhiteSpace(x.SourceMetadata))
             {
@@ -36,6 +37,12 @@ public sealed class ListPendingBalances(
                         doc.RootElement.TryGetProperty("supplierName", out prop))
                     {
                         supplierName = prop.GetString();
+                    }
+
+                    if (doc.RootElement.TryGetProperty("OriginalDescription", out var descProp) ||
+                        doc.RootElement.TryGetProperty("originalDescription", out descProp))
+                    {
+                        originalDescription = descProp.GetString();
                     }
 
                     if (doc.RootElement.TryGetProperty("Ncm", out var ncmProp) ||
@@ -53,12 +60,12 @@ public sealed class ListPendingBalances(
                 catch { /* Ignore malformed JSON */ }
             }
 
-            var material = materials.TryGetValue(x.MaterialCode, out var m) ? m : null;
+            var material = materials.TryGetValue(x.MaterialCode.Value, out var m) ? m : null;
 
             return new PendingBalanceListItemResponse(
                 x.Id,
                 x.MaterialCode,
-                material?.OfficialName ?? x.MaterialCode,
+                material?.OfficialName ?? originalDescription ?? x.MaterialCode,
                 x.Quantity,
                 x.UnitOfMeasure,
                 x.Status.ToString(),
@@ -69,7 +76,8 @@ public sealed class ListPendingBalances(
                 supplierName,
                 x.CreatedAt,
                 material?.Ncm ?? ncm,
-                material?.Gtin ?? gtin
+                material?.Gtin ?? gtin,
+                material?.ImageUrl
             );
         }).ToList();
     }

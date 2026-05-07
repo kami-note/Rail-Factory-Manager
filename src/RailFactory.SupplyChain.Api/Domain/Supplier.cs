@@ -1,10 +1,11 @@
 using RailFactory.BuildingBlocks.Domain;
+using RailFactory.BuildingBlocks.Tenancy;
 
 namespace RailFactory.SupplyChain.Api.Domain;
 
 public sealed class Supplier : AggregateRoot<Guid>
 {
-    public string FiscalId { get; private set; }
+    public FiscalId FiscalId { get; private set; }
     public string Name { get; private set; }
     public bool IsActive { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -12,11 +13,11 @@ public sealed class Supplier : AggregateRoot<Guid>
     private Supplier()
         : base(Guid.Empty)
     {
-        FiscalId = string.Empty;
+        FiscalId = default!;
         Name = string.Empty;
     }
 
-    private Supplier(Guid id, string fiscalId, string name)
+    private Supplier(Guid id, FiscalId fiscalId, string name)
         : base(id)
     {
         FiscalId = fiscalId;
@@ -27,8 +28,7 @@ public sealed class Supplier : AggregateRoot<Guid>
 
     public static Supplier Create(string fiscalId, string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(fiscalId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        return new Supplier(Guid.NewGuid(), fiscalId.Trim(), name.Trim());
+        return new Supplier(Guid.NewGuid(), FiscalId.From(fiscalId), name.Trim());
     }
 }

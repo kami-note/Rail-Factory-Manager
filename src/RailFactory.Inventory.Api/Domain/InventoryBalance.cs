@@ -1,4 +1,5 @@
 using RailFactory.BuildingBlocks.Domain;
+using RailFactory.BuildingBlocks.Tenancy;
 
 namespace RailFactory.Inventory.Api.Domain;
 
@@ -15,7 +16,7 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
     /// <summary>
     /// Unique code for the material (SKU).
     /// </summary>
-    public string MaterialCode { get; private set; }
+    public MaterialCode MaterialCode { get; private set; }
 
     /// <summary>
     /// Unit of measurement (e.g., UN, KG).
@@ -70,14 +71,14 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
     private InventoryBalance()
         : base(Guid.Empty)
     {
-        MaterialCode = string.Empty;
+        MaterialCode = default!;
         UnitOfMeasure = string.Empty;
         SourceReference = string.Empty;
     }
 
     private InventoryBalance(
         Guid id,
-        string materialCode,
+        MaterialCode materialCode,
         string unitOfMeasure,
         decimal quantity,
         Guid stockLocationId,
@@ -97,6 +98,7 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
         LotNumber = lotNumber;
         ExpirationDate = expirationDate;
         SourceType = sourceType;
+        SourceMetadata = sourceType == InventorySourceType.Purchase ? sourceMetadata : null; // Ensure only Purchase has metadata for now
         SourceMetadata = sourceMetadata;
         CreatedAt = DateTimeOffset.UtcNow;
     }
@@ -133,7 +135,7 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
 
         return new InventoryBalance(
             Guid.NewGuid(),
-            materialCode.Trim(),
+            MaterialCode.From(materialCode),
             unitOfMeasure.Trim(),
             quantity,
             stockLocationId,

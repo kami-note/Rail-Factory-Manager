@@ -39,4 +39,5 @@ export type ConferenceItem = {
   materialCode: string;
   unitOfMeasure: string;
   originalDescription?: string;
+  imageUrl?: string;
 };

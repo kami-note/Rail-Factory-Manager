@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Inventory.Api.Domain;
 
 namespace RailFactory.Inventory.Api.Infrastructure.Persistence;
@@ -26,7 +27,12 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         {
             entity.ToTable("inventory_balances");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.MaterialCode).HasMaxLength(64).IsRequired();
+            
+            entity.Property(x => x.MaterialCode)
+                .HasConversion(v => v.Value, v => MaterialCode.From(v))
+                .HasMaxLength(64)
+                .IsRequired();
+
             entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();
             entity.Property(x => x.Quantity).HasColumnType("numeric(18,4)");
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
@@ -42,7 +48,12 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         {
             entity.ToTable("materials");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.MaterialCode).HasMaxLength(64).IsRequired();
+            
+            entity.Property(x => x.MaterialCode)
+                .HasConversion(v => v.Value, v => MaterialCode.From(v))
+                .HasMaxLength(64)
+                .IsRequired();
+
             entity.Property(x => x.Ncm).HasMaxLength(16);
             entity.Property(x => x.Gtin).HasMaxLength(32);
             entity.Property(x => x.OfficialName).HasMaxLength(200).IsRequired();

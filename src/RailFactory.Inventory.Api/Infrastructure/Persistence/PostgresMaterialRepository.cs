@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Inventory.Api.Application.Ports;
 using RailFactory.Inventory.Api.Domain;
 
@@ -11,15 +12,17 @@ public sealed class PostgresMaterialRepository(InventoryDbContext dbContext) : I
 {
     public Task<Material?> GetByCodeAsync(string materialCode, CancellationToken cancellationToken)
     {
+        var code = MaterialCode.From(materialCode);
         return dbContext.Materials
-            .FirstOrDefaultAsync(x => x.MaterialCode == materialCode, cancellationToken);
+            .FirstOrDefaultAsync(x => x.MaterialCode == code, cancellationToken);
     }
 
     public Task<Dictionary<string, Material>> GetByCodesAsync(IEnumerable<string> materialCodes, CancellationToken cancellationToken)
     {
+        var codes = materialCodes.Select(MaterialCode.From).ToList();
         return dbContext.Materials
-            .Where(x => materialCodes.Contains(x.MaterialCode))
-            .ToDictionaryAsync(x => x.MaterialCode, cancellationToken);
+            .Where(x => codes.Contains(x.MaterialCode))
+            .ToDictionaryAsync(x => x.MaterialCode.Value, cancellationToken);
     }
 
     public async Task AddAsync(Material material, CancellationToken cancellationToken)

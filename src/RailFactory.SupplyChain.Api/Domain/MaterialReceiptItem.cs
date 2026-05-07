@@ -1,3 +1,5 @@
+using RailFactory.BuildingBlocks.Tenancy;
+
 namespace RailFactory.SupplyChain.Api.Domain;
 
 /// <summary>
@@ -18,7 +20,7 @@ public sealed class MaterialReceiptItem
     /// <summary>
     /// Unique code for the material (SKU).
     /// </summary>
-    public string MaterialCode { get; private set; }
+    public MaterialCode MaterialCode { get; private set; }
 
     /// <summary>
     /// Nomenclatura Comum do Mercosul (Mercosur Common Nomenclature).
@@ -72,11 +74,11 @@ public sealed class MaterialReceiptItem
 
     private MaterialReceiptItem()
     {
-        MaterialCode = string.Empty;
+        MaterialCode = default!;
         UnitOfMeasure = string.Empty;
     }
 
-    private MaterialReceiptItem(Guid id, Guid receiptId, string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription, string? ncm, string? cfop, string? ean)
+    private MaterialReceiptItem(Guid id, Guid receiptId, MaterialCode materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription, string? ncm, string? cfop, string? ean)
     {
         Id = id;
         ReceiptId = receiptId;
@@ -95,14 +97,13 @@ public sealed class MaterialReceiptItem
     /// </summary>
     public static MaterialReceiptItem Create(Guid receiptId, string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription, string? ncm = null, string? cfop = null, string? ean = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(materialCode);
         ArgumentException.ThrowIfNullOrWhiteSpace(unitOfMeasure);
         if (expectedQuantity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(expectedQuantity), "Expected quantity must be greater than zero.");
         }
 
-        return new MaterialReceiptItem(Guid.NewGuid(), receiptId, materialCode.Trim(), unitOfMeasure.Trim(), expectedQuantity, unitPrice, originalDescription?.Trim(), ncm?.Trim(), cfop?.Trim(), ean?.Trim());
+        return new MaterialReceiptItem(Guid.NewGuid(), receiptId, MaterialCode.From(materialCode), unitOfMeasure.Trim(), expectedQuantity, unitPrice, originalDescription?.Trim(), ncm?.Trim(), cfop?.Trim(), ean?.Trim());
     }
 
     /// <summary>

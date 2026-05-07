@@ -11,6 +11,7 @@ public static class FrontendEndpoints
     private const string AuthCsrfPath = "/api/auth/csrf";
     private const string AuthLogoutPath = "/api/auth/logout";
     private const string MaterialImageUploadPath = "/api/materials/{materialCode}/image";
+    private const string MaterialImageServingPath = "/api/inventory/materials/images/{tenantCode}/{fileName}";
 
     public static WebApplication MapFrontendEndpoints(this WebApplication app, FrontendHostingExtensions.FrontendStaticUiState staticUi)
     {
@@ -20,6 +21,7 @@ public static class FrontendEndpoints
         app.MapGet(AuthCsrfPath, FrontendCsrfEndpoint.HandleGet);
         app.MapPost(AuthLogoutPath, FrontendLogoutEndpoint.HandlePost);
         app.MapPost(MaterialImageUploadPath, MaterialImageUploadEndpoint.HandlePost).DisableAntiforgery();
+        app.MapGet(MaterialImageServingPath, MaterialImageServingEndpoint.HandleGet);
         app.MapGet(StatusPath, FrontendStatusEndpoint.HandleGet);
         app.MapReverseProxy();
 

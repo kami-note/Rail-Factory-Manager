@@ -6,7 +6,9 @@ namespace RailFactory.SupplyChain.Api.Application.Receiving;
 /// <summary>
 /// Retrieves items for a blind conference, omitting expected quantities.
 /// </summary>
-public sealed class GetConferenceItems(ISupplyChainRepository repository)
+public sealed class GetConferenceItems(
+    ISupplyChainRepository repository,
+    IInventoryMaterialService materialService)
 {
     /// <summary>
     /// Executes the retrieval of conference items.
@@ -16,11 +18,20 @@ public sealed class GetConferenceItems(ISupplyChainRepository repository)
         var receipt = await repository.GetReceiptByIdAsync(receiptId, cancellationToken);
         if (receipt is null) return null;
 
-        return receipt.Items.Select(i => new MaterialReceiptConferenceItemResponse(
-            Id: i.Id,
-            MaterialCode: i.MaterialCode,
-            UnitOfMeasure: i.UnitOfMeasure,
-            OriginalDescription: i.OriginalDescription
-        )).ToList();
+        // Fetch material metadata for images and standardized names from Inventory service
+        var materialCodes = receipt.Items.Select(x => x.MaterialCode.Value).Distinct();
+        var materials = await materialService.GetMaterialsByCodesAsync(materialCodes, cancellationToken);
+
+        return receipt.Items.Select(i => 
+        {
+            var material = materials.TryGetValue(i.MaterialCode, out var m) ? m : null;
+            return new MaterialReceiptConferenceItemResponse(
+                Id: i.Id,
+                MaterialCode: i.MaterialCode,
+                UnitOfMeasure: i.UnitOfMeasure,
+                OriginalDescription: material?.OfficialName ?? i.OriginalDescription,
+                ImageUrl: material?.ImageUrl
+            );
+        }).ToList();
     }
 }

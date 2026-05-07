@@ -54,6 +54,7 @@ type MaterialReceiptDetails = {
     unitPrice?: number;
     lotNumber?: string;
     expirationDate?: string;
+    imageUrl?: string;
   }>;
   timeline: Array<{
     status: string;
@@ -195,18 +196,26 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
                       <TableRow key={item.id}>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <MaterialAvatar materialCode={item.materialCode} size={28} />
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {item.productName}
-                            </Typography>
-                            {item.originalDescription && item.originalDescription !== item.productName && (
-                              <Typography variant="caption" color="text.secondary">
-                                {item.originalDescription}
+                            <MaterialAvatar 
+                              materialCode={item.materialCode} 
+                              imageUrl={item.imageUrl}
+                              size={28} 
+                            />
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {item.productName}
                               </Typography>
-                            )}
-                            <Typography variant="caption" color="text.secondary">
-                              {item.materialCode}
-                            </Typography>
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                  SKU: {item.materialCode}
+                                </Typography>
+                                {item.originalDescription && item.originalDescription !== item.productName && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    | {item.originalDescription}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
                           </Box>
                         </TableCell>
                         <TableCell>{item.expectedQuantity} {item.unitOfMeasure}</TableCell>

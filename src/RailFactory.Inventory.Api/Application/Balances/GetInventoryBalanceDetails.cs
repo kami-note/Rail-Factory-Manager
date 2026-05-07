@@ -31,12 +31,19 @@ public sealed class GetInventoryBalanceDetails(
             : JsonSerializer.Deserialize<JsonElement>(balance.SourceMetadata);
 
         string? supplierName = null;
+        string? originalDescription = null;
         if (sourceMetadata.HasValue && sourceMetadata.Value.ValueKind == JsonValueKind.Object)
         {
             if (sourceMetadata.Value.TryGetProperty("SupplierName", out var prop) || 
                 sourceMetadata.Value.TryGetProperty("supplierName", out prop))
             {
                 supplierName = prop.GetString();
+            }
+
+            if (sourceMetadata.Value.TryGetProperty("OriginalDescription", out var descProp) || 
+                sourceMetadata.Value.TryGetProperty("originalDescription", out descProp))
+            {
+                originalDescription = descProp.GetString();
             }
         }
 
@@ -50,7 +57,15 @@ public sealed class GetInventoryBalanceDetails(
                 material.ImageUrl,
                 material.Ncm,
                 material.Gtin)
-            : new MaterialDetailsResponse(balance.MaterialCode, "Unknown Material", "No catalog information available.", "RawMaterial", "Draft", null, null, null);
+            : new MaterialDetailsResponse(
+                balance.MaterialCode, 
+                originalDescription ?? balance.MaterialCode, 
+                "No catalog information available.", 
+                "RawMaterial", 
+                "Draft", 
+                null, 
+                null, 
+                null);
 
         return new InventoryBalanceDetailsResponse(
             Id: balance.Id,

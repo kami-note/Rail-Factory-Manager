@@ -36,7 +36,8 @@ public record MaterialReceiptItemResponse(
     string UnitOfMeasure,
     decimal? UnitPrice,
     string? LotNumber,
-    string? ExpirationDate);
+    string? ExpirationDate,
+    string? ImageUrl = null);
 
 /// <summary>
 /// Timeline event for the receipt.
