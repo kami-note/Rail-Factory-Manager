@@ -1,3 +1,4 @@
+using RailFactory.BuildingBlocks.Presentation;
 using RailFactory.SupplyChain.Api.Api.Responses;
 using RailFactory.SupplyChain.Api.Application.Ports;
 using RailFactory.SupplyChain.Api.Domain;
@@ -35,7 +36,7 @@ public sealed class GetMaterialReceiptDetails(
         return new MaterialReceiptDetailsResponse(
             Id: receipt.Id,
             ReceiptNumber: receipt.ReceiptNumber,
-            Status: receipt.Status.ToString(),
+            Status: receipt.Status.ToDisplayStatus(),
             Supplier: supplier is null ? null : new MaterialReceiptSupplierResponse(
                 Name: supplier.Name,
                 TaxId: supplier.FiscalId),
@@ -45,7 +46,7 @@ public sealed class GetMaterialReceiptDetails(
                 CreatedBy: firstEntry?.UserIdentifier ?? "System",
                 ConferenceStartedAt: startEntry?.CreatedAt,
                 ConferenceStartedBy: startEntry?.UserIdentifier),
-            Items: receipt.Items.Select(i => 
+            Items: receipt.Items.Select(i =>
             {
                 var material = materials.TryGetValue(i.MaterialCode, out var m) ? m : null;
                 return new MaterialReceiptItemResponse(
@@ -67,13 +68,14 @@ public sealed class GetMaterialReceiptDetails(
                 OccurredAt: a.CreatedAt
             )).ToList()
         );
-    }
+        }
 
-    private static string MapActionToStatus(string action) => action switch
-    {
-        "receipt_created" => "Registered",
-        "conference_started" => "InConference",
-        "conference_closed" => "Conferred",
-        _ => action
-    };
-}
+        private static DisplayStatus MapActionToStatus(string action) => action switch
+        {
+        "receipt_created" => MaterialReceiptStatus.Registered.ToDisplayStatus(),
+        "conference_started" => MaterialReceiptStatus.InConference.ToDisplayStatus(),
+        "conference_closed" => MaterialReceiptStatus.Approved.ToDisplayStatus(),
+        _ => new DisplayStatus(action, action, "default")
+        };
+        }
+

@@ -1,3 +1,5 @@
+using RailFactory.BuildingBlocks.Presentation;
+
 namespace RailFactory.Inventory.Api.Api.Responses;
 
 public sealed record InventoryBalanceListItemResponse(
@@ -6,11 +8,11 @@ public sealed record InventoryBalanceListItemResponse(
     string MaterialName,
     decimal Quantity,
     string UnitOfMeasure,
-    string Status,
+    DisplayStatus Status,
     string SourceReference,
     string? LotNumber,
     string? ExpirationDate,
-    string SourceType,
+    DisplayStatus SourceType,
     string? SupplierName,
     DateTimeOffset CreatedAt,
     string? Ncm = null,

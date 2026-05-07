@@ -1,3 +1,5 @@
+using RailFactory.BuildingBlocks.Presentation;
+
 namespace RailFactory.SupplyChain.Api.Api.Responses;
 
 /// <summary>
@@ -6,7 +8,7 @@ namespace RailFactory.SupplyChain.Api.Api.Responses;
 public record MaterialReceiptDetailsResponse(
     Guid Id,
     string ReceiptNumber,
-    string Status,
+    DisplayStatus Status,
     MaterialReceiptSupplierResponse? Supplier,
     DateTime IssuedAt,
     MaterialReceiptAuditResponse Audit,
@@ -42,4 +44,4 @@ public record MaterialReceiptItemResponse(
 /// <summary>
 /// Timeline event for the receipt.
 /// </summary>
-public record MaterialReceiptTimelineResponse(string Status, DateTimeOffset OccurredAt);
+public record MaterialReceiptTimelineResponse(DisplayStatus Status, DateTimeOffset OccurredAt);

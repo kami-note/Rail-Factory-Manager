@@ -2,10 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using RailFactory.BuildingBlocks.Presentation;
 
 namespace Microsoft.Extensions.Hosting;
 
-internal sealed class TenantCatalogHttpClient(
+public sealed class TenantCatalogHttpClient(
     HttpClient httpClient,
     IMemoryCache cache,
     IOptions<TenantRoutingOptions> options) : ITenantCatalogClient
@@ -41,7 +42,7 @@ internal sealed class TenantCatalogHttpClient(
             tenant.Code,
             tenant.Locale,
             tenant.TimeZone,
-            string.Equals(tenant.Status, "Active", StringComparison.OrdinalIgnoreCase),
+            string.Equals(tenant.Status?.Key, "Active", StringComparison.OrdinalIgnoreCase),
             tenant.ConnectionStrings);
 
         cache.Set(cacheKey, resolved, GetCacheLifetime(options.Value.CatalogCacheTtlSeconds));
@@ -62,8 +63,9 @@ internal sealed class TenantCatalogHttpClient(
             tenant.Code,
             tenant.Locale,
             tenant.TimeZone,
-            string.Equals(tenant.Status, "Active", StringComparison.OrdinalIgnoreCase),
+            string.Equals(tenant.Status?.Key, "Active", StringComparison.OrdinalIgnoreCase),
             tenant.ConnectionStrings)).ToList();
+
     }
 
     private static TimeSpan GetCacheLifetime(int ttlSeconds)
@@ -73,6 +75,6 @@ internal sealed class TenantCatalogHttpClient(
         string Code,
         string Locale,
         string TimeZone,
-        string Status,
+        DisplayStatus Status,
         IReadOnlyDictionary<string, string> ConnectionStrings);
 }

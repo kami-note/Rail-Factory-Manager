@@ -1,3 +1,5 @@
+import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping';
+
 export type Status = {
   service: string;
   environment: string;
@@ -12,7 +14,7 @@ export type Receipt = {
   documentNumber: string;
   accessKey?: string;
   totalValue?: number;
-  status: string;
+  status: DisplayStatus;
   itemCount: number;
 };
 
@@ -22,7 +24,7 @@ export type PendingBalance = {
   materialName: string;
   quantity: number;
   unitOfMeasure: string;
-  status: string;
+  status: DisplayStatus;
   sourceReference: string;
   lotNumber?: string;
   expirationDate?: string;

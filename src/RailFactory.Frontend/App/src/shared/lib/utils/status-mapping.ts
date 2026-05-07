@@ -1,36 +1,18 @@
-export type StatusColor = 'success' | 'warning' | 'error' | 'info' | 'default'
-
-export interface StatusMapping {
-  label: string
-  color: StatusColor
-}
+export type StatusColor = 'success' | 'warning' | 'error' | 'info' | 'default';
 
 /**
- * Maps system statuses to human-readable labels and semantic colors.
- * Supports statuses from SupplyChain and Inventory modules.
+ * Standard contract for Backend-Driven UI statuses.
+ * This matches the RailFactory.BuildingBlocks.Presentation.DisplayStatus C# record.
+ * 
+ * DESIGN DECISION: Single Source of Truth in Backend.
+ * To avoid "Unknown/Desconhecido" errors, the Backend (BFF) is now responsible 
+ * for providing the translated label and semantic color.
  */
-export const HumanizedStatusMapping: Record<string, StatusMapping> = {
-  // Supply Chain - Material Receipt
-  'Registered': { label: 'Registrado', color: 'info' },
-  'InConference': { label: 'Em Conferência', color: 'warning' },
-  'Conferred': { label: 'Conferido', color: 'success' },
-  'Cancelled': { label: 'Cancelado', color: 'error' },
-
-  // Inventory - Balance
-  'Pending': { label: 'Pendente', color: 'warning' },
-  'Available': { label: 'Disponível', color: 'success' },
-  'Blocked': { label: 'Bloqueado', color: 'error' },
-  'Consumed': { label: 'Consumido', color: 'default' },
-  
-  // Generic / Default
-  'Default': { label: 'Desconhecido', color: 'default' }
-}
-
-/**
- * Gets the humanized status mapping for a given status string.
- * @param status - The raw status string from the API.
- * @returns The mapping with label and color.
- */
-export const getStatusMapping = (status: string): StatusMapping => {
-  return HumanizedStatusMapping[status] || HumanizedStatusMapping['Default']
+export interface DisplayStatus {
+  /** The raw system identifier (e.g., "Approved") */
+  key: string;
+  /** The translated, human-readable label (e.g., "Conferido") */
+  label: string;
+  /** The semantic color for UI components (e.g., "success") */
+  color: StatusColor;
 }

@@ -20,9 +20,9 @@ import {
 import { Camera } from 'lucide-react';
 import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
 import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
-import { getStatusMapping } from '../../../shared/lib/utils/status-mapping';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
+import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping';
 
 type BalanceDetailsModalProps = {
   balanceId: string | null;
@@ -34,17 +34,16 @@ type InventoryBalanceDetails = {
   id: string;
   materialCode: string;
   material: {
-    materialCode: string;
     officialName: string;
     description: string;
-    category: string;
-    status: string;
+    category: DisplayStatus;
+    status: DisplayStatus;
     imageUrl?: string;
     ncm?: string;
     gtin?: string;
   };
   unitOfMeasure: string;
-  status: string;
+  status: DisplayStatus;
   quantities: {
     totalPhysical: number;
     available: number;
@@ -54,14 +53,14 @@ type InventoryBalanceDetails = {
   traceability: {
     lotNumber?: string;
     expirationDate?: string;
-    sourceType: string;
+    sourceType: DisplayStatus;
     sourceReference: string;
     supplierName?: string;
   };
   ledger: Array<{
     occurredAt: string;
     quantityChange: number;
-    newStatus: string;
+    newStatus: DisplayStatus;
     reason: string;
     user: string;
   }>;
@@ -130,8 +129,6 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
     }
   };
 
-  const balanceStatus = details ? getStatusMapping(details.status) : null;
-
   return (
     <ResponsiveCenteredModal 
       open={!!balanceId} 
@@ -183,17 +180,15 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
                     {details.material.officialName}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
-                    SKU: {details.materialCode} | CAT: {details.material.category} | STATUS: {details.material.status}
+                    SKU: {details.materialCode} | CAT: {details.material.category.label} | STATUS: {details.material.status.label}
                   </Typography>
                 </Box>
-                {balanceStatus && (
-                  <Chip 
-                    label={balanceStatus.label} 
-                    color={balanceStatus.color as any} 
-                    size="small" 
-                    sx={{ fontWeight: 700 }} 
-                  />
-                )}
+                <Chip 
+                  label={details.status.label} 
+                  color={details.status.color as any} 
+                  size="small" 
+                  sx={{ fontWeight: 700 }} 
+                />
               </Box>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
                 NCM: {details.material.ncm || '---'} | GTIN: {details.material.gtin || '---'}
@@ -269,7 +264,7 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
                 <Stack spacing={1}>
                   <Box>
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Source Type</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{details.traceability.sourceType}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{details.traceability.sourceType.label}</Typography>
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Source Reference</Typography>
@@ -307,7 +302,13 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
                         {entry.quantityChange >= 0 ? '+' : ''}{entry.quantityChange}
                       </TableCell>
                       <TableCell>
-                        <Chip size="small" label={entry.newStatus} variant="outlined" sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }} />
+                        <Chip 
+                          size="small" 
+                          label={entry.newStatus.label} 
+                          color={entry.newStatus.color as any}
+                          variant="outlined" 
+                          sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }} 
+                        />
                       </TableCell>
                       <TableCell>{entry.user}</TableCell>
                     </TableRow>
