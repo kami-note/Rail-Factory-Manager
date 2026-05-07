@@ -1,4 +1,5 @@
 using RailFactory.BuildingBlocks.Results;
+using RailFactory.Tenancy.Api.Domain;
 
 namespace RailFactory.Tenancy.Api.Application;
 
@@ -13,7 +14,7 @@ public sealed class ListTenants(ITenantRepository tenants)
             tenant.DisplayName,
             tenant.Locale,
             tenant.TimeZone,
-            tenant.Status.ToString(),
+            tenant.Status.ToDisplayStatus(),
             tenant.ConnectionStrings)).ToList();
 
         return Result<IReadOnlyList<TenantDetails>>.Success(details);

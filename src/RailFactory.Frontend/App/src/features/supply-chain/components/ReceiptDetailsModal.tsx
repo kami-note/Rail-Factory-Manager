@@ -18,9 +18,9 @@ import {
 } from '@mui/material';
 import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
 import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
-import { getStatusMapping } from '../../../shared/lib/utils/status-mapping';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
+import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping';
 
 type ReceiptDetailsModalProps = {
   receiptId: string | null;
@@ -31,7 +31,7 @@ type ReceiptDetailsModalProps = {
 type MaterialReceiptDetails = {
   id: string;
   receiptNumber: string;
-  status: string;
+  status: DisplayStatus;
   supplier?: {
     name: string;
     taxId: string;
@@ -57,7 +57,7 @@ type MaterialReceiptDetails = {
     imageUrl?: string;
   }>;
   timeline: Array<{
-    status: string;
+    status: DisplayStatus;
     occurredAt: string;
   }>;
 };
@@ -99,8 +99,6 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
     void fetchDetails();
   }, [receiptId, tenantCode]);
 
-  const status = details ? getStatusMapping(details.status) : null;
-
   return (
     <ResponsiveCenteredModal 
       open={!!receiptId} 
@@ -130,8 +128,8 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
               <Typography variant="overline" color="text.secondary">Status</Typography>
               <Box sx={{ display: 'flex', justifyContent: { md: 'flex-end' }, mt: 0.5 }}>
                 <Chip 
-                  label={status?.label} 
-                  color={status?.color as any} 
+                  label={details.status.label} 
+                  color={details.status.color as any} 
                   sx={{ fontWeight: 700, px: 1 }} 
                 />
               </Box>
@@ -157,13 +155,13 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
                       width: 14, 
                       height: 14, 
                       borderRadius: '50%', 
-                      bgcolor: getStatusMapping(event.status).color + '.main',
+                      bgcolor: event.status.color + '.main',
                       border: '3px solid white',
                       boxShadow: 1
                     }} 
                   />
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {getStatusMapping(event.status).label}
+                    {event.status.label}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {formatRelativeDate(event.occurredAt)}

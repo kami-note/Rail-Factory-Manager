@@ -1,3 +1,5 @@
+using RailFactory.BuildingBlocks.Presentation;
+
 namespace RailFactory.Tenancy.Api.Application;
 
 public sealed record TenantDetails(
@@ -5,5 +7,5 @@ public sealed record TenantDetails(
     string DisplayName,
     string Locale,
     string TimeZone,
-    string Status,
+    DisplayStatus Status,
     IReadOnlyDictionary<string, string> ConnectionStrings);

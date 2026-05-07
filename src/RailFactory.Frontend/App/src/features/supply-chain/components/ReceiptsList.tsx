@@ -1,19 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
+import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   CircularProgress,
   Alert,
   Paper,
   IconButton,
   Tooltip,
-  Chip
+  Chip,
+  Stack,
+  Button,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -21,7 +25,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import type { Receipt } from '../types';
 import { ReceiptDetailsModal } from './ReceiptDetailsModal';
-import { getStatusMapping } from '../../../shared/lib/utils/status-mapping';
 import { TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 
@@ -31,24 +34,14 @@ type ReceiptsListProps = {
   onStartConference?: (receiptId: string) => void;
 };
 
-/**
- * Renders a list of material receipts for the current tenant.
- * @param tenantCode - The active tenant identifier for data filtering.
- * @param refreshKey - Optional trigger to force re-fetch from the API.
- * @param onStartConference - Callback when user wants to enter conference view.
- * @remarks
- * This component handles data fetching, loading states, and error handling.
- * It includes a specialized download function for the original NF-e XML.
- */
 export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: ReceiptsListProps) {
+  const theme = useTheme();
+  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
 
-  /**
-   * Initiates the blind conference process for a receipt.
-   */
   const startConference = async (receiptId: string) => {
     try {
       await fetchJsonOrThrow(
@@ -72,9 +65,6 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
     }
   };
 
-  /**
-   * Fetches and downloads the original XML content for a specific receipt.
-   */
   const viewXml = async (receiptId: string, receiptNumber: string) => {
     try {
       const response = await fetch(`/api/supply-chain/receipts/${receiptId}/xml`, {
@@ -130,7 +120,6 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
     void fetchReceipts();
   }, [tenantCode, refreshKey]);
 
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -140,9 +129,7 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
   }
 
   if (error) {
-    return (
-      <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>
-    );
+    return <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>;
   }
 
   if (receipts.length === 0) {
@@ -155,113 +142,183 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
 
   return (
     <>
-      <TableContainer component={Paper} variant="outlined">
-        <Table>
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'background.default' }}>
-              <TableCell sx={{ fontWeight: 700 }}>Receipt</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Document / Access Key</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Total</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Items</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {receipts.map(receipt => {
-              const status = getStatusMapping(receipt.status);
-              return (
-                <TableRow key={receipt.id} hover>
-                  <TableCell sx={{ fontWeight: 600 }}>{receipt.receiptNumber}</TableCell>
-                  <TableCell>
-                    <Tooltip title="Click to copy document number">
-                      <Typography 
-                        variant="body2" 
-                        sx={{ fontWeight: 500, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                        onClick={() => TechnicalIdFormatter.copyToClipboard(receipt.documentNumber)}
-                      >
-                        {receipt.documentNumber}
+      {isCompact ? (
+        <Stack spacing={2}>
+          {receipts.map((receipt) => {
+            const status = receipt.status;
+            return (
+              <Paper key={receipt.id} variant="outlined" sx={{ p: 2 }}>
+                <Stack spacing={1.5}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1.5 }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                        {receipt.receiptNumber}
                       </Typography>
-                    </Tooltip>
-                    {receipt.accessKey && (
-                      <Tooltip title="Click to copy full access key">
-                        <Typography 
-                          variant="caption" 
-                          color="text.secondary" 
-                          sx={{ display: 'block', fontFamily: 'monospace', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                          onClick={() => receipt.accessKey && TechnicalIdFormatter.copyToClipboard(receipt.accessKey)}
+                      <Tooltip title="Click to copy document number">
+                        <Typography
+                          variant="caption"
+                          sx={{ fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                          onClick={() => TechnicalIdFormatter.copyToClipboard(receipt.documentNumber)}
                         >
-                          {TechnicalIdFormatter.truncate(receipt.accessKey)}...
+                          {receipt.documentNumber}
                         </Typography>
                       </Tooltip>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      size="small" 
-                      label={status.label} 
-                      color={status.color as any} 
-                      variant="outlined"
-                      sx={{ fontWeight: 700 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {receipt.totalValue ? `R$ ${receipt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
-                  </TableCell>
-                  <TableCell>{receipt.itemCount}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="View Full Details">
-                      <IconButton 
-                        size="small" 
-                        color="info"
-                        onClick={() => setSelectedReceiptId(receipt.id)}
+                    </Box>
+                    <Chip size="small" label={status.label} color={status.color as any} variant="outlined" sx={{ fontWeight: 700 }} />
+                  </Box>
+
+                  {receipt.accessKey && (
+                    <Tooltip title="Click to copy full access key">
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', fontFamily: 'monospace', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                        onClick={() => TechnicalIdFormatter.copyToClipboard(receipt.accessKey)}
                       >
-                        <InfoOutlinedIcon fontSize="small" />
-                      </IconButton>
+                        Access key: {TechnicalIdFormatter.truncate(receipt.accessKey)}...
+                      </Typography>
                     </Tooltip>
+                  )}
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                    <Typography variant="caption" color="text.secondary">Items: <strong>{receipt.itemCount}</strong></Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Total: <strong>{receipt.totalValue ? `R$ ${receipt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}</strong>
+                    </Typography>
+                  </Box>
+
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    <Button size="small" variant="outlined" startIcon={<InfoOutlinedIcon fontSize="small" />} onClick={() => setSelectedReceiptId(receipt.id)}>
+                      Details
+                    </Button>
                     {receipt.status === 'Registered' && (
-                      <Tooltip title="Start Conference">
-                        <IconButton 
-                          size="small" 
-                          color="success"
-                          onClick={() => startConference(receipt.id)}
-                        >
-                          <PlayArrowIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Button size="small" variant="outlined" color="success" startIcon={<PlayArrowIcon fontSize="small" />} onClick={() => startConference(receipt.id)}>
+                        Start
+                      </Button>
                     )}
                     {receipt.status === 'InConference' && (
-                      <Tooltip title="Count Items">
-                        <IconButton 
-                          size="small" 
-                          color="warning"
-                          onClick={() => onStartConference && onStartConference(receipt.id)}
+                      <Button size="small" variant="outlined" color="warning" startIcon={<CheckCircleIcon fontSize="small" />} onClick={() => onStartConference && onStartConference(receipt.id)}>
+                        Count
+                      </Button>
+                    )}
+                    <Button size="small" variant="outlined" color="primary" startIcon={<DescriptionIcon fontSize="small" />} onClick={() => viewXml(receipt.id, receipt.receiptNumber)}>
+                      XML
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Paper>
+            );
+          })}
+        </Stack>
+      ) : (
+        <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 760 }}>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'background.default' }}>
+                <TableCell sx={{ fontWeight: 700 }}>Receipt</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Document / Access Key</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Total</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Items</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {receipts.map((receipt) => {
+                const status = receipt.status;
+                return (
+                  <TableRow key={receipt.id} hover>
+                    <TableCell sx={{ fontWeight: 600 }}>{receipt.receiptNumber}</TableCell>
+                    <TableCell>
+                      <Tooltip title="Click to copy document number">
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 500, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                          onClick={() => TechnicalIdFormatter.copyToClipboard(receipt.documentNumber)}
                         >
-                          <CheckCircleIcon fontSize="small" />
+                          {receipt.documentNumber}
+                        </Typography>
+                      </Tooltip>
+                      {receipt.accessKey && (
+                        <Tooltip title="Click to copy full access key">
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block', fontFamily: 'monospace', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                            onClick={() => TechnicalIdFormatter.copyToClipboard(receipt.accessKey)}
+                          >
+                            {TechnicalIdFormatter.truncate(receipt.accessKey)}...
+                          </Typography>
+                        </Tooltip>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={status.label}
+                        color={status.color as any}
+                        variant="outlined"
+                        sx={{ fontWeight: 700 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {receipt.totalValue ? `R$ ${receipt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
+                    </TableCell>
+                    <TableCell>{receipt.itemCount}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="View Full Details">
+                        <IconButton
+                          size="small"
+                          color="info"
+                          onClick={() => setSelectedReceiptId(receipt.id)}
+                        >
+                          <InfoOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                    )}
-                    <Tooltip title="Download original XML">
-                      <IconButton 
-                        size="small" 
-                        color="primary"
-                        onClick={() => viewXml(receipt.id, receipt.receiptNumber)}
-                      >
-                        <DescriptionIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                      {receipt.status === 'Registered' && (
+                        <Tooltip title="Start Conference">
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => startConference(receipt.id)}
+                          >
+                            <PlayArrowIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {receipt.status === 'InConference' && (
+                        <Tooltip title="Count Items">
+                          <IconButton
+                            size="small"
+                            color="warning"
+                            onClick={() => onStartConference && onStartConference(receipt.id)}
+                          >
+                            <CheckCircleIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Download original XML">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => viewXml(receipt.id, receipt.receiptNumber)}
+                        >
+                          <DescriptionIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
-      <ReceiptDetailsModal 
-        receiptId={selectedReceiptId} 
-        tenantCode={tenantCode} 
-        onClose={() => setSelectedReceiptId(null)} 
+      <ReceiptDetailsModal
+        receiptId={selectedReceiptId}
+        tenantCode={tenantCode}
+        onClose={() => setSelectedReceiptId(null)}
       />
     </>
   );

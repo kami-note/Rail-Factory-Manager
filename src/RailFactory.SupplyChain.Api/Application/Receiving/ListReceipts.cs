@@ -1,5 +1,6 @@
 using RailFactory.SupplyChain.Api.Api.Responses;
 using RailFactory.SupplyChain.Api.Application.Ports;
+using RailFactory.SupplyChain.Api.Domain;
 
 namespace RailFactory.SupplyChain.Api.Application.Receiving;
 
@@ -14,15 +15,16 @@ public sealed class ListReceipts(ISupplyChainRepository repository)
     public async Task<List<MaterialReceiptListItemResponse>> ExecuteAsync(CancellationToken cancellationToken)
     {
         var receipts = await repository.ListReceiptsAsync(cancellationToken);
-        
+
         return receipts.Select(x => new MaterialReceiptListItemResponse(
             Id: x.Id,
             ReceiptNumber: x.ReceiptNumber,
             DocumentNumber: x.DocumentNumber,
             AccessKey: x.AccessKey,
             TotalValue: x.TotalValue,
-            Status: x.Status.ToString(),
+            Status: x.Status.ToDisplayStatus(),
             ItemCount: x.Items.Count
         )).ToList();
     }
 }
+

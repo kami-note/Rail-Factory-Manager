@@ -1,3 +1,5 @@
+using RailFactory.BuildingBlocks.Presentation;
+
 namespace RailFactory.Inventory.Api.Api.Responses;
 
 /// <summary>
@@ -8,7 +10,7 @@ public record InventoryBalanceDetailsResponse(
     string MaterialCode,
     MaterialDetailsResponse Material,
     string UnitOfMeasure,
-    string Status,
+    DisplayStatus Status,
     InventoryBalanceQuantitiesResponse Quantities,
     InventoryBalanceTraceabilityResponse Traceability,
     List<InventoryBalanceLedgerResponse> Ledger);
@@ -20,8 +22,8 @@ public record MaterialDetailsResponse(
     string MaterialCode,
     string OfficialName,
     string Description,
-    string Category,
-    string Status,
+    DisplayStatus Category,
+    DisplayStatus Status,
     string? ImageUrl,
     string? Ncm,
     string? Gtin);
@@ -37,11 +39,11 @@ public record InventoryBalanceQuantitiesResponse(decimal TotalPhysical, decimal 
 public record InventoryBalanceTraceabilityResponse(
     string? LotNumber, 
     string? ExpirationDate, 
-    string SourceType, 
+    DisplayStatus SourceType, 
     string SourceReference, 
     string? SupplierName);
 
 /// <summary>
 /// Ledger entry for the balance history.
 /// </summary>
-public record InventoryBalanceLedgerResponse(DateTimeOffset OccurredAt, decimal QuantityChange, string NewStatus, string Reason, string User);
+public record InventoryBalanceLedgerResponse(DateTimeOffset OccurredAt, decimal QuantityChange, DisplayStatus NewStatus, string Reason, string User);

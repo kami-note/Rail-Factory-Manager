@@ -1,3 +1,5 @@
+using RailFactory.BuildingBlocks.Presentation;
+
 namespace RailFactory.SupplyChain.Api.Api.Responses;
 
 /// <summary>
@@ -9,5 +11,5 @@ public record MaterialReceiptListItemResponse(
     string DocumentNumber,
     string? AccessKey,
     decimal? TotalValue,
-    string Status,
+    DisplayStatus Status,
     int ItemCount);

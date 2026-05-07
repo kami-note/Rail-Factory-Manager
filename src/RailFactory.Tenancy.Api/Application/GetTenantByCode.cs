@@ -1,4 +1,5 @@
 using RailFactory.BuildingBlocks.Results;
+using RailFactory.Tenancy.Api.Domain;
 
 namespace RailFactory.Tenancy.Api.Application;
 
@@ -33,7 +34,7 @@ public sealed class GetTenantByCode
             tenant.DisplayName,
             tenant.Locale,
             tenant.TimeZone,
-            tenant.Status.ToString(),
+            tenant.Status.ToDisplayStatus(),
             tenant.ConnectionStrings));
     }
 }

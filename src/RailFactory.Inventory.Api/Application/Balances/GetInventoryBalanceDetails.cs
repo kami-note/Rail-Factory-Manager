@@ -52,19 +52,19 @@ public sealed class GetInventoryBalanceDetails(
                 material.MaterialCode,
                 material.OfficialName,
                 material.Description,
-                material.Category.ToString(),
-                material.Status.ToString(),
+                material.Category.ToDisplayStatus(),
+                material.Status.ToDisplayStatus(),
                 material.ImageUrl,
                 material.Ncm,
                 material.Gtin)
             : new MaterialDetailsResponse(
-                balance.MaterialCode, 
-                originalDescription ?? balance.MaterialCode, 
-                "No catalog information available.", 
-                "RawMaterial", 
-                "Draft", 
-                null, 
-                null, 
+                balance.MaterialCode,
+                originalDescription ?? balance.MaterialCode,
+                "No catalog information available.",
+                MaterialCategory.RawMaterial.ToDisplayStatus(),
+                MaterialStatus.Draft.ToDisplayStatus(),
+                null,
+                null,
                 null);
 
         return new InventoryBalanceDetailsResponse(
@@ -72,7 +72,7 @@ public sealed class GetInventoryBalanceDetails(
             MaterialCode: balance.MaterialCode,
             Material: materialResponse,
             UnitOfMeasure: balance.UnitOfMeasure,
-            Status: balance.Status.ToString(),
+            Status: balance.Status.ToDisplayStatus(),
             Quantities: new InventoryBalanceQuantitiesResponse(
                 TotalPhysical: balance.Quantity,
                 Available: balance.Status == InventoryBalanceStatus.Available ? balance.Quantity : 0,
@@ -82,17 +82,18 @@ public sealed class GetInventoryBalanceDetails(
             Traceability: new InventoryBalanceTraceabilityResponse(
                 LotNumber: balance.LotNumber,
                 ExpirationDate: balance.ExpirationDate?.ToString("yyyy-MM-dd"),
-                SourceType: balance.SourceType.ToString(),
+                SourceType: balance.SourceType.ToDisplayStatus(),
                 SourceReference: balance.SourceReference,
                 SupplierName: supplierName
             ),
             Ledger: ledger.Select(l => new InventoryBalanceLedgerResponse(
                 OccurredAt: l.CreatedAt,
                 QuantityChange: l.QuantityDelta,
-                NewStatus: balance.Status.ToString(),
+                NewStatus: balance.Status.ToDisplayStatus(),
                 Reason: l.Operation,
                 User: "System"
             )).ToList()
         );
+
     }
 }

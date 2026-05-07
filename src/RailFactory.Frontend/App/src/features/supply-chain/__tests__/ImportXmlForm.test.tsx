@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ImportXmlForm } from '../ImportXmlForm';
+import { ImportXmlForm } from '../components/ImportXmlForm';
 
 describe('ImportXmlForm', () => {
   afterEach(() => {
