@@ -19,11 +19,11 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import type { Receipt } from './types';
-import { ReceiptDetailsModal } from './components/ReceiptDetailsModal';
-import { getStatusMapping } from '../../lib/utils/status-mapping';
-import { TechnicalIdFormatter } from '../../lib/utils/formatters';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../lib/http';
+import type { Receipt } from '../types';
+import { ReceiptDetailsModal } from './ReceiptDetailsModal';
+import { getStatusMapping } from '../../../shared/lib/utils/status-mapping';
+import { TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
+import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 
 type ReceiptsListProps = {
   tenantCode: string;
@@ -266,4 +266,3 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
     </>
   );
 }
-

@@ -9,8 +9,8 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { ArrowUpRight, ShieldCheck, AlertCircle, Package } from 'lucide-react';
-import type { Status } from './types';
-import { StatCard } from '../../components/common/StatCard';
+import type { Status } from '../types';
+import { StatCard } from '../../../shared/components/common/StatCard';
 
 /**
  * Renders the main dashboard overview panel.

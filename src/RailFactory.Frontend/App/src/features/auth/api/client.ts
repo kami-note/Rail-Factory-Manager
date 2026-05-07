@@ -1,4 +1,4 @@
-import type { AuthSession } from './types';
+import type { AuthSession } from '../types';
 
 export function clearOAuthQueryFlag() {
   const query = new URLSearchParams(window.location.search);

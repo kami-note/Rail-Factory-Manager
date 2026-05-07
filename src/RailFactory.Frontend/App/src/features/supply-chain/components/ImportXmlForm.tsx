@@ -14,7 +14,7 @@ import {
   Divider
 } from '@mui/material';
 import { FileText, UploadCloud, X, CheckCircle, AlertCircle } from 'lucide-react';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { FiscalDocumentPreview, ParsedReceiptDocument } from './FiscalDocumentPreview';
 
 type ImportXmlFormProps = {

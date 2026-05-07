@@ -16,12 +16,12 @@ import {
   Tooltip
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import type { PendingBalance } from './types';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../lib/http';
-import { BalanceDetailsModal } from './components/BalanceDetailsModal';
-import { getStatusMapping } from '../../lib/utils/status-mapping';
-import { formatRelativeDate, TechnicalIdFormatter } from '../../lib/utils/formatters';
-import { MaterialAvatar } from '../../components/common/MaterialAvatar';
+import type { PendingBalance } from '../types';
+import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { BalanceDetailsModal } from './BalanceDetailsModal';
+import { getStatusMapping } from '../../../shared/lib/utils/status-mapping';
+import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
+import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
 
 type InventoryStocksPageProps = {
   tenantCode: string;

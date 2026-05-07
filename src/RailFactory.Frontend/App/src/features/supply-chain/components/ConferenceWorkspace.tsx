@@ -17,9 +17,9 @@ import {
   IconButton
 } from '@mui/material';
 import { ChevronLeft, Save } from 'lucide-react';
-import type { ConferenceItem } from './types';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../lib/http';
-import { MaterialAvatar } from '../../components/common/MaterialAvatar';
+import type { ConferenceItem } from '../types';
+import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
 
 type ConferenceWorkspaceProps = {
   /** The identifier for the material receipt to be conferred. */
@@ -225,4 +225,3 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: Conferen
     </Box>
   );
 }
-
