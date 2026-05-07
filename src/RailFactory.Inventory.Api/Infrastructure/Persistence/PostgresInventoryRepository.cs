@@ -55,12 +55,18 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-    public Task<List<InventoryBalance>> ListPendingBalancesAsync(CancellationToken cancellationToken)
-        => dbContext.Balances
-            .AsNoTracking()
-            .Where(x => x.Status == InventoryBalanceStatus.Pending)
-            .OrderByDescending(x => x.CreatedAt)
+    public Task<List<InventoryBalance>> ListBalancesAsync(InventoryBalanceStatus? status, CancellationToken cancellationToken)
+    {
+        var query = dbContext.Balances.AsNoTracking();
+
+        if (status.HasValue)
+        {
+            query = query.Where(x => x.Status == status.Value);
+        }
+
+        return query.OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken)
         => dbContext.SaveChangesAsync(cancellationToken);

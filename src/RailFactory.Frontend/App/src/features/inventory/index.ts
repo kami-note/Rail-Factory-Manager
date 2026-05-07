@@ -1,2 +1,2 @@
 export { InventoryStocksPage } from './components/InventoryStocksPage';
-export type { PendingBalance } from './types';
+export type { InventoryBalance } from './types';

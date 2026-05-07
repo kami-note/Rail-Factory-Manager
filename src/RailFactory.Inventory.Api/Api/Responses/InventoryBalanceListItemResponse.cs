@@ -1,9 +1,6 @@
 namespace RailFactory.Inventory.Api.Api.Responses;
 
-/// <summary>
-/// Summary response for a pending inventory balance in a list.
-/// </summary>
-public record PendingBalanceListItemResponse(
+public sealed record InventoryBalanceListItemResponse(
     Guid Id,
     string MaterialCode,
     string MaterialName,
@@ -16,6 +13,6 @@ public record PendingBalanceListItemResponse(
     string SourceType,
     string? SupplierName,
     DateTimeOffset CreatedAt,
-    string? Ncm,
-    string? Gtin,
+    string? Ncm = null,
+    string? Gtin = null,
     string? MaterialImageUrl = null);
