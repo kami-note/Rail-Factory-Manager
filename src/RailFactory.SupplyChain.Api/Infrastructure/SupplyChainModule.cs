@@ -46,6 +46,7 @@ public static class SupplyChainModule
         services.AddScoped<StartMaterialReceiptConference>();
         services.AddScoped<CloseMaterialReceiptConference>();
         services.AddScoped<ListSupplyOutboxDeadLetters>();
+        services.AddScoped<ReplaySupplyOutboxDeadLetters>();
 
         return services;
     }

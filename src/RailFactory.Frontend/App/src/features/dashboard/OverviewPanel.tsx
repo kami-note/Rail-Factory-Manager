@@ -4,30 +4,21 @@ import {
   Typography, 
   Button, 
   Grid, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
   Stack,
-  Chip,
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { ArrowUpRight, Activity, ShieldCheck, AlertCircle, BarChart3, Package, History } from 'lucide-react';
+import { ArrowUpRight, ShieldCheck, AlertCircle, Package } from 'lucide-react';
 import type { Status } from './types';
 import { StatCard } from '../../components/common/StatCard';
-import { ModuleHeader } from '../../components/common/ModuleHeader';
-import { productionLines, activityLogs } from './mocks';
 
 /**
  * Renders the main dashboard overview panel.
  * @param status - The current system status information.
  * @param onNavigate - Navigation callback for quick actions.
  * @remarks
- * This panel provides a high-level summary of factory KPIs, production lines, and recent logs.
- * Note: Production monitoring currently utilizes mock data as defined in the P1/P2 development phase.
+ * This panel provides a high-level summary of factory KPIs and quick access to operational modules.
+ * Hardcoded mock data and technical telemetry have been removed to ensure a clean operational view.
  */
 export function OverviewPanel({
   status,
@@ -38,36 +29,21 @@ export function OverviewPanel({
   onNavigate: (path: string) => void;
 }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
-
-  /**
-   * Returns a semantic color for a given priority level.
-   */
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      default: return 'default';
-    }
-  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#ffffff' }}>
       {/* 1. KPI STRIP: Responsive grid for stats */}
       <Box sx={{ borderBottom: '1px solid #edebe9' }}>
         <Grid container>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ borderRight: { sm: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', md: 0 } }}>
-            <StatCard label="PENDING ACTIONS" value="12" icon={<AlertCircle size={16} />} color="error.main" />
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} sx={{ borderRight: { sm: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', md: 0 } }}>
+            <StatCard label="PENDING ACTIONS" value="--" icon={<AlertCircle size={16} />} color="error.main" />
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ borderRight: { md: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', md: 0 } }}>
-            <StatCard label="OEE EFFICIENCY" value="94.2%" icon={<Activity size={16} />} color="primary.main" />
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} sx={{ borderRight: { md: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', sm: 0 } }}>
+            <StatCard label="STOCK ALERTS" value="0" icon={<Package size={16} />} color="success.main" />
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ borderRight: { sm: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', sm: 0 } }}>
-            <StatCard label="DAILY OUTPUT" value="1,204" icon={<Package size={16} />} color="success.main" />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <StatCard label="HEALTH" value="NOMINAL" icon={<ShieldCheck size={16} />} color="success.main" />
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <StatCard label="SYSTEM STATUS" value="ACTIVE" icon={<ShieldCheck size={16} />} color="success.main" />
           </Grid>
         </Grid>
       </Box>
@@ -75,7 +51,6 @@ export function OverviewPanel({
       {/* QUICK ACTIONS FOR TABLET/DESKTOP */}
       {!isSmall && (
         <Box sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'flex-end', bgcolor: '#faf9f8', borderBottom: '1px solid #edebe9', gap: 2, alignItems: 'center' }}>
-          <Chip label="DEMO MODE: MOCK DATA" size="small" variant="outlined" color="warning" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
           <Button 
             variant="contained" 
             disableElevation
@@ -89,89 +64,33 @@ export function OverviewPanel({
       )}
 
       {/* 2. MAIN WORKSPACE */}
-      <Grid container sx={{ flexGrow: 1 }}>
-        <Grid size={{ xs: 12, lg: 8 }} sx={{ borderRight: { lg: '1px solid #edebe9' }, borderBottom: { xs: '1px solid #edebe9', lg: 0 } }}>
-          <ModuleHeader label="LIVE PRODUCTION MONITOR" icon={<BarChart3 size={14} />} />
-          <TableContainer sx={{ maxHeight: { xs: 400, lg: 'unset' } }}>
-            <Table size="small" stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>PRIORITY</TableCell>
-                  <TableCell>PRODUCT SPECIFICATION</TableCell>
-                  <TableCell>STATUS</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {productionLines.map((row, idx) => (
-                  <TableRow key={row.id} sx={{ bgcolor: idx % 2 === 0 ? '#ffffff' : '#faf9f8' }}>
-                    <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{row.id}</TableCell>
-                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                      <Chip 
-                        label={row.priority.toUpperCase()} 
-                        size="small" 
-                        color={getPriorityColor(row.priority) as any}
-                        variant="filled"
-                        sx={{ fontSize: '0.65rem', fontWeight: 900, height: 20 }}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ color: 'text.primary', fontWeight: 600 }}>{row.product}</TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: row.color }} />
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{row.status}</Typography>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Grid>
-
-
-        <Grid size={{ xs: 12, lg: 4 }} sx={{ display: 'flex', flexDirection: 'column' }}>
-          <ModuleHeader label="ACTIVITY LOG" icon={<History size={14} />} />
-          <Box sx={{ flexGrow: 1, overflow: 'auto', maxHeight: { xs: 300, lg: 'unset' } }}>
-            {activityLogs.map((ev, i) => (
-              <Box key={i} sx={{ 
-                p: 2, 
-                px: 4,
-                borderBottom: '1px solid #f3f2f1',
-                '&:hover': { bgcolor: '#f9fafb' }
-              }}>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 0.5 }}>{ev.time}</Typography>
-                <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{ev.msg}</Typography>
-              </Box>
-            ))}
+      <Box sx={{ 
+        flexGrow: 1, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        p: 4,
+        textAlign: 'center'
+      }}>
+        <Stack spacing={2} sx={{ maxWidth: 400 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+            Welcome to Rail Factory
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            You are connected to the <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{status?.tenant.code.toUpperCase()}</Box> tenant.
+            Use the sidebar to navigate between Supply Chain and Inventory modules.
+          </Typography>
+          <Box sx={{ pt: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => onNavigate('/app/receipts')}
+              sx={{ borderRadius: 1, textTransform: 'none' }}
+            >
+              Start Inbound Process
+            </Button>
           </Box>
-
-          <Box sx={{ p: 4, borderTop: '1px solid #edebe9', bgcolor: '#faf9f8' }}>
-            <Box sx={{ 
-              p: 2, 
-              bgcolor: '#1b1b1b', 
-              borderRadius: 1,
-              fontFamily: '"Cascadia Code", "Fira Code", monospace',
-              fontSize: '0.7rem',
-              color: '#9cdcfe'
-            }}>
-              <Box sx={{ color: '#6a9955', mb: 1 }}>// SYSTEM TELEMETRY</Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box>
-                  <Box sx={{ color: '#569cd6' }}>ENV: <span style={{ color: '#ce9178' }}>"{status?.environment || 'PROD'}"</span></Box>
-                  <Box sx={{ color: '#569cd6' }}>SVC: <span style={{ color: '#ce9178' }}>"{status?.service || 'API'}"</span></Box>
-                </Box>
-                {!isSmall && (
-                  <Box sx={{ textAlign: 'right', color: '#b5cea8' }}>
-                    LATENCY: 12ms<br />
-                    NODE: 04_A
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          </Box>
-        </Grid>
-      </Grid>
+        </Stack>
+      </Box>
     </Box>
   );
 }

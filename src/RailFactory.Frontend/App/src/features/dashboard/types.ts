@@ -30,6 +30,7 @@ export type PendingBalance = {
   expirationDate?: string;
   sourceType: string;
   supplierName?: string;
+  materialImageUrl?: string;
   sourceMetadata?: string;
   createdAt: string;
   ncm?: string;

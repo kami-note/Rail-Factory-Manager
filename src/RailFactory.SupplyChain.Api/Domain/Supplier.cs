@@ -1,22 +1,24 @@
+using RailFactory.BuildingBlocks.Domain;
+
 namespace RailFactory.SupplyChain.Api.Domain;
 
-public sealed class Supplier
+public sealed class Supplier : AggregateRoot<Guid>
 {
-    public Guid Id { get; private set; }
     public string FiscalId { get; private set; }
     public string Name { get; private set; }
     public bool IsActive { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
 
     private Supplier()
+        : base(Guid.Empty)
     {
         FiscalId = string.Empty;
         Name = string.Empty;
     }
 
     private Supplier(Guid id, string fiscalId, string name)
+        : base(id)
     {
-        Id = id;
         FiscalId = fiscalId;
         Name = name;
         IsActive = true;

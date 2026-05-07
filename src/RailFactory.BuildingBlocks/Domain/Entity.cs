@@ -8,5 +8,11 @@ public abstract class Entity<TId>
         Id = id;
     }
 
-    public TId Id { get; }
+    // Required for EF Core
+    protected Entity()
+    {
+        Id = default!;
+    }
+
+    public TId Id { get; private init; }
 }

@@ -10,6 +10,11 @@ public abstract class AggregateRoot<TId> : Entity<TId>
     {
     }
 
+    // Required for EF Core
+    protected AggregateRoot()
+    {
+    }
+
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     protected void RaiseDomainEvent(IDomainEvent domainEvent)

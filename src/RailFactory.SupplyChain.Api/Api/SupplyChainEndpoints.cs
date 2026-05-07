@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RailFactory.SupplyChain.Api.Api.Requests;
+using RailFactory.SupplyChain.Api.Api.Responses;
 using RailFactory.SupplyChain.Api.Api.Validation;
 using RailFactory.SupplyChain.Api.Application;
 using RailFactory.SupplyChain.Api.Application.Integration;
@@ -25,6 +26,7 @@ public static class SupplyChainEndpoints
     private const string CloseConferencePath = "/receipts/{id:guid}/conference/close";
     private const string ConferenceItemsPath = "/receipts/{id:guid}/conference/items";
     private const string OutboxDeadLettersPath = "/outbox/dead-letters";
+    private const string ReplayOutboxDeadLettersPath = "/outbox/dead-letters/replay";
 
     public static WebApplication MapSupplyChainEndpoints(this WebApplication app)
     {
@@ -41,6 +43,7 @@ public static class SupplyChainEndpoints
         app.MapPost(ImportXmlPreviewPath, HandlePreviewXmlReceipt).DisableAntiforgery();
         app.MapPost(ImportXmlBatchPath, HandleImportXmlReceiptBatch).DisableAntiforgery();
         app.MapGet(OutboxDeadLettersPath, HandleListOutboxDeadLetters);
+        app.MapPost(ReplayOutboxDeadLettersPath, HandleReplayOutboxDeadLetters);
         return app;
     }
 
@@ -83,20 +86,7 @@ public static class SupplyChainEndpoints
         }
 
         var receipts = await listReceipts.ExecuteAsync(cancellationToken);
-        var response = receipts.Select(x => new
-        {
-            x.Id,
-            x.ReceiptNumber,
-            x.DocumentNumber,
-            x.AccessKey,
-            x.TotalValue,
-            x.ReceiptDate,
-            x.Status,
-            x.CreatedAt,
-            itemCount = x.Items.Count
-        });
-
-        return Results.Ok(response);
+        return Results.Ok(receipts);
     }
 
     private static async Task<IResult> HandleGetReceiptDetails(
@@ -178,7 +168,7 @@ public static class SupplyChainEndpoints
     private static async Task<IResult> HandleGetConferenceItems(
         Guid id,
         HttpContext context,
-        ISupplyChainRepository repository,
+        GetConferenceItems getConferenceItems,
         CancellationToken cancellationToken)
     {
         var tenantCode = context.GetResolvedTenant()?.Code;
@@ -187,22 +177,8 @@ public static class SupplyChainEndpoints
             return TenantHttpResults.CodeRequired();
         }
 
-        var receipt = await repository.GetReceiptByIdAsync(id, cancellationToken);
-        if (receipt is null)
-        {
-            return Results.NotFound();
-        }
-
-        // Blind conference: DO NOT return ExpectedQuantity
-        var response = receipt.Items.Select(i => new
-        {
-            i.Id,
-            i.MaterialCode,
-            i.UnitOfMeasure,
-            i.OriginalDescription
-        });
-
-        return Results.Ok(response);
+        var result = await getConferenceItems.ExecuteAsync(id, cancellationToken);
+        return result is not null ? Results.Ok(result) : Results.NotFound();
     }
 
     private static async Task<IResult> HandleCloseConference(
@@ -377,6 +353,22 @@ public static class SupplyChainEndpoints
         });
     }
 
+    private static async Task<IResult> HandleReplayOutboxDeadLetters(
+        HttpContext context,
+        [FromBody] ReplayOutboxDeadLettersRequest request,
+        ReplaySupplyOutboxDeadLetters replayDeadLetters,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        var count = await replayDeadLetters.ExecuteAsync(request.MessageIds, cancellationToken);
+        return Results.Ok(new { replayedCount = count });
+    }
+
     private static async Task<IResult> HandleGetReceiptXml(
         Guid id,
         HttpContext context,
@@ -403,6 +395,3 @@ public static class SupplyChainEndpoints
         return Results.Content(receipt.RawXml, "application/xml");
     }
 }
-
-public sealed record CloseConferenceRequest(IReadOnlyCollection<CountedResultRequest> Results);
-public sealed record CountedResultRequest(Guid ItemId, decimal CountedQuantity, string? ConfirmedLotNumber, DateTimeOffset? ConfirmedExpirationDate);
