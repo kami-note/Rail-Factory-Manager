@@ -9,7 +9,5 @@ public record MaterialReceiptListItemResponse(
     string DocumentNumber,
     string? AccessKey,
     decimal? TotalValue,
-    DateOnly ReceiptDate,
     string Status,
-    DateTimeOffset CreatedAt,
     int ItemCount);

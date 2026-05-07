@@ -77,13 +77,7 @@ public sealed class GetInventoryBalanceDetails(
                 NewStatus: balance.Status.ToString(),
                 Reason: l.Operation,
                 User: "System"
-            )).ToList(),
-            Audit: new InventoryBalanceAuditResponse(
-                LastBlockedAt: null,
-                LastBlockedBy: null,
-                ReleasedAt: null,
-                ReleasedBy: null
-            )
+            )).ToList()
         );
     }
 }
