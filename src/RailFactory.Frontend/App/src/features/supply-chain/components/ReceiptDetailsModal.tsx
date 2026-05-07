@@ -16,11 +16,11 @@ import {
   Stack,
   Alert
 } from '@mui/material';
-import { ResponsiveCenteredModal } from '../../../components/ResponsiveCenteredModal';
-import { formatRelativeDate, TechnicalIdFormatter } from '../../../lib/utils/formatters';
-import { getStatusMapping } from '../../../lib/utils/status-mapping';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../lib/http';
-import { MaterialAvatar } from '../../../components/common/MaterialAvatar';
+import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
+import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
+import { getStatusMapping } from '../../../shared/lib/utils/status-mapping';
+import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
 
 type ReceiptDetailsModalProps = {
   receiptId: string | null;

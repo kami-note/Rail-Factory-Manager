@@ -8,7 +8,7 @@ import {
   Stack
 } from '@mui/material';
 import { FileSpreadsheet, RefreshCcw } from 'lucide-react';
-import { ResponsiveCenteredModal } from '../../components/ResponsiveCenteredModal';
+import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
 import { ImportXmlForm } from './ImportXmlForm';
 import { ReceiptsList } from './ReceiptsList';
 import { ConferenceWorkspace } from './ConferenceWorkspace';

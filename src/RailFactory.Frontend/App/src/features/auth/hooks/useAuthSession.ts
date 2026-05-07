@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { clearOAuthQueryFlag, fetchSession } from './client';
-import type { AuthViewState } from './types';
+import { clearOAuthQueryFlag, fetchSession } from '../api/client';
+import type { AuthViewState } from '../types';
 
 export function useAuthSession(tenantCode: string) {
   const [state, setState] = useState<AuthViewState>({

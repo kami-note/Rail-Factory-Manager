@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { buildLoginHref, logout, useAuthSession } from './auth';
-import { ProtectedDashboardLayout } from './components/ProtectedDashboardLayout';
-import { OverviewPanel } from './features/dashboard/OverviewPanel';
-import { ReceiptsWorkspace } from './features/dashboard/ReceiptsWorkspace';
-import { InventoryStocksPage } from './features/dashboard/InventoryStocksPage';
-import { TenantSelector } from './components/TenantSelector';
-import type { Status } from './features/dashboard/types';
+import { buildLoginHref, logout, useAuthSession } from './features/auth';
+import { ProtectedDashboardLayout } from './shared/layouts/ProtectedDashboardLayout';
+import { OverviewPanel, Status } from './features/dashboard';
+import { ReceiptsWorkspace } from './features/supply-chain';
+import { InventoryStocksPage } from './features/inventory';
+import { TenantSelector } from './shared/components/TenantSelector';
 import { Box, Button, Card, CircularProgress, Container, Typography, Link } from '@mui/material';
-import { buildTenantHeaders, fetchJsonOrThrow } from './lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow } from './shared/lib/http';
 
 const TENANT_STORAGE_KEY = 'rail_factory_tenant_code';
 
