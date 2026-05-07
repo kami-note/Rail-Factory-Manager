@@ -13,10 +13,12 @@ import {
   TableRow,
   Typography,
   IconButton,
-  Tooltip
+  Tooltip,
+  ToggleButtonGroup,
+  ToggleButton
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import type { PendingBalance } from '../types';
+import type { InventoryBalance } from '../types';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { BalanceDetailsModal } from './BalanceDetailsModal';
 import { getStatusMapping } from '../../../shared/lib/utils/status-mapping';
@@ -27,18 +29,21 @@ type InventoryStocksPageProps = {
   tenantCode: string;
 };
 
+type FilterStatus = 'ALL' | 'Pending' | 'Available' | 'Blocked';
+
 /**
- * Displays the current pending inventory balances.
+ * Displays the current inventory balances with status filtering.
  * @param tenantCode - The active tenant identifier.
  * @remarks
- * This page serves as the primary view for tracking material inbound pending confirmation.
+ * This page serves as the primary view for tracking material stock and inbound status.
  * It uses a high-density table to display traceability information including Lot and Expiry.
  */
 export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
-  const [balances, setBalances] = useState<PendingBalance[]>([]);
+  const [balances, setBalances] = useState<InventoryBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedBalanceId, setSelectedBalanceId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
 
   useEffect(() => {
     const fetchBalances = async () => {
@@ -46,8 +51,9 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
       setError(null);
 
       try {
-        const data = await fetchJsonOrThrow<PendingBalance[]>(
-          '/api/inventory/balances/pending',
+        const queryParams = statusFilter !== 'ALL' ? `?status=${statusFilter}` : '';
+        const data = await fetchJsonOrThrow<InventoryBalance[]>(
+          `/api/inventory/balances${queryParams}`,
           {
             headers: buildTenantHeaders(tenantCode),
             credentials: 'include'
@@ -63,17 +69,41 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
     };
 
     void fetchBalances();
-  }, [tenantCode]);
+  }, [tenantCode, statusFilter]);
+
+  const handleFilterChange = (
+    _event: React.MouseEvent<HTMLElement>,
+    newStatus: FilterStatus | null
+  ) => {
+    if (newStatus !== null) {
+      setStatusFilter(newStatus);
+    }
+  };
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h1" sx={{ fontWeight: 900, mb: 0.5 }}>
-          INVENTORY
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-          PENDING STOCK BALANCES
-        </Typography>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <Box>
+          <Typography variant="h1" sx={{ fontWeight: 900, mb: 0.5 }}>
+            INVENTORY
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+            CURRENT STOCK AND PENDING BALANCES
+          </Typography>
+        </Box>
+
+        <ToggleButtonGroup
+          value={statusFilter}
+          exclusive
+          onChange={handleFilterChange}
+          size="small"
+          aria-label="status filter"
+        >
+          <ToggleButton value="ALL" sx={{ fontWeight: 700, px: 2 }}>ALL</ToggleButton>
+          <ToggleButton value="Pending" sx={{ fontWeight: 700, px: 2 }}>PENDING</ToggleButton>
+          <ToggleButton value="Available" sx={{ fontWeight: 700, px: 2 }}>AVAILABLE</ToggleButton>
+          <ToggleButton value="Blocked" sx={{ fontWeight: 700, px: 2 }}>BLOCKED</ToggleButton>
+        </ToggleButtonGroup>
       </Box>
 
       {loading ? (
@@ -90,7 +120,7 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
 
       {!loading && !error && balances.length === 0 ? (
         <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
-          <Typography color="text.secondary">No pending balances.</Typography>
+          <Typography color="text.secondary">No balances found for the selected filter.</Typography>
         </Box>
       ) : null}
 

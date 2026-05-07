@@ -6,15 +6,18 @@ using RailFactory.Inventory.Api.Domain;
 namespace RailFactory.Inventory.Api.Application.Balances;
 
 /// <summary>
-/// Retrieves a list of all pending inventory balances with enriched material and supplier information.
+/// Retrieves a list of inventory balances with enriched material and supplier information.
+/// Supports optional filtering by status.
 /// </summary>
-public sealed class ListPendingBalances(
+public sealed class ListInventoryBalances(
     IInventoryRepository repository,
     IMaterialRepository materialRepository)
 {
-    public async Task<List<PendingBalanceListItemResponse>> ExecuteAsync(CancellationToken cancellationToken)
+    public async Task<List<InventoryBalanceListItemResponse>> ExecuteAsync(
+        InventoryBalanceStatus? status, 
+        CancellationToken cancellationToken)
     {
-        var balances = await repository.ListPendingBalancesAsync(cancellationToken);
+        var balances = await repository.ListBalancesAsync(status, cancellationToken);
         if (balances.Count == 0) return [];
 
         // ELITE FIX: Bulk fetch materials to eliminate N+1 query pattern.
@@ -62,7 +65,7 @@ public sealed class ListPendingBalances(
 
             var material = materials.TryGetValue(x.MaterialCode.Value, out var m) ? m : null;
 
-            return new PendingBalanceListItemResponse(
+            return new InventoryBalanceListItemResponse(
                 x.Id,
                 x.MaterialCode,
                 material?.OfficialName ?? originalDescription ?? x.MaterialCode,

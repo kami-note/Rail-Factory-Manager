@@ -30,7 +30,7 @@ public static class InventoryModule
         services.AddScoped<CreatePendingBalance>();
         services.AddScoped<GetInventoryBalanceDetails>();
         services.AddScoped<ConfirmInventoryBalance>();
-        services.AddScoped<ListPendingBalances>();
+        services.AddScoped<ListInventoryBalances>();
         services.AddScoped<UpdateMaterialImage>();
 
         // ELITE FIX: Infrastructure health checks (Manual connectivity check)

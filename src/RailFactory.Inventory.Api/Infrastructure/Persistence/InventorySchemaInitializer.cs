@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RailFactory.BuildingBlocks.Tenancy;
+using System.Reflection;
 
 namespace RailFactory.Inventory.Api.Infrastructure.Persistence;
 
@@ -55,6 +56,7 @@ public sealed class InventorySchemaInitializer(IServiceProvider serviceProvider,
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
 
+            await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
             await dbContext.Database.MigrateAsync(cancellationToken);
 
             logger.LogInformation("Inventory database for tenant {TenantCode} initialized successfully.", tenant.Code);
@@ -70,4 +72,57 @@ public sealed class InventorySchemaInitializer(IServiceProvider serviceProvider,
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private static async Task AlignLegacySchemaWithMigrationHistoryAsync(
+        InventoryDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken);
+        if (appliedMigrations.Any())
+        {
+            return;
+        }
+
+        var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync(cancellationToken);
+        if (!pendingMigrations.Any())
+        {
+            return;
+        }
+
+        var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        await using var tableExistsCommand = connection.CreateCommand();
+        tableExistsCommand.CommandText = "SELECT to_regclass('public.inventory_balances') IS NOT NULL;";
+        var tableExistsResult = await tableExistsCommand.ExecuteScalarAsync(cancellationToken);
+        var tableExists = tableExistsResult is true;
+        if (!tableExists)
+        {
+            return;
+        }
+
+        var firstPendingMigration = pendingMigrations.First();
+        var efProductVersion = typeof(DbContext)
+            .Assembly
+            .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion
+            ?.Split('+')[0] ?? "9.0.0";
+
+        await dbContext.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+                "MigrationId" character varying(150) NOT NULL,
+                "ProductVersion" character varying(32) NOT NULL,
+                CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+            );
+            """);
+
+        await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+            VALUES ({firstPendingMigration}, {efProductVersion})
+            ON CONFLICT ("MigrationId") DO NOTHING;
+            """);
+    }
 }

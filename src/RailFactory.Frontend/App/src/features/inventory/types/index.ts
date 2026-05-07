@@ -1,4 +1,4 @@
-export type PendingBalance = {
+export type InventoryBalance = {
   id: string;
   materialCode: string;
   materialName: string;

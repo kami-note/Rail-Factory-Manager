@@ -6,6 +6,7 @@ using RailFactory.Inventory.Api.Application;
 using RailFactory.Inventory.Api.Application.Balances;
 using RailFactory.Inventory.Api.Application.Materials;
 using RailFactory.Inventory.Api.Application.Ports;
+using RailFactory.Inventory.Api.Domain;
 
 namespace RailFactory.Inventory.Api.Api;
 
@@ -16,7 +17,7 @@ public static class InventoryEndpoints
 {
     private const string InventoryInfoPath = "/api/inventory/info";
     private const string BalanceDetailsPath = "/api/inventory/balances/{id:guid}";
-    private const string PendingBalancesPath = "/api/inventory/balances/pending";
+    private const string BalancesPath = "/api/inventory/balances";
     private const string InternalPendingBalancesPath = "/internal/pending-balances";
     private const string InternalConfirmedBalancesPath = "/internal/confirmed-balances";
 
@@ -24,7 +25,7 @@ public static class InventoryEndpoints
     {
         app.MapGet(InventoryInfoPath, HandleGetInventoryInfo);
         app.MapGet(BalanceDetailsPath, HandleGetBalanceDetails);
-        app.MapGet(PendingBalancesPath, HandleListPendingBalances);
+        app.MapGet(BalancesPath, HandleListBalances);
         app.MapPut("/api/inventory/materials/{materialCode}/image", HandleUpdateMaterialImage);
         app.MapPost("/internal/materials", HandleGetInternalMaterials);
         app.MapPost(InternalPendingBalancesPath, HandleCreatePendingBalance);
@@ -96,11 +97,18 @@ public static class InventoryEndpoints
         return details is not null ? Results.Ok(details) : Results.NotFound();
     }
 
-    private static async Task<IResult> HandleListPendingBalances(
-        ListPendingBalances listPendingBalances,
+    private static async Task<IResult> HandleListBalances(
+        [FromQuery] string? status,
+        ListInventoryBalances listInventoryBalances,
         CancellationToken cancellationToken)
     {
-        var response = await listPendingBalances.ExecuteAsync(cancellationToken);
+        InventoryBalanceStatus? parsedStatus = null;
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<InventoryBalanceStatus>(status, true, out var result))
+        {
+            parsedStatus = result;
+        }
+
+        var response = await listInventoryBalances.ExecuteAsync(parsedStatus, cancellationToken);
         return Results.Ok(response);
     }
 
