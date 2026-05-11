@@ -58,6 +58,11 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
     public DateTimeOffset CreatedAt { get; private set; }
 
     /// <summary>
+    /// Audit timestamp for the last modification.
+    /// </summary>
+    public DateTimeOffset UpdatedAt { get; private set; }
+
+    /// <summary>
     /// Items included in this receipt.
     /// </summary>
     public List<MaterialReceiptItem> Items { get; private set; }
@@ -90,6 +95,7 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
         ReceiptDate = receiptDate;
         Status = MaterialReceiptStatus.Registered;
         CreatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = CreatedAt;
         Items = [];
     }
 
@@ -134,6 +140,84 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
     public void AddItem(string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice = null, string? originalDescription = null, string? ncm = null, string? cfop = null, string? ean = null)
     {
         Items.Add(MaterialReceiptItem.Create(Id, materialCode, unitOfMeasure, expectedQuantity, unitPrice, originalDescription, ncm, cfop, ean));
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Adds an item that was resolved through an existing supplier mapping.
+    /// </summary>
+    public void AddMappedItem(
+        string supplierProductCode,
+        string internalMaterialCode,
+        decimal supplierQuantity,
+        string supplierUnitOfMeasure,
+        string unitOfMeasure,
+        decimal expectedQuantity,
+        decimal? unitPrice = null,
+        string? originalDescription = null,
+        string? ncm = null,
+        string? cfop = null,
+        string? ean = null,
+        decimal? conversionFactor = null)
+    {
+        Items.Add(MaterialReceiptItem.CreateMapped(
+            Id,
+            supplierProductCode,
+            internalMaterialCode,
+            supplierQuantity,
+            supplierUnitOfMeasure,
+            unitOfMeasure,
+            expectedQuantity,
+            unitPrice,
+            originalDescription,
+            ncm,
+            cfop,
+            ean,
+            conversionFactor));
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Adds an item that still requires supplier SKU to internal SKU association.
+    /// </summary>
+    public void AddPendingAssociationItem(string supplierProductCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice = null, string? originalDescription = null, string? ncm = null, string? cfop = null, string? ean = null)
+    {
+        Items.Add(MaterialReceiptItem.CreatePendingAssociation(Id, supplierProductCode, unitOfMeasure, expectedQuantity, unitPrice, originalDescription, ncm, cfop, ean));
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Blocks the receipt from proceeding because one or more supplier material codes are unmapped.
+    /// </summary>
+    public void BlockForAssociation()
+    {
+        if (Status != MaterialReceiptStatus.Registered)
+        {
+            throw new InvalidOperationException($"Cannot block receipt for association in status '{Status}'. Only 'Registered' receipts can be blocked.");
+        }
+
+        Status = MaterialReceiptStatus.PendingAssociation;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Releases a receipt blocked by supplier SKU association back to the normal conference-ready state.
+    /// </summary>
+    public void ReleaseAssociation()
+    {
+        if (Status != MaterialReceiptStatus.PendingAssociation)
+        {
+            throw new InvalidOperationException($"Cannot release association for receipt in status '{Status}'. Only 'PendingAssociation' receipts can be released.");
+        }
+
+        var unresolvedItems = Items.Where(x => x.AssociationStatus is not MaterialReceiptItemAssociationStatus.Mapped and not MaterialReceiptItemAssociationStatus.CreatedAndMapped).ToList();
+        if (unresolvedItems.Count > 0)
+        {
+            throw new InvalidOperationException("Cannot release receipt while association items are unresolved.");
+        }
+
+        Status = MaterialReceiptStatus.Registered;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>
@@ -151,6 +235,7 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
         }
 
         Status = MaterialReceiptStatus.InConference;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>
@@ -176,6 +261,7 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
         Status = Items.Any(x => x.HasDivergence)
             ? MaterialReceiptStatus.Divergent
             : MaterialReceiptStatus.Approved;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 }
 

@@ -17,37 +17,48 @@ public sealed class UpdateMaterialImage(
     /// </summary>
     /// <param name="materialCode">Target material SKU.</param>
     /// <param name="imageUrl">New public image URL.</param>
+    /// <param name="modifiedBy">The identity of the actor performing the update.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if updated or provisioned.</returns>
-    public async Task<bool> ExecuteAsync(string materialCode, string imageUrl, CancellationToken cancellationToken)
+    public async Task<bool> ExecuteAsync(string materialCode, string imageUrl, string modifiedBy, CancellationToken cancellationToken)
     {
         var code = MaterialCode.From(materialCode);
         var material = await repository.GetByCodeAsync(code, cancellationToken);
+        var actor = EmailAddress.From(modifiedBy);
         
         if (material is null)
         {
-            // ELITE JIT PROVISIONING: Try to recover the official name from existing balances
+            // ELITE JIT PROVISIONING: Try to recover the official name and unit from existing balances
             var latestBalance = await inventoryRepository.GetLatestBalanceByMaterialCodeAsync(code, cancellationToken);
             var officialName = code.Value;
+            var uom = "UN";
             
-            if (latestBalance?.SourceMetadata != null)
+            if (latestBalance != null)
             {
-                try 
+                uom = latestBalance.UnitOfMeasure;
+                
+                if (latestBalance.SourceMetadata != null)
                 {
-                    using var doc = JsonDocument.Parse(latestBalance.SourceMetadata);
-                    if (doc.RootElement.TryGetProperty("OriginalDescription", out var descProp))
+                    try 
                     {
-                        officialName = descProp.GetString() ?? code.Value;
+                        using var doc = JsonDocument.Parse(latestBalance.SourceMetadata);
+                        if (doc.RootElement.TryGetProperty("OriginalDescription", out var descProp))
+                        {
+                            officialName = descProp.GetString() ?? code.Value;
+                        }
                     }
+                    catch { /* Ignore parsing errors, fallback to SKU */ }
                 }
-                catch { /* Ignore parsing errors, fallback to SKU */ }
             }
 
             material = Material.Create(
                 code,
-                officialName: officialName, 
-                description: "Auto-provisioned during image upload.",
+                officialName, 
+                "Auto-provisioned during image upload.",
                 MaterialCategory.RawMaterial,
+                ProcurementType.Buy,
+                actor,
+                uom,
                 MaterialStatus.Draft,
                 imageUrl: imageUrl);
             
@@ -55,7 +66,7 @@ public sealed class UpdateMaterialImage(
         }
         else
         {
-            material.UpdateImageUrl(imageUrl);
+            material.UpdateImageUrl(imageUrl, actor);
         }
 
         try
@@ -68,7 +79,7 @@ public sealed class UpdateMaterialImage(
             var existingMaterial = await repository.GetByCodeAsync(materialCode, cancellationToken);
             if (existingMaterial is not null)
             {
-                existingMaterial.UpdateImageUrl(imageUrl);
+                existingMaterial.UpdateImageUrl(imageUrl, actor);
                 await repository.SaveChangesAsync(cancellationToken);
             }
         }

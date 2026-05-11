@@ -24,8 +24,7 @@ public sealed class ImportXmlReceipt(
         var receipt = await receiptWriter.StageReceiptAsync(
             userIdentifier,
             parsed.ReceiptNumber,
-            supplier.Id,
-            supplier.Name,
+            supplier,
             parsed.DocumentNumber,
             parsed.AccessKey,
             parsed.TotalValue,

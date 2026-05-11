@@ -21,7 +21,7 @@ public sealed class ListInventoryBalances(
         if (balances.Count == 0) return [];
 
         // ELITE FIX: Bulk fetch materials to eliminate N+1 query pattern.
-        var materialCodes = balances.Select(x => x.MaterialCode.Value).Distinct();
+        var materialCodes = balances.Select(x => x.MaterialCode).Distinct();
         var materials = await materialRepository.GetByCodesAsync(materialCodes, cancellationToken);
 
         return balances.Select(x =>
@@ -63,7 +63,7 @@ public sealed class ListInventoryBalances(
                 catch { /* Ignore malformed JSON */ }
             }
 
-            var material = materials.TryGetValue(x.MaterialCode.Value, out var m) ? m : null;
+            var material = materials.TryGetValue(x.MaterialCode, out var m) ? m : null;
 
             return new InventoryBalanceListItemResponse(
                 x.Id,

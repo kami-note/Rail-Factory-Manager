@@ -49,6 +49,14 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public Task<List<InventoryBalance>> GetBalancesByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken)
+    {
+        var code = MaterialCode.From(materialCode);
+        return dbContext.Balances
+            .Where(x => x.MaterialCode == code)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<List<InventoryLedgerEntry>> GetLedgerEntriesByBalanceIdAsync(Guid balanceId, CancellationToken cancellationToken)
         => dbContext.LedgerEntries
             .Where(x => x.BalanceId == balanceId)

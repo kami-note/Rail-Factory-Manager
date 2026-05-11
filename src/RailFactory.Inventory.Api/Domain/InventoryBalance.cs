@@ -1,25 +1,19 @@
 using RailFactory.BuildingBlocks.Domain;
-using RailFactory.BuildingBlocks.Tenancy;
 
 namespace RailFactory.Inventory.Api.Domain;
 
 /// <summary>
-/// Represents a stock balance for a specific material in a location.
+/// Represents the stock quantity of a specific material in a location.
 /// </summary>
-/// <remarks>
-/// This entity follows a hybrid relational-document model for traceability.
-/// Operational fields (Lot, Expiry) are first-class columns, while
-/// source-specific data (Purchase vs Production) are encapsulated in JSON metadata.
-/// </remarks>
 public sealed class InventoryBalance : AggregateRoot<Guid>
 {
     /// <summary>
-    /// Unique code for the material (SKU).
+    /// The material SKU.
     /// </summary>
-    public MaterialCode MaterialCode { get; private set; }
+    public string MaterialCode { get; private set; }
 
     /// <summary>
-    /// Unit of measurement (e.g., UN, KG).
+    /// Base unit of measure.
     /// </summary>
     public string UnitOfMeasure { get; private set; }
 
@@ -29,37 +23,37 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
     public decimal Quantity { get; private set; }
 
     /// <summary>
-    /// Current availability status of the balance.
-    /// </summary>
-    public InventoryBalanceStatus Status { get; private set; }
-
-    /// <summary>
-    /// Reference to the physical or logical stock location.
+    /// The physical or logical location of this balance.
     /// </summary>
     public Guid StockLocationId { get; private set; }
 
     /// <summary>
-    /// Unique reference to the source transaction (e.g., ReceiptId:ItemId or WorkOrderId).
+    /// External reference to the source of this balance (e.g., ReceiptId:ItemId).
     /// </summary>
     public string SourceReference { get; private set; }
 
     /// <summary>
-    /// Tracking lot or batch number.
+    /// Optional lot number for traceability.
     /// </summary>
     public string? LotNumber { get; private set; }
 
     /// <summary>
-    /// Optional expiration date for the material.
+    /// Optional expiration date.
     /// </summary>
     public DateTimeOffset? ExpirationDate { get; private set; }
 
     /// <summary>
-    /// The origin type of this balance (e.g., Purchase, Production).
+    /// The origin of this balance.
     /// </summary>
     public InventorySourceType SourceType { get; private set; }
 
     /// <summary>
-    /// Rich traceability metadata stored as JSON (e.g., NF-e keys, OP details).
+    /// Current lifecycle status.
+    /// </summary>
+    public InventoryBalanceStatus Status { get; private set; }
+
+    /// <summary>
+    /// Extended metadata in JSON format.
     /// </summary>
     public string? SourceMetadata { get; private set; }
 
@@ -68,17 +62,21 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
     /// </summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    private InventoryBalance()
-        : base(Guid.Empty)
+    /// <summary>
+    /// Audit timestamp for the last modification.
+    /// </summary>
+    public DateTimeOffset UpdatedAt { get; private set; }
+
+    private InventoryBalance() : base(Guid.Empty)
     {
-        MaterialCode = default!;
+        MaterialCode = string.Empty;
         UnitOfMeasure = string.Empty;
         SourceReference = string.Empty;
     }
 
     private InventoryBalance(
         Guid id,
-        MaterialCode materialCode,
+        string materialCode,
         string unitOfMeasure,
         decimal quantity,
         Guid stockLocationId,
@@ -86,37 +84,26 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
         string? lotNumber,
         DateTimeOffset? expirationDate,
         InventorySourceType sourceType,
-        string? sourceMetadata)
-        : base(id)
+        InventoryBalanceStatus status,
+        string? sourceMetadata) : base(id)
     {
         MaterialCode = materialCode;
         UnitOfMeasure = unitOfMeasure;
         Quantity = quantity;
-        Status = InventoryBalanceStatus.Pending;
         StockLocationId = stockLocationId;
         SourceReference = sourceReference;
         LotNumber = lotNumber;
         ExpirationDate = expirationDate;
         SourceType = sourceType;
-        SourceMetadata = sourceType == InventorySourceType.Purchase ? sourceMetadata : null; // Ensure only Purchase has metadata for now
+        Status = status;
         SourceMetadata = sourceMetadata;
         CreatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = CreatedAt;
     }
 
     /// <summary>
-    /// Factory method for creating a new pending balance from an external integration.
+    /// Factory method for creating a pending balance from an external source.
     /// </summary>
-    /// <param name="materialCode">Material SKU.</param>
-    /// <param name="unitOfMeasure">Unit of measure.</param>
-    /// <param name="quantity">Initial quantity.</param>
-    /// <param name="stockLocationId">Destination location.</param>
-    /// <param name="sourceReference">Unique source identifier.</param>
-    /// <param name="lotNumber">Optional tracking lot.</param>
-    /// <param name="expirationDate">Optional expiration date.</param>
-    /// <param name="sourceType">Type of origin.</param>
-    /// <param name="sourceMetadata">Optional rich metadata in JSON format.</param>
-    /// <returns>A new <see cref="InventoryBalance"/> in Pending status.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when quantity is not positive.</exception>
     public static InventoryBalance CreatePending(
         string materialCode,
         string unitOfMeasure,
@@ -128,34 +115,26 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
         InventorySourceType sourceType,
         string? sourceMetadata)
     {
-        if (quantity <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be greater than zero.");
-        }
-
         return new InventoryBalance(
             Guid.NewGuid(),
-            MaterialCode.From(materialCode),
-            unitOfMeasure.Trim(),
+            materialCode,
+            unitOfMeasure,
             quantity,
             stockLocationId,
-            sourceReference.Trim(),
-            lotNumber?.Trim(),
+            sourceReference,
+            lotNumber,
             expirationDate,
             sourceType,
+            InventoryBalanceStatus.Pending,
             sourceMetadata);
     }
 
     /// <summary>
-    /// Confirms a pending balance with actual conference data.
+    /// Confirms the physical count for a pending balance, making it available or blocked.
     /// </summary>
-    /// <param name="quantity">Actual quantity counted.</param>
-    /// <param name="lotNumber">Tracking lot confirmed.</param>
-    /// <param name="expirationDate">Expiration date confirmed.</param>
-    /// <param name="isApproved">Whether the balance is approved for use.</param>
-    /// <exception cref="InvalidOperationException">Thrown if balance is not Pending.</exception>
     public void Confirm(decimal quantity, string? lotNumber, DateTimeOffset? expirationDate, bool isApproved)
     {
+        // ELITE FIX: Rigid state machine guard
         if (Status != InventoryBalanceStatus.Pending)
         {
             throw new InvalidOperationException($"Cannot confirm balance in status '{Status}'. Only 'Pending' balances can be confirmed.");
@@ -163,12 +142,13 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
 
         if (quantity < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(quantity), "Confirmed quantity cannot be negative.");
+            throw new ArgumentException("Counted quantity cannot be negative.");
         }
 
         Quantity = quantity;
         LotNumber = lotNumber?.Trim();
         ExpirationDate = expirationDate;
         Status = isApproved ? InventoryBalanceStatus.Available : InventoryBalanceStatus.Blocked;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

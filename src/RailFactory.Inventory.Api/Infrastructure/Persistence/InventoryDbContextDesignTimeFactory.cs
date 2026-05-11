@@ -9,6 +9,6 @@ public sealed class InventoryDbContextDesignTimeFactory : IDesignTimeDbContextFa
     {
         var optionsBuilder = new DbContextOptionsBuilder<InventoryDbContext>();
         optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=inventorydb;Username=postgres;Password=postgres");
-        return new InventoryDbContext(optionsBuilder.Options);
+        return new InventoryDbContext(optionsBuilder.Options, null!);
     }
 }

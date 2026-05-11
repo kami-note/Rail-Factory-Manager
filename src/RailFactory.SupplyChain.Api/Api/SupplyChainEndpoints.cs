@@ -17,7 +17,17 @@ public static class SupplyChainEndpoints
     private const string InfoPath = "/info";
     private const string SuppliersPath = "/suppliers";
     private const string ReceiptsPath = "/receipts";
+    private const string AssociationQueuePath = "/receipts/association-queue";
     private const string ReceiptDetailsPath = "/receipts/{id:guid}";
+    private const string AssociationWorkbenchPath = "/receipts/{id:guid}/association-workbench";
+    private const string ReceiptItemsToAssociatePath = "/receipts/{id:guid}/items-to-associate";
+    private const string AssociateReceiptItemPath = "/receipts/{receiptId:guid}/items/{itemId:guid}/association";
+    private const string CreateMaterialAndAssociatePath = "/receipts/{receiptId:guid}/items/{itemId:guid}/create-material-and-associate";
+    private const string ReviewAssociationItemLaterPath = "/receipts/{receiptId:guid}/items/{itemId:guid}/review-later";
+    private const string IgnoreAssociationItemPath = "/receipts/{receiptId:guid}/items/{itemId:guid}/ignored";
+    private const string OverrideSupplierSkuPath = "/receipts/{receiptId:guid}/items/{itemId:guid}/override-supplier-sku";
+    private const string ReleaseToConferencePath = "/receipts/{receiptId:guid}/release-to-conference";
+    private const string MappingsPath = "/mappings";
     private const string ImportXmlPath = "/receipts/import/xml";
     private const string ImportXmlPreviewPath = "/receipts/import/xml/preview";
     private const string ImportXmlBatchPath = "/receipts/import/xml/batch";
@@ -34,7 +44,17 @@ public static class SupplyChainEndpoints
         app.MapGet(InfoPath, HandleGetInfo);
         app.MapPost(SuppliersPath, HandleCreateSupplier);
         app.MapGet(ReceiptsPath, HandleListReceipts);
+        app.MapGet(AssociationQueuePath, HandleListAssociationQueue);
         app.MapGet(ReceiptDetailsPath, HandleGetReceiptDetails);
+        app.MapGet(AssociationWorkbenchPath, HandleGetAssociationWorkbench);
+        app.MapGet(ReceiptItemsToAssociatePath, HandleGetItemsToAssociate);
+        app.MapPost(AssociateReceiptItemPath, HandleAssociateReceiptItem);
+        app.MapPost(CreateMaterialAndAssociatePath, HandleCreateMaterialAndAssociate);
+        app.MapPost(ReviewAssociationItemLaterPath, HandleReviewAssociationItemLater);
+        app.MapPost(IgnoreAssociationItemPath, HandleIgnoreAssociationItem);
+        app.MapPost(OverrideSupplierSkuPath, HandleOverrideSupplierSku);
+        app.MapPost(ReleaseToConferencePath, HandleReleaseToConference);
+        app.MapPost(MappingsPath, HandleCreateMapping);
         app.MapGet(ReceiptXmlPath, HandleGetReceiptXml);
         app.MapPost(StartConferencePath, HandleStartConference);
         app.MapPost(CloseConferencePath, HandleCloseConference);
@@ -45,6 +65,382 @@ public static class SupplyChainEndpoints
         app.MapGet(OutboxDeadLettersPath, HandleListOutboxDeadLetters);
         app.MapPost(ReplayOutboxDeadLettersPath, HandleReplayOutboxDeadLetters);
         return app;
+    }
+
+    private static async Task<IResult> HandleGetItemsToAssociate(
+        Guid id,
+        GetItemsToAssociate getItems,
+        CancellationToken cancellationToken)
+    {
+        var items = await getItems.ExecuteAsync(id, cancellationToken);
+        return Results.Ok(items);
+    }
+
+    private static async Task<IResult> HandleListAssociationQueue(
+        HttpContext context,
+        ListAssociationQueue listAssociationQueue,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        var result = await listAssociationQueue.ExecuteAsync(cancellationToken);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetAssociationWorkbench(
+        Guid id,
+        HttpContext context,
+        GetAssociationWorkbench getAssociationWorkbench,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        var result = await getAssociationWorkbench.ExecuteAsync(id, cancellationToken);
+        return result is not null ? Results.Ok(result) : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleAssociateReceiptItem(
+        Guid receiptId,
+        Guid itemId,
+        [FromBody] AssociateReceiptItemRequest request,
+        HttpContext context,
+        AssociateReceiptItem associateReceiptItem,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        try
+        {
+            var result = await associateReceiptItem.ExecuteAsync(
+                receiptId,
+                itemId,
+                request.ExpectedVersion,
+                request.InternalMaterialCode,
+                request.ConversionFactor,
+                context.User.Identity?.Name ?? "system@railfactory.local",
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return Results.Problem(
+                title: "Association item was modified",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["itemId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
+        }
+        catch (AssociationValidationException ex)
+        {
+            var statusCode = ex.Code switch
+            {
+                "association.material_not_found" or "receipt.not_found" or "supplier.not_found" or "association.item_not_found" => StatusCodes.Status404NotFound,
+                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return Results.Problem(
+                title: "Invalid association request",
+                detail: ex.Message,
+                statusCode: statusCode,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+    }
+
+    private static async Task<IResult> HandleCreateMaterialAndAssociate(
+        Guid receiptId,
+        Guid itemId,
+        [FromBody] CreateMaterialAndAssociateRequest request,
+        HttpContext context,
+        CreateMaterialAndAssociate createMaterialAndAssociate,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        try
+        {
+            var materialInput = new CreateMaterialInput(
+                request.MaterialCode,
+                request.OfficialName,
+                request.Description,
+                request.UnitOfMeasure,
+                request.ProcurementType,
+                request.Category,
+                request.Gtin,
+                request.Ncm);
+
+            var result = await createMaterialAndAssociate.ExecuteAsync(
+                receiptId,
+                itemId,
+                request.ExpectedVersion,
+                materialInput,
+                request.ConversionFactor,
+                context.User.Identity?.Name ?? "system@railfactory.local",
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return Results.Problem(
+                title: "Association item was modified",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["itemId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
+        }
+        catch (AssociationValidationException ex)
+        {
+            var statusCode = ex.Code switch
+            {
+                "receipt.not_found" or "supplier.not_found" or "association.item_not_found" => StatusCodes.Status404NotFound,
+                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return Results.Problem(
+                title: "Invalid association and creation request",
+                detail: ex.Message,
+                statusCode: statusCode,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+    }
+
+    private static Task<IResult> HandleReviewAssociationItemLater(
+        Guid receiptId,
+        Guid itemId,
+        [FromBody] ControlledAssociationDecisionRequest request,
+        HttpContext context,
+        RecordControlledAssociationDecision recordDecision,
+        CancellationToken cancellationToken)
+        => HandleControlledAssociationDecision(
+            receiptId,
+            itemId,
+            request,
+            context,
+            recordDecision,
+            ControlledAssociationDecision.ReviewLater,
+            cancellationToken);
+
+    private static Task<IResult> HandleIgnoreAssociationItem(
+        Guid receiptId,
+        Guid itemId,
+        [FromBody] ControlledAssociationDecisionRequest request,
+        HttpContext context,
+        RecordControlledAssociationDecision recordDecision,
+        CancellationToken cancellationToken)
+        => HandleControlledAssociationDecision(
+            receiptId,
+            itemId,
+            request,
+            context,
+            recordDecision,
+            ControlledAssociationDecision.Ignored,
+            cancellationToken);
+
+    private static async Task<IResult> HandleControlledAssociationDecision(
+        Guid receiptId,
+        Guid itemId,
+        ControlledAssociationDecisionRequest request,
+        HttpContext context,
+        RecordControlledAssociationDecision recordDecision,
+        ControlledAssociationDecision decision,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        try
+        {
+            var result = await recordDecision.ExecuteAsync(
+                receiptId,
+                itemId,
+                request.ExpectedVersion,
+                decision,
+                request.Reason,
+                context.User.Identity?.Name ?? "system@railfactory.local",
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return Results.Problem(
+                title: "Association item was modified",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["itemId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
+        }
+        catch (AssociationValidationException ex)
+        {
+            var statusCode = ex.Code switch
+            {
+                "receipt.not_found" or "association.item_not_found" => StatusCodes.Status404NotFound,
+                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return Results.Problem(
+                title: "Invalid association decision",
+                detail: ex.Message,
+                statusCode: statusCode,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+    }
+
+    private static async Task<IResult> HandleOverrideSupplierSku(
+        Guid receiptId,
+        Guid itemId,
+        [FromBody] OverrideSupplierProductCodeRequest request,
+        HttpContext context,
+        OverrideSupplierProductCode overrideSku,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        try
+        {
+            var actor = context.User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(actor)) return Results.Unauthorized();
+
+            var result = await overrideSku.ExecuteAsync(
+                receiptId,
+                itemId,
+                request.ExpectedVersion,
+                request.CorrectedCode,
+                request.Reason,
+                actor,
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return Results.Problem(
+                title: "Association item was modified",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["itemId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
+        }
+        catch (AssociationValidationException ex)
+        {
+            var statusCode = ex.Code switch
+            {
+                "receipt.not_found" or "association.item_not_found" => StatusCodes.Status404NotFound,
+                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return Results.Problem(
+                title: "Invalid SKU override request",
+                detail: ex.Message,
+                statusCode: statusCode,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+    }
+
+    private static async Task<IResult> HandleReleaseToConference(
+        Guid receiptId,
+        [FromBody] ReleaseReceiptToConferenceRequest request,
+        HttpContext context,
+        ReleaseReceiptToConference releaseReceiptToConference,
+        CancellationToken cancellationToken)
+    {
+        var tenantCode = context.GetResolvedTenant()?.Code;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return TenantHttpResults.CodeRequired();
+        }
+
+        try
+        {
+            var result = await releaseReceiptToConference.ExecuteAsync(
+                receiptId,
+                request.ExpectedReceiptVersion,
+                context.User.Identity?.Name ?? "system@railfactory.local",
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return Results.Problem(
+                title: "Association receipt was modified",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["receiptId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
+        }
+        catch (AssociationReleaseBlockedException ex)
+        {
+            return Results.Problem(
+                title: "Receipt has unresolved association items",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["code"] = "association.release_blocked", ["blockers"] = ex.Blockers });
+        }
+        catch (AssociationValidationException ex)
+        {
+            var statusCode = ex.Code switch
+            {
+                "receipt.not_found" => StatusCodes.Status404NotFound,
+                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return Results.Problem(
+                title: "Invalid association release request",
+                detail: ex.Message,
+                statusCode: statusCode,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+    }
+
+    private static async Task<IResult> HandleCreateMapping(
+        [FromBody] CreateSupplierMaterialMappingRequest request,
+        HttpContext context,
+        CreateSupplierMaterialMapping createMapping,
+        CancellationToken cancellationToken)
+    {
+        var actor = context.User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(actor))
+        {
+            return Results.Unauthorized();
+        }
+
+        await createMapping.ExecuteAsync(
+            request.SupplierFiscalId,
+            request.SupplierProductCode,
+            request.InternalMaterialCode,
+            request.InternalUnitOfMeasure,
+            request.SupplierUnit,
+            request.ConversionFactor,
+            actor,
+            cancellationToken);
+
+
+        return Results.NoContent();
     }
 
     private static IResult HandleGetInfo(HttpContext context, IHostEnvironment environment, GetSupplyChainInfo getSupplyChainInfo)
@@ -297,7 +693,7 @@ public static class SupplyChainEndpoints
                 documents.Add(new ImportXmlReceiptBatchDocument(file.FileName, xmlContent));
             }
 
-            var imported = await importXmlReceiptBatch.ExecuteAsync(
+            var summary = await importXmlReceiptBatch.ExecuteAsync(
                 context.User.Identity?.Name ?? "anonymous",
                 documents,
                 context.TraceIdentifier,
@@ -305,12 +701,17 @@ public static class SupplyChainEndpoints
 
             return Results.Created(ImportXmlBatchPath, new
             {
-                imported = imported.Select(x => new
+                successful = summary.SuccessfulImports.Select(x => new
                 {
                     x.FileName,
                     x.ReceiptId,
                     x.ReceiptNumber,
                     x.DocumentNumber
+                }),
+                failed = summary.FailedImports.Select(x => new
+                {
+                    x.FileName,
+                    x.Message
                 })
             });
         }

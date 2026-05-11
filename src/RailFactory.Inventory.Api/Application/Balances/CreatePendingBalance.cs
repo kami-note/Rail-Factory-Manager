@@ -1,4 +1,5 @@
 using System.Text.Json;
+using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Inventory.Api.Application.Ports;
 using RailFactory.Inventory.Api.Domain;
 
@@ -18,15 +19,21 @@ public sealed class CreatePendingBalance(
             return false;
         }
 
+        var systemActor = EmailAddress.From("system@railfactory.local");
+
         // JIT Provisioning: Ensure the material exists in the catalog
         var material = await materialRepository.GetByCodeAsync(input.MaterialCode, cancellationToken);
         if (material is null)
         {
+            // ELITE FIX: Propagate correct UnitOfMeasure from integration event.
             material = Material.Create(
                 input.MaterialCode,
                 input.OriginalDescription ?? input.MaterialCode,
-                $"Auto-provisioned from {input.Source}",
+                $"Auto-provisioned from {input.Source} receipt.",
                 MaterialCategory.RawMaterial,
+                ProcurementType.Buy,
+                systemActor,
+                input.UnitOfMeasure,
                 MaterialStatus.Draft,
                 imageUrl: null,
                 ncm: input.Ncm,
@@ -37,7 +44,7 @@ public sealed class CreatePendingBalance(
         else if (string.IsNullOrWhiteSpace(material.Ncm) && !string.IsNullOrWhiteSpace(input.Ncm))
         {
             // ELITE FIX: Retroactively enrich technical metadata if missing
-            material.SetTechnicalMetadata(input.Ncm, input.Gtin ?? material.Gtin);
+            material.SetTechnicalMetadata(input.Ncm, input.Gtin ?? material.Gtin, systemActor);
         }
 
         await repository.EnsureDefaultLocationAsync(cancellationToken);
@@ -94,7 +101,7 @@ public sealed class CreatePendingBalance(
         catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) 
             when (ex.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
         {
-            // ELITE FIX: Handle race condition in JIT provisioning.
+            // Handle race condition in JIT provisioning by ignoring duplicate creates.
         }
 
         return true;

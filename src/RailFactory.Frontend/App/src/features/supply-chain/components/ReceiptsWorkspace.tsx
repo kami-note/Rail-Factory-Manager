@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
+  Stack,
   Button,
   IconButton,
-  Stack,
-  useMediaQuery,
-  useTheme
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { FileSpreadsheet, RefreshCcw } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
 import { ImportXmlForm } from './ImportXmlForm';
 import { ReceiptsList } from './ReceiptsList';
@@ -20,6 +20,12 @@ type ReceiptsWorkspaceProps = {
   requestedDrawer?: 'xml' | null;
 };
 
+/**
+ * Main workspace for managing Material Receipts.
+ * Provides the list of receipts and the entry points for XML import and physical conference.
+ * 
+ * @param props - Component properties.
+ */
 export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: ReceiptsWorkspaceProps) {
   const theme = useTheme();
   const isCompact = useMediaQuery(theme.breakpoints.down('sm'));
@@ -37,87 +43,75 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
   };
 
   const handleOpenXmlModal = () => {
-    if (!isImportXmlRoute) {
-      navigate('/app/import-xml');
-    }
+    navigate('/app/import-xml');
   };
 
-  if (activeConferenceReceiptId) {
-    return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
-        <ConferenceWorkspace
-          receiptId={activeConferenceReceiptId}
-          tenantCode={tenantCode}
-          onClose={() => {
-            setActiveConferenceReceiptId(null);
-            setRefreshKey((prev) => prev + 1);
-          }}
-        />
-      </Box>
-    );
-  }
+  const handleRefresh = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', md: 'center' },
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: 2,
-          mb: 4
-        }}
-      >
-        <Box>
-          <Typography variant="h1" sx={{ fontWeight: 900, mb: 0.5 }}>
-            RECEIPTS
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-            MANAGE INBOUND MATERIALS
-          </Typography>
+      {!activeConferenceReceiptId && (
+        <Box sx={{ mb: 4 }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'center' } }} spacing={2}>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.02em' }}>
+                RECEBIMENTOS
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Gerencie notas fiscais de entrada e o status das conferências físicas.
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} sx={{ alignSelf: { xs: 'stretch', md: 'center' } }}>
+              <Button
+                variant="contained"
+                startIcon={<FileSpreadsheet size={18} />}
+                onClick={handleOpenXmlModal}
+                sx={{ fontWeight: 800, borderRadius: 2 }}
+              >
+                Importar XML
+              </Button>
+              <IconButton
+                onClick={handleRefresh}
+                sx={{
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2
+                }}
+              >
+                <RefreshCcw size={18} />
+              </IconButton>
+            </Stack>
+          </Stack>
         </Box>
-        <Stack
-          direction={isCompact ? 'column' : 'row'}
-          spacing={1.5}
-          sx={{ width: { xs: '100%', md: 'auto' }, justifyContent: 'flex-end' }}
-        >
-          <Button
-            variant="outlined"
-            size="large"
-            startIcon={<FileSpreadsheet size={18} />}
-            onClick={handleOpenXmlModal}
-            sx={{ width: { xs: '100%', md: 'auto' }, minWidth: { md: 180 }, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
-          >
-            IMPORT XML
-          </Button>
-          <IconButton
-            size="medium"
-            onClick={() => setRefreshKey((current) => current + 1)}
-            sx={{
-              alignSelf: isCompact ? 'flex-end' : 'center',
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'divider'
-            }}
-          >
-            <RefreshCcw size={18} />
-          </IconButton>
-        </Stack>
-      </Box>
+      )}
 
-      <Box sx={{ mt: 1 }}>
-        <ReceiptsList
+      {activeConferenceReceiptId ? (
+        <ConferenceWorkspace
           tenantCode={tenantCode}
-          refreshKey={refreshKey}
-          onStartConference={(id) => setActiveConferenceReceiptId(id)}
+          receiptId={activeConferenceReceiptId}
+          onClose={() => setActiveConferenceReceiptId(null)}
+          onSuccess={() => {
+            setActiveConferenceReceiptId(null);
+            setRefreshKey(prev => prev + 1);
+          }}
         />
-      </Box>
+      ) : (
+        <Box sx={{ mt: 1 }}>
+          <ReceiptsList
+            tenantCode={tenantCode}
+            refreshKey={refreshKey}
+            onStartConference={(id) => setActiveConferenceReceiptId(id)}
+          />
+        </Box>
+      )}
 
       <ResponsiveCenteredModal
         open={isXmlModalOpen}
         onClose={handleCloseModal}
-        title="IMPORT XML BATCH"
+        title="IMPORTAR ARQUIVOS XML"
       >
         <ImportXmlForm tenantCode={tenantCode} showTitle={false} />
       </ResponsiveCenteredModal>

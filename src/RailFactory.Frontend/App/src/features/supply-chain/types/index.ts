@@ -43,3 +43,80 @@ export type ConferenceItem = {
   originalDescription?: string;
   imageUrl?: string;
 };
+
+export type AssociationQueueItem = {
+  receiptId: string;
+  receiptNumber: string;
+  supplierName: string;
+  documentNumber: string;
+  issuedAt: string;
+  status: string;
+  totalItems: number;
+  resolvedItems: number;
+  blockingItems: number;
+};
+
+export type WorkbenchSuggestion = {
+  materialCode: string;
+  officialName: string;
+  stockUnit: string;
+  confidence: 'High' | 'Medium' | 'Low';
+  reason: string;
+};
+
+export type WorkbenchItem = {
+  itemId: string;
+  version: string;
+  associationStatus: 'Pending' | 'Mapped' | 'CreatedAndMapped' | 'ReviewLater' | 'Ignored' | 'Conflict';
+  supplierProductCode: string;
+  description: string;
+  originalDescription?: string;
+  ncm?: string;
+  gtin?: string;
+  supplierUnit: string;
+  quantity: number;
+  unitPrice?: number;
+  internalMaterialCode?: string;
+  internalMaterialName?: string;
+  stockUnit?: string;
+  conversionFactor?: number;
+  reviewReason?: string;
+  suggestions: WorkbenchSuggestion[];
+};
+
+export type AssociationWorkbench = {
+  receipt: {
+    id: string;
+    receiptNumber: string;
+    version: string;
+    supplierFiscalId: string;
+    supplierName: string;
+    status: string;
+    canReleaseToConference: boolean;
+    releaseBlockers: string[];
+  };
+  items: WorkbenchItem[];
+};
+
+export type AssociateReceiptItemResponse = {
+  itemId: string;
+  version: string;
+  associationStatus: string;
+  internalMaterialCode?: string;
+  conversionFactor?: number;
+  canReleaseReceiptToConference: boolean;
+};
+
+export type CreateMaterialAndAssociateRequest = {
+  expectedVersion: string;
+  materialCode: string;
+  officialName: string;
+  description: string;
+  originalDescription?: string;
+  unitOfMeasure: string;
+  procurementType: string;
+  category: string;
+  gtin?: string;
+  ncm?: string;
+  conversionFactor: number;
+};

@@ -15,6 +15,7 @@ public static class InventoryModule
 {
     public static IServiceCollection AddInventoryModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<AuditSaveChangesInterceptor>();
         services.AddDbContext<InventoryDbContext>((sp, options) =>
         {
             var resolver = sp.GetRequiredService<ITenantConnectionResolver>();
@@ -31,7 +32,12 @@ public static class InventoryModule
         services.AddScoped<GetInventoryBalanceDetails>();
         services.AddScoped<ConfirmInventoryBalance>();
         services.AddScoped<ListInventoryBalances>();
+        services.AddScoped<CreateMaterial>();
+        services.AddScoped<GetMaterialDetails>();
         services.AddScoped<UpdateMaterialImage>();
+        services.AddScoped<SearchMaterials>();
+        services.AddScoped<GetMaterialSuggestions>();
+        services.AddScoped<RegisterSupplierMaterialMapping>();
 
         // ELITE FIX: Infrastructure health checks (Manual connectivity check)
         services.AddHealthChecks()

@@ -15,6 +15,7 @@ public static class MaterialReceiptStatusExtensions
     public static DisplayStatus ToDisplayStatus(this MaterialReceiptStatus status) => status switch
     {
         MaterialReceiptStatus.Draft => new DisplayStatus("Draft", "Rascunho", "default"),
+        MaterialReceiptStatus.PendingAssociation => new DisplayStatus("PendingAssociation", "Aguardando Associação", "warning"),
         MaterialReceiptStatus.Registered => new DisplayStatus("Registered", "Registrado", "info"),
         MaterialReceiptStatus.InConference => new DisplayStatus("InConference", "Em Conferência", "warning"),
         MaterialReceiptStatus.Approved => new DisplayStatus("Approved", "Conferido", "success"),

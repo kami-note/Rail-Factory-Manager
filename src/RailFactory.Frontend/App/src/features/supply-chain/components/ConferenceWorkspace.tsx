@@ -13,13 +13,13 @@ import {
   TextField, 
   CircularProgress,
   Alert,
-  Stack,
-  IconButton
+  Stack
 } from '@mui/material';
-import { ChevronLeft, Save } from 'lucide-react';
+import { ChevronLeft, Save, ClipboardCheck } from 'lucide-react';
 import type { ConferenceItem } from '../types';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
+import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 
 type ConferenceWorkspaceProps = {
   /** The identifier for the material receipt to be conferred. */
@@ -28,6 +28,8 @@ type ConferenceWorkspaceProps = {
   tenantCode: string;
   /** Callback to close the workspace. */
   onClose: () => void;
+  /** Callback after successful conference submission. */
+  onSuccess?: () => void;
 };
 
 type CountedResult = {
@@ -45,7 +47,7 @@ type CountedResult = {
  * It receives material codes but DOES NOT display expected quantities from the fiscal document,
  * forcing the operator to perform an unbiased physical count.
  */
-export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: ConferenceWorkspaceProps) {
+export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess }: ConferenceWorkspaceProps) {
   const [items, setItems] = useState<ConferenceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +125,11 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: Conferen
         'Failed to close conference'
       );
 
-      onClose();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        onClose();
+      }
     } catch (err) {
       console.error(err);
       alert('Error saving conference.');
@@ -137,33 +143,39 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: Conferen
 
   return (
     <Box>
-      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <IconButton onClick={onClose} size="small">
-          <ChevronLeft />
-        </IconButton>
-        <Typography variant="h2" sx={{ fontWeight: 800 }}>
-          BLIND CONFERENCE
-        </Typography>
-      </Box>
+      <ModuleHeader 
+        label="BLIND CONFERENCE" 
+        icon={<ClipboardCheck size={20} />}
+        action={
+          <Button 
+            variant="outlined" 
+            size="small" 
+            startIcon={<ChevronLeft size={16} />} 
+            onClick={onClose}
+          >
+            Back to List
+          </Button>
+        }
+      />
 
-      <Alert severity="info" sx={{ mb: 3 }}>
+      <Alert severity="info" sx={{ mt: 3, mb: 3 }}>
         Enter the actual quantities, lot numbers, and expiration dates as counted in the physical material.
       </Alert>
 
       <TableContainer component={Paper} variant="outlined">
-        <Table>
+        <Table stickyHeader size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: 'background.default' }}>
-              <TableCell sx={{ fontWeight: 700 }}>Material</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Counted Qty</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>UoM</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Lot Number</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Expiration Date</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>MATERIAL</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>COUNTED QTY</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>UOM</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>LOT NUMBER</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>EXPIRATION DATE</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {items.map(item => (
-              <TableRow key={item.id}>
+              <TableRow key={item.id} hover>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <MaterialAvatar 
@@ -173,11 +185,11 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: Conferen
                       size={32} 
                     />
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                         {item.originalDescription || 'No description'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
-                        SKU: {item.materialCode}
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600, fontFamily: 'monospace' }}>
+                        {item.materialCode}
                       </Typography>
                     </Box>
                   </Box>
@@ -186,27 +198,29 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: Conferen
                   <TextField
                     type="number"
                     size="small"
-                    value={counts[item.id].countedQuantity}
+                    value={counts[item.id]?.countedQuantity ?? 0}
                     onChange={(e) => handleInputChange(item.id, 'countedQuantity', e.target.value)}
                     sx={{ width: 100 }}
                   />
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{item.unitOfMeasure}</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{item.unitOfMeasure}</TableCell>
                 <TableCell>
                   <TextField
                     size="small"
-                    value={counts[item.id].confirmedLotNumber}
+                    value={counts[item.id]?.confirmedLotNumber ?? ''}
                     onChange={(e) => handleInputChange(item.id, 'confirmedLotNumber', e.target.value)}
                     placeholder="Lot #"
+                    fullWidth
                   />
                 </TableCell>
                 <TableCell>
                   <TextField
                     type="date"
                     size="small"
-                    value={counts[item.id].confirmedExpirationDate}
+                    value={counts[item.id]?.confirmedExpirationDate ?? ''}
                     onChange={(e) => handleInputChange(item.id, 'confirmedExpirationDate', e.target.value)}
                     slotProps={{ inputLabel: { shrink: true } }}
+                    fullWidth
                   />
                 </TableCell>
               </TableRow>
@@ -221,10 +235,10 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose }: Conferen
         </Button>
         <Button 
           variant="contained" 
-          startIcon={saving ? <CircularProgress size={20} /> : <Save size={18} />}
+          startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <Save size={18} />}
           onClick={handleSave}
           disabled={saving}
-          sx={{ px: 4 }}
+          sx={{ px: 4, fontWeight: 800 }}
         >
           {saving ? 'SAVING...' : 'FINISH CONFERENCE'}
         </Button>

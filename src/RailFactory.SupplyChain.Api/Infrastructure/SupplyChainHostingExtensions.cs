@@ -13,6 +13,7 @@ public static class SupplyChainHostingExtensions
     {
         app.UseServiceDefaults();
         app.UseTenantResolution();
+        app.UseRailFactoryHeaderIdentity(); // ELITE FIX: Enable trusted identity from headers
         app.MapDefaultEndpoints();
         return app;
     }

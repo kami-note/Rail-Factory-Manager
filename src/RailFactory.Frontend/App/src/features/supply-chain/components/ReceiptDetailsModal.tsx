@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { 
   Box, 
   Typography, 
-  Grid, 
   Table, 
   TableBody, 
   TableCell, 
@@ -10,16 +9,19 @@ import {
   TableHead, 
   TableRow, 
   Paper, 
-  Chip,
   CircularProgress,
   Divider,
   Stack,
-  Alert
+  Alert,
+  Grid,
+  alpha,
+  useTheme
 } from '@mui/material';
 import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
 import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
+import { StatusChip } from '../../../shared/components/common/StatusChip';
 import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping';
 
 type ReceiptDetailsModalProps = {
@@ -64,11 +66,13 @@ type MaterialReceiptDetails = {
 
 /**
  * Modal displaying full details of a Material Receipt.
- * @param receiptId - The ID of the receipt to fetch and display.
- * @param tenantCode - Active tenant for API headers.
- * @param onClose - Callback to close the modal.
+ * @param props - Component properties.
+ * @remarks
+ * Architectural Decision: Uses StatusChip for unified status rendering.
+ * Localization: All operator-facing labels are in Portuguese (Brazil).
  */
 export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptDetailsModalProps) {
+  const theme = useTheme();
   const [details, setDetails] = useState<MaterialReceiptDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +106,7 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
   return (
     <ResponsiveCenteredModal 
       open={!!receiptId} 
-      title={`RECEIPT DETAILS: ${details?.receiptNumber || '...'}`} 
+      title={`DETALHES DO RECEBIMENTO: ${details?.receiptNumber || '...'}`} 
       onClose={onClose}
     >
       {loading && (
@@ -119,22 +123,18 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
         <Stack spacing={4}>
           {/* Header Info */}
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="overline" color="text.secondary">Supplier</Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>{details.supplier?.name || 'Unknown'}</Typography>
-              <Typography variant="body2" color="text.secondary">Tax ID: {details.supplier?.taxId}</Typography>
+            <Grid item xs={12} md={6}>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>FORNECEDOR</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{details.supplier?.name || 'Desconhecido'}</Typography>
+              <Typography variant="body2" color="text.secondary">CNPJ: {details.supplier?.taxId}</Typography>
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: 'right' } }}>
-              <Typography variant="overline" color="text.secondary">Status</Typography>
+            <Grid item xs={12} md={6} sx={{ textAlign: { md: 'right' } }}>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>STATUS ATUAL</Typography>
               <Box sx={{ display: 'flex', justifyContent: { md: 'flex-end' }, mt: 0.5 }}>
-                <Chip 
-                  label={details.status.label} 
-                  color={details.status.color as any} 
-                  sx={{ fontWeight: 700, px: 1 }} 
-                />
+                <StatusChip status={details.status} />
               </Box>
               <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
-                Issued at: {formatRelativeDate(details.issuedAt)}
+                Emissão: {formatRelativeDate(details.issuedAt)}
               </Typography>
             </Grid>
           </Grid>
@@ -143,7 +143,7 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
 
           {/* Timeline Section */}
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>TIMELINE</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2 }}>LINHA DO TEMPO</Typography>
             <Box sx={{ position: 'relative', pl: 3, borderLeft: '2px solid', borderColor: 'divider' }}>
               {details.timeline.map((event, idx) => (
                 <Box key={idx} sx={{ mb: 2, position: 'relative' }}>
@@ -155,7 +155,7 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
                       width: 14, 
                       height: 14, 
                       borderRadius: '50%', 
-                      bgcolor: event.status.color + '.main',
+                      bgcolor: (theme) => (theme.palette as any)[event.status.color]?.main || theme.palette.grey[400],
                       border: '3px solid white',
                       boxShadow: 1
                     }} 
@@ -175,23 +175,23 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
 
           {/* Items Table */}
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>ITEMS COMPARISON</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2 }}>CONFERÊNCIA DE ITENS</Typography>
             <TableContainer component={Paper} variant="outlined">
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'background.default' }}>
-                    <TableCell sx={{ fontWeight: 700 }}>Material</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Expected</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Counted</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Diff</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Lot / Expiry</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>MATERIAL</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800 }}>ESPERADO</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800 }}>CONTADO</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800 }}>DIF</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>LOTE / VALIDADE</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {details.items.map((item) => {
                     const diff = item.countedQuantity !== undefined ? item.countedQuantity - item.expectedQuantity : null;
                     return (
-                      <TableRow key={item.id}>
+                      <TableRow key={item.id} hover>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <MaterialAvatar 
@@ -203,22 +203,15 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                 {item.productName}
                               </Typography>
-                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                  SKU: {item.materialCode}
-                                </Typography>
-                                {item.originalDescription && item.originalDescription !== item.productName && (
-                                  <Typography variant="caption" color="text.secondary">
-                                    | {item.originalDescription}
-                                  </Typography>
-                                )}
-                              </Box>
+                              <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'block', fontWeight: 600, fontFamily: 'monospace' }}>
+                                {item.materialCode}
+                              </Typography>
                             </Box>
                           </Box>
                         </TableCell>
-                        <TableCell>{item.expectedQuantity} {item.unitOfMeasure}</TableCell>
-                        <TableCell>{item.countedQuantity ?? '-'} {item.unitOfMeasure}</TableCell>
-                        <TableCell>
+                        <TableCell align="right">{item.expectedQuantity} {item.unitOfMeasure}</TableCell>
+                        <TableCell align="right">{item.countedQuantity ?? '-'} {item.unitOfMeasure}</TableCell>
+                        <TableCell align="right">
                           {diff !== null && (
                             <Typography 
                               variant="body2" 
@@ -232,9 +225,9 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
                           )}
                         </TableCell>
                         <TableCell>
-                          <Typography variant="caption" sx={{ display: 'block' }}>{item.lotNumber || '-'}</Typography>
+                          <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>{item.lotNumber || '-'}</Typography>
                           <Typography variant="caption" color="text.secondary">{item.expirationDate ? formatRelativeDate(item.expirationDate, false) : '-'}</Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          <Typography variant="caption" color="primary.main" sx={{ display: 'block' }}>
                             {item.unitPrice !== undefined && item.unitPrice !== null
                               ? `R$ ${item.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                               : '-'}
@@ -251,19 +244,19 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
           <Divider />
 
           {/* Audit Trail */}
-          <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, display: 'block', mb: 1 }}>
-              AUDIT TRAIL
+          <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.03), p: 2, borderRadius: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, display: 'block', mb: 1 }}>
+              TRILHA DE AUDITORIA
             </Typography>
             <Grid container spacing={2}>
-              <Grid size={6}>
-                <Typography variant="caption" sx={{ display: 'block' }}>Created: {formatRelativeDate(details.audit.createdAt)}</Typography>
-                <Typography variant="caption" sx={{ display: 'block' }}>By: {details.audit.createdBy}</Typography>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="caption" sx={{ display: 'block' }}>Criação: <strong>{formatRelativeDate(details.audit.createdAt)}</strong></Typography>
+                <Typography variant="caption" sx={{ display: 'block' }}>Por: <strong>{details.audit.createdBy}</strong></Typography>
               </Grid>
               {details.audit.conferenceStartedAt && (
-                <Grid size={6}>
-                  <Typography variant="caption" sx={{ display: 'block' }}>Conference: {formatRelativeDate(details.audit.conferenceStartedAt)}</Typography>
-                  <Typography variant="caption" sx={{ display: 'block' }}>By: {details.audit.conferenceStartedBy}</Typography>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" sx={{ display: 'block' }}>Início Conf.: <strong>{formatRelativeDate(details.audit.conferenceStartedAt)}</strong></Typography>
+                  <Typography variant="caption" sx={{ display: 'block' }}>Por: <strong>{details.audit.conferenceStartedBy}</strong></Typography>
                 </Grid>
               )}
             </Grid>

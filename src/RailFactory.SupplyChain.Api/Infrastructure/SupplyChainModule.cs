@@ -44,10 +44,19 @@ public static class SupplyChainModule
         services.AddScoped<ImportXmlReceipt>();
         services.AddScoped<ImportXmlReceiptBatch>();
         services.AddScoped<ListReceipts>();
+        services.AddScoped<ListAssociationQueue>();
         services.AddScoped<GetMaterialReceiptDetails>();
+        services.AddScoped<GetAssociationWorkbench>();
+        services.AddScoped<GetItemsToAssociate>();
+        services.AddScoped<AssociateReceiptItem>();
+        services.AddScoped<CreateMaterialAndAssociate>();
+        services.AddScoped<RecordControlledAssociationDecision>();
+        services.AddScoped<OverrideSupplierProductCode>();
+        services.AddScoped<ReleaseReceiptToConference>();
         services.AddScoped<GetConferenceItems>();
         services.AddScoped<StartMaterialReceiptConference>();
         services.AddScoped<CloseMaterialReceiptConference>();
+        services.AddScoped<CreateSupplierMaterialMapping>();
         services.AddScoped<ListSupplyOutboxDeadLetters>();
         services.AddScoped<ReplaySupplyOutboxDeadLetters>();
 
