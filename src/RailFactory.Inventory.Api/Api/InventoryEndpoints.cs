@@ -18,29 +18,138 @@ public static class InventoryEndpoints
     private const string InventoryInfoPath = "/api/inventory/info";
     private const string BalanceDetailsPath = "/api/inventory/balances/{id:guid}";
     private const string BalancesPath = "/api/inventory/balances";
+    private const string MaterialsPath = "/api/inventory/materials";
+    private const string MaterialDetailsPath = "/api/inventory/materials/{materialCode}";
+    private const string MaterialSuggestionsPath = "/api/inventory/materials/suggestions";
     private const string InternalPendingBalancesPath = "/internal/pending-balances";
     private const string InternalConfirmedBalancesPath = "/internal/confirmed-balances";
+    private const string InternalSupplierMaterialMappingPath = "/internal/supplier-material-mapping";
 
     public static WebApplication MapInventoryEndpoints(this WebApplication app)
     {
         app.MapGet(InventoryInfoPath, HandleGetInventoryInfo);
         app.MapGet(BalanceDetailsPath, HandleGetBalanceDetails);
         app.MapGet(BalancesPath, HandleListBalances);
+        app.MapPost(MaterialsPath, HandleCreateMaterial);
+        app.MapGet("/api/inventory/materials/search", HandleSearchMaterials);
+        app.MapGet(MaterialSuggestionsPath, HandleGetMaterialSuggestions);
         app.MapPut("/api/inventory/materials/{materialCode}/image", HandleUpdateMaterialImage);
+        app.MapGet(MaterialDetailsPath, HandleGetMaterialDetails);
         app.MapPost("/internal/materials", HandleGetInternalMaterials);
         app.MapPost(InternalPendingBalancesPath, HandleCreatePendingBalance);
         app.MapPost(InternalConfirmedBalancesPath, HandleConfirmInventoryBalance);
+        app.MapPost(InternalSupplierMaterialMappingPath, HandleSupplierMaterialMappingCreated);
 
         return app;
+    }
+
+    private static async Task<IResult> HandleCreateMaterial(
+        [FromBody] CreateMaterialRequest request,
+        HttpContext context,
+        CreateMaterial createMaterial,
+        CancellationToken cancellationToken)
+    {
+        var actor = context.User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(actor))
+        {
+            return Results.Unauthorized();
+        }
+
+        try
+        {
+            var created = await createMaterial.ExecuteAsync(
+                new CreateMaterialInput(
+                    request.MaterialCode,
+                    request.OfficialName,
+                    request.Description,
+                    request.UnitOfMeasure,
+                    request.ProcurementType,
+                    request.Category,
+                    request.Gtin,
+                    request.Ncm),
+                actor,
+                cancellationToken);
+
+            return Results.Created($"{MaterialsPath}/{Uri.EscapeDataString(created.MaterialCode)}", created);
+        }
+        catch (MaterialValidationException ex)
+        {
+            var statusCode = ex.Code is "material.duplicate_code" or "material.duplicate_gtin"
+                ? StatusCodes.Status409Conflict
+                : StatusCodes.Status400BadRequest;
+
+            return Results.Problem(
+                title: "Invalid material request",
+                detail: ex.Message,
+                statusCode: statusCode,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+    }
+
+    private static async Task<IResult> HandleGetMaterialDetails(
+        [FromRoute] string materialCode,
+        GetMaterialDetails getMaterialDetails,
+        CancellationToken cancellationToken)
+    {
+        var details = await getMaterialDetails.ExecuteAsync(materialCode, cancellationToken);
+        return details is not null ? Results.Ok(details) : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleSearchMaterials(
+        [FromQuery] string q,
+        SearchMaterials searchMaterials,
+        CancellationToken cancellationToken)
+    {
+        var results = await searchMaterials.ExecuteAsync(q, cancellationToken);
+        return Results.Ok(results);
+    }
+
+    private static async Task<IResult> HandleGetMaterialSuggestions(
+        [FromQuery] string? gtin,
+        [FromQuery] string? ncm,
+        [FromQuery] string? description,
+        [FromQuery] string? supplierFiscalId,
+        [FromQuery] string? supplierProductCode,
+        GetMaterialSuggestions getMaterialSuggestions,
+        CancellationToken cancellationToken)
+    {
+        var input = new GetMaterialSuggestionsInput(gtin, ncm, description, supplierFiscalId, supplierProductCode);
+        var results = await getMaterialSuggestions.ExecuteAsync(input, cancellationToken);
+        return Results.Ok(results);
+    }
+
+    private static async Task<IResult> HandleSupplierMaterialMappingCreated(
+        [FromBody] CreateSupplierMaterialMappingRequest request,
+        RegisterSupplierMaterialMapping registerSupplierMaterialMapping,
+        CancellationToken cancellationToken)
+    {
+        var input = new RegisterSupplierMaterialMappingInput(
+            request.Payload.SupplierFiscalId,
+            request.Payload.SupplierProductCode,
+            request.Payload.MaterialCode);
+
+        await registerSupplierMaterialMapping.ExecuteAsync(input, cancellationToken);
+        return Results.Accepted();
     }
 
     private static async Task<IResult> HandleUpdateMaterialImage(
         [FromRoute] string materialCode,
         [FromBody] UpdateMaterialImageRequest request,
+        HttpContext context,
         UpdateMaterialImage updateMaterialImage,
         CancellationToken cancellationToken)
     {
-        var updated = await updateMaterialImage.ExecuteAsync(materialCode, request.ImageUrl, cancellationToken);
+        var actor = context.User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(actor))
+        {
+            return Results.Unauthorized();
+        }
+
+        var updated = await updateMaterialImage.ExecuteAsync(
+            materialCode, 
+            request.ImageUrl, 
+            actor,
+            cancellationToken);
         return updated ? Results.NoContent() : Results.NotFound();
     }
 

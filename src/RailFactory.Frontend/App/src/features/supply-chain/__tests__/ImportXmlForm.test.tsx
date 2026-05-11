@@ -10,20 +10,30 @@ describe('ImportXmlForm', () => {
 
   it('uses the preview and confirm flow for single XML file', async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          receiptNumber: 'NFE-1',
-          documentNumber: '1',
-          receiptDate: '2026-05-05',
-          supplierFiscalId: '12345678000199',
-          supplierName: 'ACME SUPPLIER',
-          items: [{ materialCode: 'MAT-001', quantity: 10, unitOfMeasure: 'UN' }]
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ receiptId: 'receipt-1' })
+      .mockImplementation(async (url) => {
+        if (url === '/api/auth/csrf') {
+          return { ok: true, json: async () => ({ token: 'mock-csrf' }) };
+        }
+        if (url === '/api/supply-chain/receipts/import/xml/preview') {
+          return {
+            ok: true,
+            json: async () => ({
+              receiptNumber: 'NFE-1',
+              documentNumber: '1',
+              receiptDate: '2026-05-05',
+              supplierFiscalId: '12345678000199',
+              supplierName: 'ACME SUPPLIER',
+              items: [{ materialCode: 'MAT-001', quantity: 10, unitOfMeasure: 'UN' }]
+            })
+          };
+        }
+        if (url === '/api/supply-chain/receipts/import/xml') {
+          return {
+            ok: true,
+            json: async () => ({ receiptId: 'receipt-1' })
+          };
+        }
+        return { ok: false };
       });
     vi.stubGlobal('fetch', fetchMock);
 
@@ -43,13 +53,15 @@ describe('ImportXmlForm', () => {
     // Wait for the Confirm button
     const confirmButton = await screen.findByRole('button', { name: /CONFIRM AND IMPORT/i });
     expect(confirmButton).toBeInTheDocument();
+    
+    expect(screen.getByText('Supplier')).toBeInTheDocument();
     expect(screen.getByText('ACME SUPPLIER')).toBeInTheDocument();
 
     // Click confirm (no form, just a button)
     fireEvent.click(confirmButton);
 
     // Verify /import call
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(fetchMock).toHaveBeenLastCalledWith(
       '/api/supply-chain/receipts/import/xml',
       expect.objectContaining({

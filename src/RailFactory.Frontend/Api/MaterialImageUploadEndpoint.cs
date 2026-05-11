@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Antiforgery;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.Frontend.Infrastructure;
 
@@ -17,6 +18,30 @@ internal static class MaterialImageUploadEndpoint
         IHttpClientFactory httpClientFactory,
         CancellationToken cancellationToken)
     {
+        // When running behind a public HTTPS tunnel/proxy, honor forwarded scheme before CSRF validation.
+        if (!httpContext.Request.IsHttps
+            && string.Equals(httpContext.Request.Headers["X-Forwarded-Proto"].FirstOrDefault(), "https", StringComparison.OrdinalIgnoreCase))
+        {
+            httpContext.Request.Scheme = "https";
+        }
+
+        if (!httpContext.Request.IsHttps)
+        {
+            return Results.Json(
+                new AuthErrorDto("csrf_https_required", "CSRF token validation requires HTTPS."),
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var antiforgery = httpContext.RequestServices.GetRequiredService<IAntiforgery>();
+        try
+        {
+            await antiforgery.ValidateRequestAsync(httpContext);
+        }
+        catch (AntiforgeryValidationException)
+        {
+            return Results.Json(new AuthErrorDto("csrf_error", "CSRF token validation failed."), statusCode: StatusCodes.Status403Forbidden);
+        }
+
         var tenantCode = httpContext.ReadTenantCodeHeader();
         if (string.IsNullOrWhiteSpace(tenantCode) || !Regex.IsMatch(tenantCode, "^[A-Za-z0-9_-]+$"))
         {

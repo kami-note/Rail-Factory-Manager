@@ -3,6 +3,8 @@ namespace Microsoft.Extensions.Hosting;
 public static class TenantConstants
 {
     public const string TenantCodeHeaderName = "X-Tenant-Code";
+    public const string UserEmailHeaderName = "X-RF-User-Email";
+    public const string UserNameHeaderName = "X-RF-User-Name";
     public const string TenantCodeItemName = "TenantCode";
     public const string TenantLocaleItemName = "TenantLocale";
     public const string TenantTimeZoneItemName = "TenantTimeZone";

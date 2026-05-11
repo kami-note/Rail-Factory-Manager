@@ -5,28 +5,41 @@ import { Box, Typography } from '@mui/material';
  * Properties for the ModuleHeader component.
  */
 interface ModuleHeaderProps {
+  /** The text label to display in the header. */
   label: string;
+  /** The icon to display alongside the label. */
   icon: React.ReactNode;
+  /** Optional action element (e.g., a button) to display on the right side. */
+  action?: React.ReactNode;
 }
 
 /**
- * Renders a consistent header for dashboard modules/panels.
+ * Renders a standardized header for modules and panels.
  */
-export const ModuleHeader: React.FC<ModuleHeaderProps> = ({ label, icon }) => {
+export const ModuleHeader: React.FC<ModuleHeaderProps> = ({ label, icon, action }) => {
   return (
     <Box sx={{ 
-      p: 2, 
-      px: 4, 
-      bgcolor: '#faf9f8', 
-      borderBottom: '1px solid #edebe9', 
       display: 'flex', 
       alignItems: 'center', 
-      gap: 2 
+      justifyContent: 'space-between',
+      gap: 2,
+      mb: 1
     }}>
-      <Box sx={{ color: '#605e5c', display: 'flex' }}>{icon}</Box>
-      <Typography variant="caption" sx={{ color: '#323130', fontWeight: 700 }}>
-        {label.toUpperCase()}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ color: '#605e5c', display: 'flex' }}>{icon}</Box>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            color: '#323130', 
+            fontWeight: 700, 
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase'
+          }}
+        >
+          {label}
+        </Typography>
+      </Box>
+      {action && <Box sx={{ display: 'flex' }}>{action}</Box>}
     </Box>
   );
 };

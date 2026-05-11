@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { 
   Box, 
   Typography, 
-  Grid, 
   Table, 
   TableBody, 
   TableCell, 
@@ -10,18 +9,19 @@ import {
   TableHead, 
   TableRow, 
   Paper, 
-  Chip,
   CircularProgress,
   Divider,
   Stack,
   Alert,
-  Button
+  alpha,
+  useTheme,
+  Grid
 } from '@mui/material';
-import { Camera } from 'lucide-react';
 import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
 import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
+import { StatusChip } from '../../../shared/components/common/StatusChip';
 import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping';
 
 type BalanceDetailsModalProps = {
@@ -33,30 +33,18 @@ type BalanceDetailsModalProps = {
 type InventoryBalanceDetails = {
   id: string;
   materialCode: string;
-  material: {
-    officialName: string;
-    description: string;
-    category: DisplayStatus;
-    status: DisplayStatus;
-    imageUrl?: string;
-    ncm?: string;
-    gtin?: string;
-  };
+  materialName: string;
+  quantity: number;
   unitOfMeasure: string;
   status: DisplayStatus;
-  quantities: {
-    totalPhysical: number;
-    available: number;
-    blocked: number;
-    quarantine: number;
-  };
-  traceability: {
-    lotNumber?: string;
-    expirationDate?: string;
-    sourceType: DisplayStatus;
-    sourceReference: string;
-    supplierName?: string;
-  };
+  locationName: string;
+  lotNumber?: string;
+  expirationDate?: string;
+  sourceReference: string;
+  sourceType: DisplayStatus;
+  supplierName?: string;
+  materialImageUrl?: string;
+  createdAt: string;
   ledger: Array<{
     occurredAt: string;
     quantityChange: number;
@@ -67,75 +55,48 @@ type InventoryBalanceDetails = {
 };
 
 /**
- * Modal displaying full details of an Inventory Balance, including technical metadata and image management.
+ * Modal displaying full details and ledger for an Inventory Balance.
+ * @param props - Component properties.
  */
 export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceDetailsModalProps) {
+  const theme = useTheme();
   const [details, setDetails] = useState<InventoryBalanceDetails | null>(null);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDetails = async () => {
-    if (!balanceId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchJsonOrThrow<InventoryBalanceDetails>(
-        `/api/inventory/balances/${balanceId}`,
-        {
-          headers: buildTenantHeaders(tenantCode),
-          credentials: 'include'
-        },
-        'Failed to load balance details'
-      );
-      setDetails(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    if (!balanceId) return;
+
+    const fetchDetails = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchJsonOrThrow<InventoryBalanceDetails>(
+          `/api/inventory/balances/${balanceId}`,
+          {
+            headers: buildTenantHeaders(tenantCode),
+            credentials: 'include'
+          },
+          'Failed to load balance details'
+        );
+        setDetails(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     void fetchDetails();
   }, [balanceId, tenantCode]);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !details) return;
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      await fetchJsonOrThrow(
-        `/api/materials/${details.materialCode}/image`,
-        {
-          method: 'POST',
-          headers: {
-            'X-Tenant-Code': tenantCode
-          },
-          body: formData,
-          credentials: 'include'
-        },
-        'Image upload failed'
-      );
-      await fetchDetails();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  };
 
   return (
     <ResponsiveCenteredModal 
       open={!!balanceId} 
-      title={`BALANCE DETAILS: ${details?.material.officialName || '...'}`} 
+      title={`DETALHES DO ESTOQUE: ${details?.materialCode || '...'}`} 
       onClose={onClose}
     >
-      {loading && !details && (
+      {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
         </Box>
@@ -145,181 +106,111 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
         <Alert severity="error">{error}</Alert>
       )}
 
-      {details && (
+      {details && !loading && (
         <Stack spacing={4}>
-          {/* Material Info Section with Image Upload */}
-          <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
-            <Box sx={{ position: 'relative' }}>
-              <MaterialAvatar materialCode={details.materialCode} size={100} />
-              {details.material.imageUrl && (
-                <Box 
-                  component="img" 
-                  src={details.material.imageUrl} 
-                  sx={{ position: 'absolute', top: 0, left: 0, width: 100, height: 100, borderRadius: 1, objectFit: 'cover', border: '1px solid #ddd' }} 
+          {/* Main Info */}
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <MaterialAvatar 
+                  materialCode={details.materialCode} 
+                  description={details.materialName}
+                  imageUrl={details.materialImageUrl}
+                  size={48} 
                 />
-              )}
-              <Button
-                component="label"
-                variant="contained"
-                size="small"
-                disabled={uploading}
-                sx={{ 
-                  position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)', 
-                  minWidth: 0, p: 0.5, borderRadius: '50%', width: 32, height: 32 
-                }}
-              >
-                {uploading ? <CircularProgress size={16} color="inherit" /> : <Camera size={16} />}
-                <input type="file" hidden accept="image/*" onChange={handleImageUpload} />
-              </Button>
-            </Box>
-
-            <Box sx={{ flexGrow: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                    {details.material.officialName}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
-                    SKU: {details.materialCode} | CAT: {details.material.category.label} | STATUS: {details.material.status.label}
+                  <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>{details.materialName}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700, fontFamily: 'monospace' }}>
+                    SKU: {details.materialCode}
                   </Typography>
                 </Box>
-                <Chip 
-                  label={details.status.label} 
-                  color={details.status.color as any} 
-                  size="small" 
-                  sx={{ fontWeight: 700 }} 
-                />
               </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block' }}>
-                NCM: {details.material.ncm || '---'} | GTIN: {details.material.gtin || '---'}
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                {details.material.description}
+            </Grid>
+            <Grid item xs={12} md={6} sx={{ textAlign: { md: 'right' } }}>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>STATUS ATUAL</Typography>
+              <Box sx={{ display: 'flex', justifyContent: { md: 'flex-end' }, mt: 0.5 }}>
+                <StatusChip status={details.status} />
+              </Box>
+            </Grid>
+          </Grid>
+
+          <Divider />
+
+          {/* Stock Metrics */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 3 }}>
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>QUANTIDADE</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800 }}>{details.quantity} {details.unitOfMeasure}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>LOTE / VALIDADE</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 700 }}>{details.lotNumber || 'N/A'}</Typography>
+              {details.expirationDate && (
+                <Typography variant="caption" color="text.secondary">Vencimento: {formatRelativeDate(details.expirationDate, false)}</Typography>
+              )}
+            </Box>
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>ORIGEM</Typography>
+              <Box sx={{ mt: 0.5 }}>
+                <StatusChip status={details.sourceType} label={details.supplierName || details.sourceType.label} />
+              </Box>
+              <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5, fontFamily: 'monospace' }}>
+                Ref: {TechnicalIdFormatter.truncate(details.sourceReference)}
               </Typography>
             </Box>
           </Box>
 
           <Divider />
 
-          {/* Magic Numbers Section */}
+          {/* Ledger / History */}
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>QUANTITY BREAKDOWN</Typography>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'grey.50' }}>
-                  <Typography variant="overline" color="text.secondary">Total Physical</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800 }}>{details.quantities.totalPhysical}</Typography>
-                  <Typography variant="caption">{details.unitOfMeasure}</Typography>
-                </Paper>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderLeft: '4px solid', borderLeftColor: 'success.main' }}>
-                  <Typography variant="overline" color="success.main">Available</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800 }}>{details.quantities.available}</Typography>
-                  <Typography variant="caption">{details.unitOfMeasure}</Typography>
-                </Paper>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderLeft: '4px solid', borderLeftColor: 'error.main' }}>
-                  <Typography variant="overline" color="error.main">Blocked</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800 }}>{details.quantities.blocked}</Typography>
-                  <Typography variant="caption">{details.unitOfMeasure}</Typography>
-                </Paper>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderLeft: '4px solid', borderLeftColor: 'warning.main' }}>
-                  <Typography variant="overline" color="warning.main">Quarantine</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800 }}>{details.quantities.quarantine}</Typography>
-                  <Typography variant="caption">{details.unitOfMeasure}</Typography>
-                </Paper>
-              </Grid>
-            </Grid>
-          </Box>
-
-          <Divider />
-
-          {/* Traceability Section */}
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>TRACEABILITY & ORIGIN</Typography>
-            <Grid container spacing={3}>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Stack spacing={1}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Lot Number</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{details.traceability.lotNumber || 'N/A'}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Expiration Date</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {details.traceability.expirationDate ? formatRelativeDate(details.traceability.expirationDate, false) : 'N/A'}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Supplier</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{details.traceability.supplierName || 'N/A'}</Typography>
-                  </Box>
-                </Stack>
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Stack spacing={1}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Source Type</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{details.traceability.sourceType.label}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Source Reference</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
-                      {details.traceability.sourceReference}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Grid>
-            </Grid>
-          </Box>
-
-          <Divider />
-
-          {/* Ledger Section */}
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>MOVEMENT HISTORY (LEDGER)</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2 }}>HISTÓRICO DE MOVIMENTAÇÕES (LEDGER)</Typography>
             <TableContainer component={Paper} variant="outlined">
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: 'grey.50' }}>
-                    <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Operation</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Delta</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>User</TableCell>
+                  <TableRow sx={{ bgcolor: 'background.default' }}>
+                    <TableCell sx={{ fontWeight: 800 }}>DATA</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800 }}>VARIÂÇÃO</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>NOVO STATUS</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>MOTIVO</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>OPERADOR</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {details.ledger.map((entry, index) => (
-                    <TableRow key={index} hover>
+                  {details.ledger.map((entry, idx) => (
+                    <TableRow key={idx} hover>
                       <TableCell>{formatRelativeDate(entry.occurredAt)}</TableCell>
-                      <TableCell sx={{ fontWeight: 500 }}>{entry.reason}</TableCell>
-                      <TableCell sx={{ color: entry.quantityChange >= 0 ? 'success.main' : 'error.main', fontWeight: 700 }}>
-                        {entry.quantityChange >= 0 ? '+' : ''}{entry.quantityChange}
+                      <TableCell align="right">
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 700, 
+                            color: entry.quantityChange >= 0 ? 'success.main' : 'error.main' 
+                          }}
+                        >
+                          {entry.quantityChange > 0 ? `+${entry.quantityChange}` : entry.quantityChange}
+                        </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          size="small" 
-                          label={entry.newStatus.label} 
-                          color={entry.newStatus.color as any}
-                          variant="outlined" 
-                          sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }} 
-                        />
+                        <StatusChip status={entry.newStatus} />
                       </TableCell>
-                      <TableCell>{entry.user}</TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ fontWeight: 600 }}>{entry.reason}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption">{entry.user}</Typography>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
-            
-            <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.5, fontFamily: 'monospace' }}>
-              System ID: {details.id}
-            </Typography>
+          </Box>
+
+          <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.03), p: 2, borderRadius: 1 }}>
+             <Typography variant="caption" sx={{ display: 'block', opacity: 0.5, fontFamily: 'monospace' }}>
+                ID Interno: {details.id} | Criado em: {formatRelativeDate(details.createdAt)}
+              </Typography>
           </Box>
         </Stack>
       )}

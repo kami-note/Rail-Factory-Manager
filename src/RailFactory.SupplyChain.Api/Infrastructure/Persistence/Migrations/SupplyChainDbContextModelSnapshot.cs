@@ -62,6 +62,9 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("TotalValue")
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ReceiptNumber")
@@ -75,6 +78,25 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("AssociationConversionFactor")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("AssociationReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("AssociationStatus")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<DateTimeOffset>("AssociationUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AssociationUpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Cfop")
                         .HasColumnType("text");
@@ -95,6 +117,10 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("ExpectedQuantity")
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<string>("InternalMaterialCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("MaterialCode")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -109,6 +135,19 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("ReceiptId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("SupplierProductCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("SupplierQuantity")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("SupplierUnitOfMeasure")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("UnitOfMeasure")
                         .IsRequired()
@@ -153,6 +192,53 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("suppliers", (string)null);
+                });
+
+            modelBuilder.Entity("RailFactory.SupplyChain.Api.Domain.SupplierMaterialMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("ConversionFactor")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("InternalMaterialCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("SupplierFiscalId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SupplierProductCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SupplierUnit")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierFiscalId", "SupplierProductCode")
+                        .IsUnique();
+
+                    b.ToTable("supplier_material_mappings", (string)null);
                 });
 
             modelBuilder.Entity("RailFactory.SupplyChain.Api.Domain.SupplyAuditEntry", b =>

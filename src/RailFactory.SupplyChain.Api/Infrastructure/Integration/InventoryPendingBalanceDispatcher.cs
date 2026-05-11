@@ -1,15 +1,22 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using RailFactory.BuildingBlocks.Events;
+using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.SupplyChain.Api.Infrastructure.Persistence;
 
 namespace RailFactory.SupplyChain.Api.Infrastructure.Integration;
 
+/// <summary>
+/// Background service that dispatches Supply Chain outbox events to the Inventory microservice.
+/// </summary>
 public sealed class InventoryPendingBalanceDispatcher(
     IServiceProvider serviceProvider,
     ILogger<InventoryPendingBalanceDispatcher> logger) : BackgroundService
 {
     private const int MaxTransientAttempts = 10;
+    private const string DispatcherEmail = "system-dispatcher@railfactory.local";
+    private const string DispatcherName = "Inventory Integration Dispatcher";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -70,13 +77,18 @@ public sealed class InventoryPendingBalanceDispatcher(
 
         foreach (var message in pendingMessages)
         {
-            if (message.EventType == "supply.receipt_item_registered")
+            // ELITE FIX: Use centralized integration constants to avoid naming mismatches.
+            if (message.EventType == IntegrationConstants.Events.ReceiptItemRegistered)
             {
                 await HandleRegisteredEventAsync(message, tenant, client, cancellationToken);
             }
-            else if (message.EventType == "supply.receipt_item_conferred")
+            else if (message.EventType == IntegrationConstants.Events.ReceiptItemConferred)
             {
                 await HandleConferredEventAsync(message, tenant, client, cancellationToken);
+            }
+            else if (message.EventType == IntegrationConstants.Events.SupplierMaterialMappingCreated)
+            {
+                await HandleSupplierMaterialMappingCreatedAsync(message, tenant, client, cancellationToken);
             }
             else
             {
@@ -93,7 +105,8 @@ public sealed class InventoryPendingBalanceDispatcher(
         var payload = DeserializePayload<PendingBalanceRequestedPayload>(message);
         if (payload is null) return;
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/internal/pending-balances")
+        // ELITE FIX: Call correct internal API path using constants.
+        var request = new HttpRequestMessage(HttpMethod.Post, IntegrationConstants.ApiPaths.InternalPendingBalances)
         {
             Content = JsonContent.Create(new
             {
@@ -126,7 +139,7 @@ public sealed class InventoryPendingBalanceDispatcher(
         var payload = DeserializePayload<BalanceConfirmationPayload>(message);
         if (payload is null) return;
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/internal/confirmed-balances")
+        var request = new HttpRequestMessage(HttpMethod.Post, IntegrationConstants.ApiPaths.InternalConfirmedBalances)
         {
             Content = JsonContent.Create(new
             {
@@ -144,6 +157,31 @@ public sealed class InventoryPendingBalanceDispatcher(
                     payload.LotNumber,
                     payload.ExpirationDate,
                     source = string.IsNullOrWhiteSpace(payload.Source) ? "supply-chain" : payload.Source
+                }
+            })
+        };
+
+        await SendIntegrationRequestAsync(message, request, tenant.Code, client, cancellationToken);
+    }
+
+    private async Task HandleSupplierMaterialMappingCreatedAsync(SupplyOutboxMessage message, TenantResolutionResult tenant, HttpClient client, CancellationToken cancellationToken)
+    {
+        var payload = DeserializePayload<SupplierMaterialMappingCreatedEvent>(message);
+        if (payload is null) return;
+
+        var request = new HttpRequestMessage(HttpMethod.Post, IntegrationConstants.ApiPaths.InternalSupplierMaterialMapping)
+        {
+            Content = JsonContent.Create(new
+            {
+                eventId = message.Id,
+                eventType = message.EventType,
+                correlationId = message.CorrelationId,
+                payload = new
+                {
+                    tenantCode = tenant.Code,
+                    supplierFiscalId = payload.SupplierFiscalId?.Value,
+                    supplierProductCode = payload.SupplierProductCode,
+                    materialCode = payload.MaterialCode?.Value
                 }
             })
         };
@@ -169,7 +207,10 @@ public sealed class InventoryPendingBalanceDispatcher(
 
     private async Task SendIntegrationRequestAsync(SupplyOutboxMessage message, HttpRequestMessage request, string tenantCode, HttpClient client, CancellationToken cancellationToken)
     {
-        request.Headers.Add("X-Tenant-Code", tenantCode);
+        // ELITE FIX: Propagate tenant and dispatcher identity via trusted headers.
+        request.Headers.Add(TenantConstants.TenantCodeHeaderName, tenantCode);
+        request.Headers.Add(TenantConstants.UserEmailHeaderName, DispatcherEmail);
+        request.Headers.Add(TenantConstants.UserNameHeaderName, DispatcherName);
 
         HttpResponseMessage response;
         try

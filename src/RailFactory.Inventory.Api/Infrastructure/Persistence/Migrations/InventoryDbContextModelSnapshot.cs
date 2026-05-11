@@ -141,6 +141,11 @@ namespace RailFactory.Inventory.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -153,6 +158,11 @@ namespace RailFactory.Inventory.Api.Infrastructure.Persistence.Migrations
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("MaterialCode")
                         .IsRequired()
@@ -168,12 +178,30 @@ namespace RailFactory.Inventory.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("ProcurementType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ReplacedBy")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(24)
                         .HasColumnType("character varying(24)");
 
+                    b.Property<string>("UnitOfMeasure")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Gtin")
+                        .IsUnique()
+                        .HasFilter("\"Gtin\" IS NOT NULL AND \"Gtin\" <> ''");
 
                     b.HasIndex("MaterialCode")
                         .IsUnique();
@@ -206,6 +234,38 @@ namespace RailFactory.Inventory.Api.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("stock_locations", (string)null);
+                });
+
+            modelBuilder.Entity("RailFactory.Inventory.Api.Domain.SupplierMaterialHint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MappedMaterialCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SupplierFiscalId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SupplierProductCode")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierFiscalId", "SupplierProductCode")
+                        .IsUnique();
+
+                    b.ToTable("supplier_material_hints", (string)null);
                 });
 #pragma warning restore 612, 618
         }

@@ -23,6 +23,51 @@ public sealed class MaterialReceiptItem
     public MaterialCode MaterialCode { get; private set; }
 
     /// <summary>
+    /// Supplier SKU from the fiscal document (`cProd`). This preserves the source identity even after mapping.
+    /// </summary>
+    public string SupplierProductCode { get; private set; }
+
+    /// <summary>
+    /// Original quantity from the supplier fiscal document before any stock-unit conversion.
+    /// </summary>
+    public decimal SupplierQuantity { get; private set; }
+
+    /// <summary>
+    /// Original unit from the supplier fiscal document before any stock-unit conversion.
+    /// </summary>
+    public string SupplierUnitOfMeasure { get; private set; }
+
+    /// <summary>
+    /// Internal Inventory SKU selected by an operator or existing supplier mapping.
+    /// </summary>
+    public MaterialCode? InternalMaterialCode { get; private set; }
+
+    /// <summary>
+    /// Current item-level association decision state.
+    /// </summary>
+    public MaterialReceiptItemAssociationStatus AssociationStatus { get; private set; }
+
+    /// <summary>
+    /// Quantity multiplier from supplier unit to stock unit.
+    /// </summary>
+    public decimal? AssociationConversionFactor { get; private set; }
+
+    /// <summary>
+    /// Required human reason for review/ignore/override decisions.
+    /// </summary>
+    public string? AssociationReason { get; private set; }
+
+    /// <summary>
+    /// Version token used by the Workbench to detect concurrent item updates.
+    /// </summary>
+    public DateTimeOffset AssociationUpdatedAt { get; private set; }
+
+    /// <summary>
+    /// Last actor who changed the association decision.
+    /// </summary>
+    public string? AssociationUpdatedBy { get; private set; }
+
+    /// <summary>
     /// Nomenclatura Comum do Mercosul (Mercosur Common Nomenclature).
     /// </summary>
     public string? Ncm { get; private set; }
@@ -75,14 +120,39 @@ public sealed class MaterialReceiptItem
     private MaterialReceiptItem()
     {
         MaterialCode = default!;
+        SupplierProductCode = string.Empty;
+        SupplierUnitOfMeasure = string.Empty;
         UnitOfMeasure = string.Empty;
     }
 
-    private MaterialReceiptItem(Guid id, Guid receiptId, MaterialCode materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription, string? ncm, string? cfop, string? ean)
+    private MaterialReceiptItem(
+        Guid id,
+        Guid receiptId,
+        MaterialCode materialCode,
+        string supplierProductCode,
+        MaterialCode? internalMaterialCode,
+        MaterialReceiptItemAssociationStatus associationStatus,
+        decimal? associationConversionFactor,
+        decimal supplierQuantity,
+        string supplierUnitOfMeasure,
+        string unitOfMeasure,
+        decimal expectedQuantity,
+        decimal? unitPrice,
+        string? originalDescription,
+        string? ncm,
+        string? cfop,
+        string? ean)
     {
         Id = id;
         ReceiptId = receiptId;
         MaterialCode = materialCode;
+        SupplierProductCode = supplierProductCode;
+        SupplierQuantity = supplierQuantity;
+        SupplierUnitOfMeasure = supplierUnitOfMeasure;
+        InternalMaterialCode = internalMaterialCode;
+        AssociationStatus = associationStatus;
+        AssociationConversionFactor = associationConversionFactor;
+        AssociationUpdatedAt = DateTimeOffset.UtcNow;
         UnitOfMeasure = unitOfMeasure;
         ExpectedQuantity = expectedQuantity;
         UnitPrice = unitPrice;
@@ -96,14 +166,121 @@ public sealed class MaterialReceiptItem
     /// Factory method for creating a new receipt item.
     /// </summary>
     public static MaterialReceiptItem Create(Guid receiptId, string materialCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription, string? ncm = null, string? cfop = null, string? ean = null)
+        => CreateMapped(receiptId, materialCode, materialCode, expectedQuantity, unitOfMeasure, unitOfMeasure, expectedQuantity, unitPrice, originalDescription, ncm, cfop, ean, conversionFactor: 1);
+
+    /// <summary>
+    /// Creates an item that is already mapped to an internal Inventory material.
+    /// </summary>
+    public static MaterialReceiptItem CreateMapped(
+        Guid receiptId,
+        string supplierProductCode,
+        string internalMaterialCode,
+        decimal supplierQuantity,
+        string supplierUnitOfMeasure,
+        string unitOfMeasure,
+        decimal expectedQuantity,
+        decimal? unitPrice,
+        string? originalDescription,
+        string? ncm = null,
+        string? cfop = null,
+        string? ean = null,
+        decimal? conversionFactor = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(internalMaterialCode);
+        var item = CreateCore(
+            receiptId,
+            internalMaterialCode,
+            supplierProductCode,
+            MaterialCode.From(internalMaterialCode),
+            MaterialReceiptItemAssociationStatus.Mapped,
+            conversionFactor,
+            supplierQuantity,
+            supplierUnitOfMeasure,
+            unitOfMeasure,
+            expectedQuantity,
+            unitPrice,
+            originalDescription,
+            ncm,
+            cfop,
+            ean);
+
+        return item;
+    }
+
+    /// <summary>
+    /// Creates an item that still needs supplier SKU to internal SKU association.
+    /// </summary>
+    public static MaterialReceiptItem CreatePendingAssociation(Guid receiptId, string supplierProductCode, string unitOfMeasure, decimal expectedQuantity, decimal? unitPrice, string? originalDescription, string? ncm = null, string? cfop = null, string? ean = null)
+        => CreateCore(
+            receiptId,
+            supplierProductCode,
+            supplierProductCode,
+            internalMaterialCode: null,
+            MaterialReceiptItemAssociationStatus.Pending,
+            associationConversionFactor: null,
+            expectedQuantity,
+            unitOfMeasure,
+            unitOfMeasure,
+            expectedQuantity,
+            unitPrice,
+            originalDescription,
+            ncm,
+            cfop,
+            ean);
+
+    private static MaterialReceiptItem CreateCore(
+        Guid receiptId,
+        string materialCode,
+        string supplierProductCode,
+        MaterialCode? internalMaterialCode,
+        MaterialReceiptItemAssociationStatus associationStatus,
+        decimal? associationConversionFactor,
+        decimal supplierQuantity,
+        string supplierUnitOfMeasure,
+        string unitOfMeasure,
+        decimal expectedQuantity,
+        decimal? unitPrice,
+        string? originalDescription,
+        string? ncm = null,
+        string? cfop = null,
+        string? ean = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(materialCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(supplierProductCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(supplierUnitOfMeasure);
         ArgumentException.ThrowIfNullOrWhiteSpace(unitOfMeasure);
+        if (supplierQuantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(supplierQuantity), "Supplier quantity must be greater than zero.");
+        }
+
         if (expectedQuantity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(expectedQuantity), "Expected quantity must be greater than zero.");
         }
 
-        return new MaterialReceiptItem(Guid.NewGuid(), receiptId, MaterialCode.From(materialCode), unitOfMeasure.Trim(), expectedQuantity, unitPrice, originalDescription?.Trim(), ncm?.Trim(), cfop?.Trim(), ean?.Trim());
+        if (associationConversionFactor is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(associationConversionFactor), "Association conversion factor must be greater than zero.");
+        }
+
+        return new MaterialReceiptItem(
+            Guid.NewGuid(),
+            receiptId,
+            MaterialCode.From(materialCode),
+            supplierProductCode.Trim(),
+            internalMaterialCode,
+            associationStatus,
+            associationConversionFactor,
+            supplierQuantity,
+            supplierUnitOfMeasure.Trim(),
+            unitOfMeasure.Trim(),
+            expectedQuantity,
+            unitPrice,
+            originalDescription?.Trim(),
+            ncm?.Trim(),
+            cfop?.Trim(),
+            ean?.Trim());
     }
 
     /// <summary>
@@ -119,6 +296,86 @@ public sealed class MaterialReceiptItem
         CountedQuantity = quantity;
         ConfirmedLotNumber = lotNumber?.Trim();
         ConfirmedExpirationDate = expirationDate;
+    }
+
+    /// <summary>
+    /// Resolves this supplier item to an internal Inventory material.
+    /// </summary>
+    public void MapToExistingMaterial(string internalMaterialCode, string internalUnitOfMeasure, decimal conversionFactor, string actor)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(internalMaterialCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(internalUnitOfMeasure);
+        ArgumentException.ThrowIfNullOrWhiteSpace(actor);
+        if (conversionFactor <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(conversionFactor), "Conversion factor must be greater than zero.");
+        }
+
+        var convertedQuantity = SupplierQuantity * conversionFactor;
+        MaterialCode = MaterialCode.From(internalMaterialCode);
+        InternalMaterialCode = MaterialCode;
+        UnitOfMeasure = internalUnitOfMeasure.Trim().ToUpperInvariant();
+        ExpectedQuantity = convertedQuantity;
+        UnitPrice = UnitPrice.HasValue
+            ? Math.Round(UnitPrice.Value / conversionFactor, PrecisionConstants.DefaultDecimalPlaces, MidpointRounding.AwayFromZero)
+            : null;
+        AssociationStatus = MaterialReceiptItemAssociationStatus.Mapped;
+        AssociationConversionFactor = conversionFactor;
+        AssociationReason = null;
+        AssociationUpdatedAt = DateTimeOffset.UtcNow;
+        AssociationUpdatedBy = actor.Trim();
+    }
+
+    /// <summary>
+    /// Resolves this supplier item by creating a new internal Inventory material.
+    /// </summary>
+    public void MapToNewMaterial(string internalMaterialCode, string internalUnitOfMeasure, decimal conversionFactor, string actor)
+    {
+        MapToExistingMaterial(internalMaterialCode, internalUnitOfMeasure, conversionFactor, actor);
+        AssociationStatus = MaterialReceiptItemAssociationStatus.CreatedAndMapped;
+    }
+
+    /// <summary>
+    /// Marks the item as requiring later review before the receipt can proceed.
+    /// </summary>
+    public void MarkReviewLater(string reason, string actor)
+    {
+        MarkControlledDecision(MaterialReceiptItemAssociationStatus.ReviewLater, reason, actor);
+    }
+
+    /// <summary>
+    /// Marks the item as intentionally ignored. This remains blocking until business rules allow release.
+    /// </summary>
+    public void MarkIgnored(string reason, string actor)
+    {
+        MarkControlledDecision(MaterialReceiptItemAssociationStatus.Ignored, reason, actor);
+    }
+
+    private void MarkControlledDecision(MaterialReceiptItemAssociationStatus status, string reason, string actor)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentException.ThrowIfNullOrWhiteSpace(actor);
+
+        AssociationStatus = status;
+        AssociationReason = reason.Trim();
+        AssociationUpdatedAt = DateTimeOffset.UtcNow;
+        AssociationUpdatedBy = actor.Trim();
+    }
+
+    /// <summary>
+    /// Overrides the supplier product code from the invoice with a corrected value.
+    /// This is an exceptional auditable operation.
+    /// </summary>
+    public void OverrideSupplierProductCode(string correctedCode, string reason, string actor)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correctedCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentException.ThrowIfNullOrWhiteSpace(actor);
+
+        SupplierProductCode = correctedCode.Trim();
+        AssociationReason = reason.Trim();
+        AssociationUpdatedAt = DateTimeOffset.UtcNow;
+        AssociationUpdatedBy = actor.Trim();
     }
 
     /// <summary>

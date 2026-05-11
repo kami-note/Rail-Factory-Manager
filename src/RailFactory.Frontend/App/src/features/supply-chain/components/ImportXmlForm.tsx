@@ -11,7 +11,9 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
-  Divider
+  Divider,
+  alpha,
+  useTheme
 } from '@mui/material';
 import { FileText, UploadCloud, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
@@ -31,7 +33,12 @@ type BatchError = {
   message: string;
 };
 
+/**
+ * Multi-file upload form for importing NF-e XML files.
+ * @param props - Component properties.
+ */
 export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormProps) {
+  const theme = useTheme();
   const [files, setFiles] = useState<SelectedXmlFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState<ParsedReceiptDocument | null>(null);
@@ -55,11 +62,11 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
           headers: buildTenantHeaders(tenantCode),
           body: formData
         },
-        'Failed to parse XML for preview'
+        'Falha ao analisar XML para pré-visualização'
       );
       setPreviewData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error previewing XML.');
+      setError(err instanceof Error ? err.message : 'Erro ao pré-visualizar XML.');
     } finally {
       setLoading(false);
     }
@@ -84,9 +91,9 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
             headers: buildTenantHeaders(tenantCode),
             body: formData
           },
-          'XML import failed'
+          'Falha na importação do XML'
         );
-        setResult(`XML imported successfully. Receipt ID: ${data.receiptId ?? data.id}`);
+        setResult(`XML importado com sucesso. ID do Recebimento: ${data.receiptId ?? data.id}`);
         setPreviewData(null);
         setFiles([]);
       } else {
@@ -107,16 +114,16 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
         if (!response.ok) {
           if (data?.errors) {
             setBatchErrors(data.errors);
-            throw new Error('Batch import failed with validation errors.');
+            throw new Error('Importação em lote falhou com erros de validação.');
           }
-          throw new Error(data?.detail ?? 'Batch import failed');
+          throw new Error(data?.detail ?? 'Importação em lote falhou');
         }
 
-        setResult(`${data.imported?.length ?? 0} files imported in batch.`);
+        setResult(`${data.imported?.length ?? 0} arquivos importados com sucesso.`);
         setFiles([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error importing XML.');
+      setError(err instanceof Error ? err.message : 'Erro ao importar XML.');
     } finally {
       setLoading(false);
     }
@@ -148,8 +155,8 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
   return (
     <Box>
       {showTitle && (
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>
-          Import receipt XML
+        <Typography variant="h6" sx={{ mb: 3, fontWeight: 800 }}>
+          Importar XML de Recebimento
         </Typography>
       )}
 
@@ -158,17 +165,18 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
           <Paper
             variant="outlined"
             sx={{
-              p: 3,
+              p: 4,
               textAlign: 'center',
               cursor: 'pointer',
               borderStyle: 'dashed',
               borderWidth: 2,
-              bgcolor: 'background.default',
+              bgcolor: alpha(theme.palette.primary.main, 0.02),
               '&:hover': {
                 borderColor: 'primary.main',
-                bgcolor: 'action.hover'
+                bgcolor: alpha(theme.palette.primary.main, 0.05)
               },
-              position: 'relative'
+              position: 'relative',
+              borderRadius: 2
             }}
             component="label"
           >
@@ -179,12 +187,12 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
               hidden
               onChange={handleFileChange}
             />
-            <UploadCloud size={32} color="currentColor" />
-            <Typography variant="body1" sx={{ fontWeight: 600, mt: 1 }}>
-              Upload XML files
+            <UploadCloud size={48} color={theme.palette.primary.main} style={{ marginBottom: 16 }} />
+            <Typography variant="body1" sx={{ fontWeight: 700 }}>
+              Clique ou arraste arquivos XML aqui
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Single invoice or batch import
+              Suporta Nota Fiscal avulsa ou importação em lote
             </Typography>
           </Paper>
         )}
@@ -192,18 +200,18 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
         {loading && !previewData && (
           <Box sx={{ textAlign: 'center', p: 4 }}>
             <CircularProgress size={32} />
-            <Typography variant="body2" sx={{ mt: 1 }}>Processing document...</Typography>
+            <Typography variant="body2" sx={{ mt: 2, fontWeight: 600 }}>Processando documento...</Typography>
           </Box>
         )}
 
         {previewData && (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                PREVIEW
+              <Typography variant="overline" sx={{ fontWeight: 800, color: 'text.secondary' }}>
+                PRÉ-VISUALIZAÇÃO DA NOTA
               </Typography>
               <Button size="small" variant="outlined" color="error" onClick={removeFiles} startIcon={<X size={14} />}>
-                Cancel
+                Cancelar
               </Button>
             </Box>
             
@@ -217,9 +225,9 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
               onClick={confirmImport}
               disabled={loading}
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle size={20} />}
-              sx={{ mt: 4, py: 1.5, fontWeight: 900 }}
+              sx={{ mt: 4, py: 2, fontWeight: 900, borderRadius: 2 }}
             >
-              {loading ? 'CONFIRMING...' : 'CONFIRM AND IMPORT TO INVENTORY'}
+              {loading ? 'CONFIRMANDO...' : 'CONFIRMAR E IMPORTAR PARA ESTOQUE'}
             </Button>
           </Box>
         )}
@@ -227,15 +235,15 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
         {files.length > 1 && !result && (
           <Box>
              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                BATCH FILES ({files.length})
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                ARQUIVOS EM LOTE ({files.length})
               </Typography>
-              <Button size="small" onClick={removeFiles} startIcon={<X size={14} />}>
-                Clear
+              <Button size="small" onClick={removeFiles} startIcon={<X size={14} />} color="inherit">
+                Limpar
               </Button>
             </Box>
-            <Paper variant="outlined">
-               <List disablePadding sx={{ maxHeight: 200, overflow: 'auto' }}>
+            <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+               <List disablePadding sx={{ maxHeight: 300, overflow: 'auto' }}>
                 {files.map((file, index) => (
                   <React.Fragment key={index}>
                     <ListItem>
@@ -253,25 +261,26 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
             <Button 
               fullWidth 
               variant="contained" 
+              size="large"
               onClick={confirmImport}
               disabled={loading}
-              sx={{ mt: 2 }}
+              sx={{ mt: 3, py: 1.5, fontWeight: 800, borderRadius: 2 }}
             >
-              {loading ? 'Importing Batch...' : `Import ${files.length} files`}
+              {loading ? 'Importando Lote...' : `Importar ${files.length} arquivos`}
             </Button>
           </Box>
         )}
         
         {result && (
           <Box sx={{ textAlign: 'center', p: 2 }}>
-            <Alert severity="success" sx={{ mb: 3 }}>{result}</Alert>
-            <Button variant="outlined" onClick={removeFiles}>Import another</Button>
+            <Alert severity="success" sx={{ mb: 3, fontWeight: 600 }}>{result}</Alert>
+            <Button variant="outlined" size="large" onClick={removeFiles} sx={{ fontWeight: 700 }}>Importar outro</Button>
           </Box>
         )}
         
         {(error || batchErrors.length > 0) && (
           <Stack spacing={1}>
-            {error && <Alert severity="error" sx={{ whiteSpace: 'pre-line' }}>{error}</Alert>}
+            {error && <Alert severity="error" sx={{ whiteSpace: 'pre-line', fontWeight: 600 }}>{error}</Alert>}
             {batchErrors.map((err, i) => (
               <Alert key={i} severity="error" icon={<AlertCircle size={18} />} sx={{ '& .MuiAlert-message': { width: '100%' } }}>
                 <Typography variant="caption" sx={{ fontWeight: 800, display: 'block' }}>{err.fileName}</Typography>

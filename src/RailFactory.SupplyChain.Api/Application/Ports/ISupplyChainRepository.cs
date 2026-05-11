@@ -14,4 +14,6 @@ public interface ISupplyChainRepository
     Task AddAuditEntryAsync(SupplyAuditEntry entry, CancellationToken cancellationToken);
     Task<List<SupplyAuditEntry>> GetAuditEntriesByReceiptIdAsync(Guid receiptId, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);
+    Task<SupplierMaterialMapping?> GetSupplierMaterialMappingAsync(string supplierFiscalId, string supplierProductCode, CancellationToken cancellationToken);
+    Task AddSupplierMaterialMappingAsync(SupplierMaterialMapping mapping, CancellationToken cancellationToken);
 }

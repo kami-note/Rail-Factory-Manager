@@ -1,294 +1,246 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Box,
-  Chip,
+  Typography,
   CircularProgress,
+  Alert,
   Paper,
+  Stack,
+  Button,
+  IconButton,
+  Tooltip,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
-  IconButton,
-  Tooltip,
-  ToggleButtonGroup,
-  ToggleButton,
-  Stack,
-  Button,
+  Chip,
+  useTheme,
   useMediaQuery,
-  useTheme
+  alpha
 } from '@mui/material';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import type { InventoryBalance } from '../types';
+import {
+  RefreshCw as RefreshIcon,
+  Search as SearchIcon,
+  Info as InfoIcon,
+  ExternalLink as LaunchIcon
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
-import { BalanceDetailsModal } from './BalanceDetailsModal';
-import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
+import { InventoryBalance } from '../types';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
+import { StatusChip } from '../../../shared/components/common/StatusChip';
+import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
+import { BalanceDetailsModal } from './BalanceDetailsModal';
+import { TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
 
-type InventoryStocksPageProps = {
+interface InventoryStocksPageProps {
   tenantCode: string;
+}
+
+const formatRelativeDate = (dateIso: string, includeTime = true) => {
+  if (!dateIso) return '-';
+  const date = new Date(dateIso);
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    ...(includeTime ? { hour: '2-digit', minute: '2-digit' } : {})
+  });
 };
 
-type FilterStatus = 'ALL' | 'Pending' | 'Available' | 'Blocked';
-
+/**
+ * List view for current inventory balances.
+ * @param props - Component properties.
+ * @remarks
+ * Localization: All operator-facing labels are in Portuguese (Brazil).
+ * Standard: Uses StatusChip for all status rendering.
+ */
 export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
   const theme = useTheme();
-  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
+  const navigate = useNavigate();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedBalanceId, setSelectedBalanceId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
+  const [filter, setFilter] = useState<string>('Todos');
 
-  useEffect(() => {
-    const fetchBalances = async () => {
-      setLoading(true);
-      setError(null);
+  const filterOptions = [
+    { key: 'All', label: 'Todos' },
+    { key: 'Pending', label: 'Pendente' },
+    { key: 'Available', label: 'Disponível' },
+    { key: 'Blocked', label: 'Bloqueado' }
+  ];
 
-      try {
-        const queryParams = statusFilter !== 'ALL' ? `?status=${statusFilter}` : '';
-        const data = await fetchJsonOrThrow<InventoryBalance[]>(
-          `/api/inventory/balances${queryParams}`,
-          {
-            headers: buildTenantHeaders(tenantCode),
-            credentials: 'include'
-          },
-          'Inventory request failed'
-        );
-        setBalances(data);
-      } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : 'Inventory request failed.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void fetchBalances();
-  }, [tenantCode, statusFilter]);
-
-  const handleFilterChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newStatus: FilterStatus | null
-  ) => {
-    if (newStatus !== null) {
-      setStatusFilter(newStatus);
+  const loadBalances = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchJsonOrThrow<InventoryBalance[]>(
+        '/api/inventory/balances',
+        {
+          headers: buildTenantHeaders(tenantCode),
+          credentials: 'include'
+        },
+        'Falha ao carregar saldos de estoque'
+      );
+      setBalances(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro ao carregar o estoque.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    void loadBalances();
+  }, [tenantCode]);
+
+  const handleNavigateToMaterial = (code: string) => {
+    navigate(`/app/inventory/materials/${code}`);
+  };
+
+  const filteredBalances = balances.filter(b => {
+    if (filter === 'Todos') return true;
+    const option = filterOptions.find(o => o.label === filter);
+    return b.status.key === option?.key;
+  });
+
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
-      <Box
-        sx={{
-          mb: 3,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', md: 'flex-end' },
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: 2
-        }}
-      >
-        <Box>
-          <Typography variant="h1" sx={{ fontWeight: 900, mb: 0.5 }}>
-            INVENTORY
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-            CURRENT STOCK AND PENDING BALANCES
-          </Typography>
-        </Box>
+      <ModuleHeader 
+        label="SALDOS DE ESTOQUE" 
+        icon={<LaunchIcon size={20} />}
+        action={
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon size={16} />}
+            onClick={loadBalances}
+            disabled={loading}
+            size="small"
+          >
+            Atualizar
+          </Button>
+        }
+      />
 
-        <ToggleButtonGroup
-          value={statusFilter}
-          exclusive
-          onChange={handleFilterChange}
-          size="small"
-          aria-label="status filter"
-          sx={{
-            flexWrap: 'wrap',
-            width: { xs: '100%', md: 'auto' },
-            justifyContent: { xs: 'flex-start', md: 'flex-end' },
-            gap: 1,
-            '& .MuiToggleButton-root': {
-              fontWeight: 700,
-              px: 2,
-              minHeight: 36,
-              borderRadius: 1
-            }
-          }}
-        >
-          <ToggleButton value="ALL">ALL</ToggleButton>
-          <ToggleButton value="Pending">PENDING</ToggleButton>
-          <ToggleButton value="Available">AVAILABLE</ToggleButton>
-          <ToggleButton value="Blocked">BLOCKED</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+      <Stack direction="row" spacing={1} sx={{ mt: 2, mb: 3 }}>
+        {filterOptions.map((f) => (
+          <Chip
+            key={f.key}
+            label={f.label}
+            onClick={() => setFilter(f.label)}
+            color={filter === f.label ? 'primary' : 'default'}
+            variant={filter === f.label ? 'filled' : 'outlined'}
+            size="small"
+            sx={{ fontWeight: 700 }}
+          />
+        ))}
+      </Stack>
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
-          <CircularProgress size={32} />
-        </Box>
-      ) : null}
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+      ) : filteredBalances.length === 0 ? (
+        <Paper variant="outlined" sx={{ p: 8, textAlign: 'center', bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
+          <SearchIcon size={48} style={{ color: theme.palette.text.disabled, marginBottom: 16 }} />
+          <Typography variant="h6" color="text.secondary">Nenhum saldo encontrado.</Typography>
+          <Typography variant="body2" color="text.disabled">Tente mudar seus filtros ou aguarde novos recebimentos.</Typography>
+        </Paper>
+      ) : isMobile ? (
+        <Stack spacing={2}>
+          {filteredBalances.map((balance) => (
+            <Paper key={balance.id} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+              <Stack spacing={2}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }} onClick={() => handleNavigateToMaterial(balance.materialCode)}>
+                    <MaterialAvatar materialCode={balance.materialCode} size={40} description={balance.materialName} imageUrl={balance.materialImageUrl} />
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{balance.materialName}</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>SKU: {balance.materialCode}</Typography>
+                    </Box>
+                  </Box>
+                  <StatusChip status={balance.status} />
+                </Box>
 
-      {error ? (
-        <Alert severity="error" sx={{ my: 2 }}>
-          {error}
-        </Alert>
-      ) : null}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                  <Typography variant="caption" color="text.secondary">Qtd: <strong>{balance.quantity}</strong> {balance.unitOfMeasure}</Typography>
+                  <Typography variant="caption" color="text.secondary">Lote: <strong>{balance.lotNumber || 'N/A'}</strong></Typography>
+                  <Typography variant="caption" color="text.secondary">Origem: <StatusChip status={balance.sourceType} label={balance.supplierName || balance.sourceType.label} /></Typography>
+                  <Typography variant="caption" color="text.secondary">Criado: <strong>{formatRelativeDate(balance.createdAt)}</strong></Typography>
+                </Box>
 
-      {!loading && !error && balances.length === 0 ? (
-        <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
-          <Typography color="text.secondary">No balances found for the selected filter.</Typography>
-        </Box>
-      ) : null}
-
-      {!loading && !error && balances.length > 0 ? (
-        isCompact ? (
-          <Stack spacing={2}>
-            {balances.map((balance) => {
-              const status = balance.status;
-              return (
-                <Paper key={balance.id} variant="outlined" sx={{ p: 2 }}>
-                  <Stack spacing={1.5}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <MaterialAvatar
-                          materialCode={balance.materialCode}
-                          description={balance.materialName}
-                          imageUrl={balance.materialImageUrl}
-                          size={32}
-                        />
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 700 }}>{balance.materialName}</Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
-                            SKU: {balance.materialCode}
-                          </Typography>
-                        </Box>
+                <Button size="small" variant="outlined" startIcon={<InfoIcon size={14} />} onClick={() => setSelectedBalanceId(balance.id)}>
+                  Ver Histórico Completo
+                </Button>
+              </Stack>
+            </Paper>
+          ))}
+        </Stack>
+      ) : (
+        <TableContainer component={Paper} variant="outlined">
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'background.default' }}>
+                <TableCell sx={{ fontWeight: 800 }}>MATERIAL</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>LOTE / VALIDADE</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 800 }}>QUANTIDADE</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>UN</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>STATUS</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>ORIGEM / FORNECEDOR</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>CRIADO EM</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 800 }}>AÇÕES</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredBalances.map((balance) => (
+                <TableRow key={balance.id} hover>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }} onClick={() => handleNavigateToMaterial(balance.materialCode)}>
+                      <MaterialAvatar materialCode={balance.materialCode} size={32} description={balance.materialName} imageUrl={balance.materialImageUrl} />
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}>{balance.materialName}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600, fontFamily: 'monospace' }}>{balance.materialCode}</Typography>
                       </Box>
-                      <Chip size="small" label={status.label} color={status.color as any} variant="outlined" sx={{ fontWeight: 700 }} />
                     </Box>
-
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-                      <Typography variant="caption" color="text.secondary">Qty: <strong>{balance.quantity}</strong> {balance.unitOfMeasure}</Typography>
-                      <Typography variant="caption" color="text.secondary">Lot: <strong>{balance.lotNumber || 'N/A'}</strong></Typography>
-                      <Typography variant="caption" color="text.secondary">Supplier: <strong>{balance.supplierName || balance.sourceType}</strong></Typography>
-                      <Typography variant="caption" color="text.secondary">Created: <strong>{formatRelativeDate(balance.createdAt)}</strong></Typography>
-                    </Box>
-
-                    {balance.sourceReference && (
-                      <Tooltip title="Click to copy full reference">
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ fontFamily: 'monospace', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                          onClick={() => TechnicalIdFormatter.copyToClipboard(balance.sourceReference)}
-                        >
-                          Ref: {TechnicalIdFormatter.truncate(balance.sourceReference)}
-                        </Typography>
-                      </Tooltip>
-                    )}
-
-                    <Button size="small" variant="outlined" startIcon={<InfoOutlinedIcon fontSize="small" />} onClick={() => setSelectedBalanceId(balance.id)}>
-                      View Full Ledger
-                    </Button>
-                  </Stack>
-                </Paper>
-              );
-            })}
-          </Stack>
-        ) : (
-          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
-            <Table sx={{ minWidth: 980 }}>
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'background.default' }}>
-                  <TableCell sx={{ fontWeight: 700 }}>Material</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Lot / Expiry</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Quantity</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>UoM</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Source / Supplier</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Created At</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{balance.lotNumber || 'N/A'}</Typography>
+                    {balance.expirationDate && <Typography variant="caption" color="text.secondary">{formatRelativeDate(balance.expirationDate, false)}</Typography>}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 800 }}>{balance.quantity}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>{balance.unitOfMeasure}</TableCell>
+                  <TableCell><StatusChip status={balance.status} /></TableCell>
+                  <TableCell>
+                    <StatusChip status={balance.sourceType} label={balance.supplierName || balance.sourceType.label} />
+                    <Tooltip title="Clique para copiar referência">
+                      <Typography 
+                        variant="caption" 
+                        color="text.disabled" 
+                        sx={{ display: 'block', fontFamily: 'monospace', cursor: 'pointer', mt: 0.5 }}
+                        onClick={() => TechnicalIdFormatter.copyToClipboard(balance.sourceReference)}
+                      >
+                        {TechnicalIdFormatter.truncate(balance.sourceReference)}
+                      </Typography>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>{formatRelativeDate(balance.createdAt)}</TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="Ver detalhes e histórico">
+                      <IconButton size="small" onClick={() => setSelectedBalanceId(balance.id)}>
+                        <InfoIcon size={16} />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {balances.map((balance) => {
-                  const status = balance.status;
-                  return (
-                    <TableRow key={balance.id} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <MaterialAvatar
-                            materialCode={balance.materialCode}
-                            description={balance.materialName}
-                            imageUrl={balance.materialImageUrl}
-                            size={32}
-                          />
-                          <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                              {balance.materialName}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
-                              SKU: {balance.materialCode}
-                              {balance.ncm && ` | NCM: ${balance.ncm}`}
-                              {balance.gtin && ` | GTIN: ${balance.gtin}`}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>{balance.lotNumber || 'N/A'}</Typography>
-                        {balance.expirationDate && (
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            EXP: {formatRelativeDate(balance.expirationDate, false)}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>{balance.quantity}</TableCell>
-                      <TableCell>{balance.unitOfMeasure}</TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          label={status.label}
-                          color={status.color as any}
-                          variant="outlined"
-                          sx={{ fontWeight: 700 }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{balance.supplierName || balance.sourceType}</Typography>
-                        <Tooltip title="Click to copy full reference">
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block', fontFamily: 'monospace', fontSize: '0.65rem', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                            onClick={() => TechnicalIdFormatter.copyToClipboard(balance.sourceReference)}
-                          >
-                            {TechnicalIdFormatter.truncate(balance.sourceReference)}
-                          </Typography>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell>{formatRelativeDate(balance.createdAt)}</TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="View Full Ledger">
-                          <IconButton
-                            size="small"
-                            color="info"
-                            onClick={() => setSelectedBalanceId(balance.id)}
-                          >
-                            <InfoOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )
-      ) : null}
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       <BalanceDetailsModal
         balanceId={selectedBalanceId}

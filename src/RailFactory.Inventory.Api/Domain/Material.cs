@@ -11,7 +11,7 @@ namespace RailFactory.Inventory.Api.Domain;
 /// This entity serves as the centralized source of truth for product metadata, 
 /// separating it from physical <see cref="InventoryBalance"/> records.
 /// </remarks>
-public sealed class Material : AggregateRoot<Guid>
+public sealed class Material : AggregateRoot<Guid>, IAuditable
 {
     /// <summary>
     /// Unique business identifier (e.g., SKU, Internal Part Number).
@@ -39,6 +39,11 @@ public sealed class Material : AggregateRoot<Guid>
     public string Description { get; private set; }
 
     /// <summary>
+    /// Base inventory unit used for stock balances and conversions.
+    /// </summary>
+    public string UnitOfMeasure { get; private set; }
+
+    /// <summary>
     /// The categorization for the material.
     /// </summary>
     public MaterialCategory Category { get; private set; }
@@ -53,26 +58,64 @@ public sealed class Material : AggregateRoot<Guid>
     /// </summary>
     public string? ImageUrl { get; private set; }
 
+    /// <summary>
+    /// Identifies if the material is manufactured internally, purchased, or both.
+    /// </summary>
+    public ProcurementType ProcurementType { get; private set; }
+
+    /// <summary>
+    /// The identity of the actor who created this material.
+    /// </summary>
+    public EmailAddress CreatedBy { get; private set; }
+
+    /// <summary>
+    /// The identity of the actor who last modified this material.
+    /// </summary>
+    public EmailAddress LastModifiedBy { get; private set; }
+
+    /// <summary>
+    /// If this material is obsolete, points to the new official material code.
+    /// </summary>
+    public MaterialCode? ReplacedBy { get; private set; }
+
     // Private parameterless constructor for EF Core compatibility
     private Material() : base(Guid.Empty)
     {
         MaterialCode = default!;
         OfficialName = string.Empty;
         Description = string.Empty;
-        Status = MaterialStatus.Draft;
+        UnitOfMeasure = string.Empty;
+        CreatedBy = default!;
+        LastModifiedBy = default!;
     }
 
-    private Material(Guid id, MaterialCode materialCode, string officialName, string description, MaterialCategory category, MaterialStatus status, string? imageUrl, string? ncm, string? gtin)
+    private Material(
+        Guid id, 
+        MaterialCode materialCode, 
+        string officialName, 
+        string description, 
+        string unitOfMeasure,
+        MaterialCategory category, 
+        MaterialStatus status, 
+        string? imageUrl, 
+        string? ncm, 
+        string? gtin,
+        ProcurementType procurementType,
+        EmailAddress createdBy)
         : base(id)
     {
         MaterialCode = materialCode;
         OfficialName = officialName;
         Description = description;
+        UnitOfMeasure = unitOfMeasure;
         Category = category;
         Status = status;
         ImageUrl = imageUrl;
         Ncm = ncm;
         Gtin = gtin;
+        ProcurementType = procurementType;
+        CreatedBy = createdBy;
+        LastModifiedBy = createdBy;
     }
 
     /// <summary>
@@ -83,23 +126,31 @@ public sealed class Material : AggregateRoot<Guid>
         string officialName, 
         string description, 
         MaterialCategory category, 
+        ProcurementType procurementType,
+        EmailAddress createdBy,
+        string unitOfMeasure,
         MaterialStatus status = MaterialStatus.Verified, 
         string? imageUrl = null,
         string? ncm = null,
         string? gtin = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(officialName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentException.ThrowIfNullOrWhiteSpace(unitOfMeasure);
 
         return new Material(
             Guid.NewGuid(), 
             MaterialCode.From(materialCode), 
             officialName.Trim(), 
             description.Trim(), 
+            unitOfMeasure.Trim().ToUpperInvariant(),
             category, 
             status, 
             imageUrl?.Trim(), 
             ncm?.Trim(), 
-            gtin?.Trim());
+            gtin?.Trim(),
+            procurementType,
+            createdBy);
     }
 
     /// <summary>
@@ -107,26 +158,56 @@ public sealed class Material : AggregateRoot<Guid>
     /// </summary>
     public void Verify()
     {
+        if (Status != MaterialStatus.Draft)
+        {
+            throw new InvalidOperationException($"Cannot verify material in status '{Status}'. Only 'Draft' materials can be verified.");
+        }
+
         Status = MaterialStatus.Verified;
     }
 
     /// <summary>
     /// Updates the technical metadata of the material.
     /// </summary>
-    public void SetTechnicalMetadata(string? ncm, string? gtin)
+    public void SetTechnicalMetadata(string? ncm, string? gtin, EmailAddress modifiedBy)
     {
         Ncm = ncm?.Trim();
         Gtin = gtin?.Trim();
+        LastModifiedBy = modifiedBy;
     }
 
     /// <summary>
     /// Updates the public image URL for the material catalog entry.
     /// </summary>
     /// <param name="imageUrl">Public image URL.</param>
-    public void UpdateImageUrl(string imageUrl)
+    /// <param name="modifiedBy">The actor modifying the image.</param>
+    public void UpdateImageUrl(string imageUrl, EmailAddress modifiedBy)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(imageUrl);
         ImageUrl = imageUrl.Trim();
+        LastModifiedBy = modifiedBy;
+    }
+
+    /// <summary>
+    /// Marks the material as obsolete due to unification.
+    /// </summary>
+    /// <param name="replacedBy">The official material code replacing this one.</param>
+    /// <param name="modifiedBy">The actor making it obsolete.</param>
+    public void MarkObsolete(MaterialCode replacedBy, EmailAddress modifiedBy)
+    {
+        if (Status == MaterialStatus.Obsolete)
+        {
+            throw new InvalidOperationException("Material is already obsolete.");
+        }
+
+        if (replacedBy == MaterialCode)
+        {
+            throw new InvalidOperationException("A material cannot be replaced by itself.");
+        }
+
+        Status = MaterialStatus.Obsolete;
+        ReplacedBy = replacedBy;
+        LastModifiedBy = modifiedBy;
     }
 }
 
@@ -143,7 +224,12 @@ public enum MaterialStatus
     /// <summary>
     /// Material has been reviewed and standardized by the team.
     /// </summary>
-    Verified = 1
+    Verified = 1,
+
+    /// <summary>
+    /// Material was merged and is no longer active.
+    /// </summary>
+    Obsolete = 2
 }
 
 /// <summary>

@@ -69,4 +69,10 @@ public static class Extensions
         app.UseMiddleware<TenantResolutionMiddleware>();
         return app;
     }
+
+    public static WebApplication UseRailFactoryHeaderIdentity(this WebApplication app)
+    {
+        app.UseMiddleware<HeaderIdentityMiddleware>();
+        return app;
+    }
 }

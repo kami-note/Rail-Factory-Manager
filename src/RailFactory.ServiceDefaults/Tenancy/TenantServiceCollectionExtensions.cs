@@ -8,6 +8,9 @@ internal static class TenantServiceCollectionExtensions
     public static TBuilder AddRailFactoryTenantResolution<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<IUserContext, UserContextAccessor>();
+
         builder.Services.AddMemoryCache();
         builder.Services.Configure<TenantRoutingOptions>(builder.Configuration.GetSection("TenantRouting"));
         builder.Services.AddScoped<ITenantContextAccessor, TenantContextAccessor>();

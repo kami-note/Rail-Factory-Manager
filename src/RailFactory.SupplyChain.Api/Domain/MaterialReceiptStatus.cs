@@ -33,5 +33,10 @@ public enum MaterialReceiptStatus
     /// <summary>
     /// Receipt was cancelled.
     /// </summary>
-    Cancelled = 5
+    Cancelled = 5,
+
+    /// <summary>
+    /// Receipt is blocked because a supplier material code (cProd) is unknown and needs mapping.
+    /// </summary>
+    PendingAssociation = 6
 }

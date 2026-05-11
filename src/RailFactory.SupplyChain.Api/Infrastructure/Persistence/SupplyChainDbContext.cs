@@ -7,6 +7,7 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence;
 public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> options) : DbContext(options)
 {
     public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<SupplierMaterialMapping> SupplierMaterialMappings => Set<SupplierMaterialMapping>();
     public DbSet<MaterialReceipt> Receipts => Set<MaterialReceipt>();
     public DbSet<MaterialReceiptItem> ReceiptItems => Set<MaterialReceiptItem>();
     public DbSet<SupplyAuditEntry> AuditEntries => Set<SupplyAuditEntry>();
@@ -14,6 +15,47 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<SupplierMaterialMapping>(entity =>
+        {
+            entity.ToTable("supplier_material_mappings");
+            entity.HasKey(x => x.Id);
+            
+            entity.Property(x => x.SupplierFiscalId)
+                .HasConversion(v => v.Value, v => FiscalId.From(v))
+                .HasMaxLength(32)
+                .IsRequired();
+
+            entity.Property(x => x.SupplierProductCode).HasMaxLength(100).IsRequired();
+            
+            entity.Property(x => x.InternalMaterialCode)
+                .HasConversion(v => v.Value, v => MaterialCode.From(v))
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.Property(x => x.InternalUnitOfMeasure).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.SupplierUnit).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ConversionFactor).HasColumnType("numeric(18,4)").IsRequired();
+            
+            // ELITE FIX: Defensive conversion for EmailAddress to handle legacy/empty data.
+            const string DefaultSystemEmail = "system@railfactory.local";
+
+            entity.Property(x => x.CreatedBy)
+                .HasConversion(
+                    v => v.Value, 
+                    v => string.IsNullOrWhiteSpace(v) ? EmailAddress.From(DefaultSystemEmail) : EmailAddress.From(v))
+                .HasMaxLength(256)
+                .IsRequired();
+                
+            entity.Property(x => x.LastModifiedBy)
+                .HasConversion(
+                    v => v.Value, 
+                    v => string.IsNullOrWhiteSpace(v) ? EmailAddress.From(DefaultSystemEmail) : EmailAddress.From(v))
+                .HasMaxLength(256)
+                .IsRequired();
+
+            entity.HasIndex(x => new { x.SupplierFiscalId, x.SupplierProductCode }).IsUnique();
+        });
+
         modelBuilder.Entity<Supplier>(entity =>
         {
             entity.ToTable("suppliers");
@@ -38,6 +80,8 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
             entity.Property(x => x.TotalValue).HasColumnType("numeric(18,2)");
             entity.Property(x => x.RawXml).HasColumnType("text");
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt).IsRequired();
             entity.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.ReceiptId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(x => x.ReceiptNumber).IsUnique();
         });
@@ -51,6 +95,37 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
                 .HasConversion(v => v.Value, v => MaterialCode.From(v))
                 .HasMaxLength(64)
                 .IsRequired();
+
+            entity.Property(x => x.SupplierProductCode)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(x => x.SupplierQuantity)
+                .HasColumnType("numeric(18,4)");
+
+            entity.Property(x => x.SupplierUnitOfMeasure)
+                .HasMaxLength(16)
+                .IsRequired();
+
+            entity.Property(x => x.InternalMaterialCode)
+                .HasConversion(
+                    v => v == null ? null : v.Value,
+                    v => string.IsNullOrWhiteSpace(v) ? null : MaterialCode.From(v))
+                .HasMaxLength(64);
+
+            entity.Property(x => x.AssociationStatus)
+                .HasConversion<string>()
+                .HasMaxLength(24)
+                .IsRequired();
+
+            entity.Property(x => x.AssociationConversionFactor)
+                .HasColumnType("numeric(18,4)");
+
+            entity.Property(x => x.AssociationReason)
+                .HasMaxLength(512);
+
+            entity.Property(x => x.AssociationUpdatedBy)
+                .HasMaxLength(256);
 
             entity.Property(x => x.ExpectedQuantity).HasColumnType("numeric(18,4)");
             entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();

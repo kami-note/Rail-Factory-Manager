@@ -13,6 +13,7 @@ public interface IInventoryRepository
     Task<InventoryBalance?> GetBalanceByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<InventoryBalance?> GetBalanceBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken);
     Task<InventoryBalance?> GetLatestBalanceByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken);
+    Task<List<InventoryBalance>> GetBalancesByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken);
     Task<List<InventoryLedgerEntry>> GetLedgerEntriesByBalanceIdAsync(Guid balanceId, CancellationToken cancellationToken);
     Task<List<InventoryBalance>> ListBalancesAsync(InventoryBalanceStatus? status, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);

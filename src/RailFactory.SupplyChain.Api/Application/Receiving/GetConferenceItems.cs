@@ -29,7 +29,7 @@ public sealed class GetConferenceItems(
                 Id: i.Id,
                 MaterialCode: i.MaterialCode,
                 UnitOfMeasure: i.UnitOfMeasure,
-                OriginalDescription: material?.OfficialName ?? i.OriginalDescription,
+                OriginalDescription: i.OriginalDescription ?? material?.OfficialName ?? i.MaterialCode.Value,
                 ImageUrl: material?.ImageUrl
             );
         }).ToList();

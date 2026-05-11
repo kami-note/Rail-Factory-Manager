@@ -9,7 +9,7 @@ public sealed class ImportXmlReceiptBatch(
     MaterialReceiptWriter receiptWriter,
     ISupplyChainTransactionRunner transactionRunner)
 {
-    public async Task<IReadOnlyList<ImportedReceiptResult>> ExecuteAsync(
+    public async Task<BatchImportSummary> ExecuteAsync(
         string userIdentifier,
         IReadOnlyCollection<ImportXmlReceiptBatchDocument> documents,
         string correlationId,
@@ -24,23 +24,24 @@ public sealed class ImportXmlReceiptBatch(
         }
 
         var parsedDocuments = batchParser.Parse(documents);
+        // We still validate global duplicates, but we could also move this into the resilient loop
         await ValidateDuplicatesAsync(parsedDocuments, cancellationToken);
 
-        var imported = new List<ImportedReceiptResult>();
+        var successful = new List<ImportedReceiptResult>();
+        var failed = new List<ImportXmlReceiptBatchError>();
         var suppliersByFiscalId = new Dictionary<string, Supplier>(StringComparer.OrdinalIgnoreCase);
 
-        try
+        foreach (var document in parsedDocuments)
         {
-            await transactionRunner.ExecuteAsync(async ct =>
+            try
             {
-                foreach (var document in parsedDocuments)
+                await transactionRunner.ExecuteAsync(async ct =>
                 {
                     var supplier = await receiptWriter.ResolveOrCreateSupplierAsync(document.Parsed, suppliersByFiscalId, ct);
                     var receipt = await receiptWriter.StageReceiptAsync(
                         userIdentifier,
                         document.Parsed.ReceiptNumber,
-                        supplier.Id,
-                        supplier.Name,
+                        supplier,
                         document.Parsed.DocumentNumber,
                         document.Parsed.AccessKey,
                         document.Parsed.TotalValue,
@@ -52,25 +53,22 @@ public sealed class ImportXmlReceiptBatch(
                         correlationId,
                         ct);
 
-                    imported.Add(new ImportedReceiptResult(
+                    await repository.SaveChangesAsync(ct);
+
+                    successful.Add(new ImportedReceiptResult(
                         document.FileName,
                         receipt.Id,
                         receipt.ReceiptNumber,
                         receipt.DocumentNumber));
-                }
-
-                await repository.SaveChangesAsync(ct);
-            }, cancellationToken);
-        }
-        catch (ReceiptAlreadyExistsException ex)
-        {
-            throw new ImportXmlReceiptBatchValidationException(
-            [
-                new ImportXmlReceiptBatchError("request", ex.Message)
-            ]);
+                }, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                failed.Add(new ImportXmlReceiptBatchError(document.FileName, ex.Message));
+            }
         }
 
-        return imported;
+        return new BatchImportSummary(successful, failed);
     }
 
     private async Task ValidateDuplicatesAsync(IReadOnlyCollection<ParsedBatchDocument> parsedDocuments, CancellationToken cancellationToken)
@@ -107,3 +105,7 @@ public sealed class ImportXmlReceiptBatchValidationException(IReadOnlyCollection
 }
 
 public sealed record ParsedBatchDocument(string FileName, string XmlContent, ParsedReceiptDocument Parsed);
+
+public sealed record BatchImportSummary(
+    IReadOnlyList<ImportedReceiptResult> SuccessfulImports, 
+    IReadOnlyList<ImportXmlReceiptBatchError> FailedImports);

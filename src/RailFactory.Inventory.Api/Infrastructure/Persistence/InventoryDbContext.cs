@@ -4,13 +4,22 @@ using RailFactory.Inventory.Api.Domain;
 
 namespace RailFactory.Inventory.Api.Infrastructure.Persistence;
 
-public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> options) : DbContext(options)
+public sealed class InventoryDbContext(
+    DbContextOptions<InventoryDbContext> options,
+    AuditSaveChangesInterceptor auditInterceptor) : DbContext(options)
 {
     public DbSet<StockLocation> StockLocations => Set<StockLocation>();
     public DbSet<InventoryBalance> Balances => Set<InventoryBalance>();
     public DbSet<Material> Materials => Set<Material>();
     public DbSet<InventoryLedgerEntry> LedgerEntries => Set<InventoryLedgerEntry>();
     public DbSet<InventoryIntegrationMessage> ProcessedIntegrationMessages => Set<InventoryIntegrationMessage>();
+    public DbSet<SupplierMaterialHint> SupplierMaterialHints => Set<SupplierMaterialHint>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.AddInterceptors(auditInterceptor);
+        base.OnConfiguring(optionsBuilder);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,7 +38,6 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
             entity.HasKey(x => x.Id);
             
             entity.Property(x => x.MaterialCode)
-                .HasConversion(v => v.Value, v => MaterialCode.From(v))
                 .HasMaxLength(64)
                 .IsRequired();
 
@@ -50,7 +58,6 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
             entity.HasKey(x => x.Id);
             
             entity.Property(x => x.MaterialCode)
-                .HasConversion(v => v.Value, v => MaterialCode.From(v))
                 .HasMaxLength(64)
                 .IsRequired();
 
@@ -58,10 +65,35 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
             entity.Property(x => x.Gtin).HasMaxLength(32);
             entity.Property(x => x.OfficialName).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Description).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();
             entity.Property(x => x.Category).HasConversion<string>().HasMaxLength(32).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.ImageUrl).HasMaxLength(500);
+            
+            entity.Property(x => x.ProcurementType).HasConversion<string>().HasMaxLength(32).IsRequired();
+            
+            // ELITE FIX: Defensive conversion for EmailAddress to handle legacy/empty data.
+            const string DefaultSystemEmail = "system@railfactory.local";
+            
+            entity.Property(x => x.CreatedBy)
+                .HasConversion(
+                    v => v.Value, 
+                    v => string.IsNullOrWhiteSpace(v) ? EmailAddress.From(DefaultSystemEmail) : EmailAddress.From(v))
+                .HasMaxLength(256)
+                .IsRequired();
+
+            entity.Property(x => x.LastModifiedBy)
+                .HasConversion(
+                    v => v.Value, 
+                    v => string.IsNullOrWhiteSpace(v) ? EmailAddress.From(DefaultSystemEmail) : EmailAddress.From(v))
+                .HasMaxLength(256)
+                .IsRequired();
+
+            entity.Property(x => x.ReplacedBy)
+                .HasMaxLength(64);
+                
             entity.HasIndex(x => x.MaterialCode).IsUnique();
+            entity.HasIndex(x => x.Gtin).IsUnique().HasFilter("\"Gtin\" IS NOT NULL AND \"Gtin\" <> ''");
         });
 
         modelBuilder.Entity<InventoryLedgerEntry>(entity =>
@@ -79,6 +111,26 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
             entity.ToTable("inventory_processed_integration_messages");
             entity.HasKey(x => x.EventId);
             entity.Property(x => x.EventType).HasMaxLength(128).IsRequired();
+        });
+
+        modelBuilder.Entity<SupplierMaterialHint>(entity =>
+        {
+            entity.ToTable("supplier_material_hints");
+            entity.HasKey(x => x.Id);
+            
+            entity.Property(x => x.SupplierFiscalId)
+                .HasConversion(v => v.Value, v => FiscalId.From(v))
+                .HasMaxLength(32)
+                .IsRequired();
+
+            entity.Property(x => x.SupplierProductCode).HasMaxLength(128).IsRequired();
+            
+            entity.Property(x => x.MappedMaterialCode)
+                .HasConversion(v => v.Value, v => MaterialCode.From(v))
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.HasIndex(x => new { x.SupplierFiscalId, x.SupplierProductCode }).IsUnique();
         });
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.SupplyChain.Api.Application.Ports;
 using RailFactory.SupplyChain.Api.Application.Receiving;
 using RailFactory.SupplyChain.Api.Domain;
@@ -12,7 +13,7 @@ public sealed class PostgresSupplyChainRepository(SupplyChainDbContext dbContext
         => dbContext.Suppliers.FirstOrDefaultAsync(x => x.Id == supplierId, cancellationToken);
 
     public Task<Supplier?> GetSupplierByFiscalIdAsync(string fiscalId, CancellationToken cancellationToken)
-        => dbContext.Suppliers.FirstOrDefaultAsync(x => x.FiscalId == fiscalId, cancellationToken);
+        => dbContext.Suppliers.FirstOrDefaultAsync(x => x.FiscalId == FiscalId.From(fiscalId), cancellationToken);
 
     public Task<MaterialReceipt?> GetReceiptByReceiptNumberAsync(string receiptNumber, CancellationToken cancellationToken)
         => dbContext.Receipts.Include(x => x.Items).FirstOrDefaultAsync(x => x.ReceiptNumber == receiptNumber, cancellationToken);
@@ -41,6 +42,13 @@ public sealed class PostgresSupplyChainRepository(SupplyChainDbContext dbContext
             .Where(x => EF.Functions.JsonContains(x.MetadataJson, "{\"receiptId\": \"" + receiptId + "\"}"))
             .OrderBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
+
+    public Task<SupplierMaterialMapping?> GetSupplierMaterialMappingAsync(string supplierFiscalId, string supplierProductCode, CancellationToken cancellationToken)
+        => dbContext.SupplierMaterialMappings
+            .FirstOrDefaultAsync(x => x.SupplierFiscalId == FiscalId.From(supplierFiscalId) && x.SupplierProductCode == supplierProductCode, cancellationToken);
+
+    public Task AddSupplierMaterialMappingAsync(SupplierMaterialMapping mapping, CancellationToken cancellationToken)
+        => dbContext.SupplierMaterialMappings.AddAsync(mapping, cancellationToken).AsTask();
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {

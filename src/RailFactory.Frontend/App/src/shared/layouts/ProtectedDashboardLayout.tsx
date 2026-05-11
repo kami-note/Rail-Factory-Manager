@@ -18,14 +18,15 @@ import {
   Avatar,
   IconButton
 } from '@mui/material';
-import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 const drawerWidth = 220;
 const navItems = [
-  { href: '/app', label: 'OVERVIEW', icon: <LayoutDashboard size={18} /> },
-  { href: '/app/receipts', label: 'RECEIPTS', icon: <ReceiptText size={18} /> },
-  { href: '/app/inventory', label: 'INVENTORY', icon: <Boxes size={18} /> },
+  { href: '/app', label: 'VISÃO GERAL', icon: <LayoutDashboard size={18} /> },
+  { href: '/app/receipts', label: 'RECEBIMENTOS', icon: <ReceiptText size={18} /> },
+  { href: '/app/supply-chain/association', label: 'BANCADA', icon: <Link2 size={18} /> },
+  { href: '/app/inventory', label: 'ESTOQUE', icon: <Boxes size={18} /> },
 ];
 
 type ProtectedDashboardLayoutProps = {
@@ -37,6 +38,12 @@ type ProtectedDashboardLayoutProps = {
   children: ReactNode;
 };
 
+/**
+ * Main application layout for authenticated sessions.
+ * @remarks
+ * Localization: All navigation labels are in Portuguese (Brazil).
+ * Standard: Uses lucide-react for iconography.
+ */
 export function ProtectedDashboardLayout({
   tenantCode,
   userLabel,
@@ -62,7 +69,7 @@ export function ProtectedDashboardLayout({
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#ffffff' }}>
       <Box sx={{ p: 4, mb: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em' }}>
-          NAVIGATION
+          NAVEGAÇÃO
         </Typography>
       </Box>
       
@@ -100,7 +107,7 @@ export function ProtectedDashboardLayout({
       <Box sx={{ p: 2 }}>
         <Box sx={{ px: 2, mb: 2 }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, display: 'block', mb: 1, opacity: 0.6 }}>
-            ENVIRONMENT
+            ORGANIZAÇÃO
           </Typography>
           <Chip 
             label={tenantCode.toUpperCase()} 
@@ -118,7 +125,7 @@ export function ProtectedDashboardLayout({
         <Divider sx={{ mb: 2, opacity: 0.5 }} />
         <ListItemButton onClick={onLogout} sx={{ px: 2, borderRadius: 1, color: 'text.secondary' }}>
           <ListItemIcon sx={{ minWidth: 32 }}><LogOut size={16} /></ListItemIcon>
-          <ListItemText primary="SIGN OUT" slotProps={{ primary: { variant: 'caption', sx: { fontWeight: 700 } } }} />
+          <ListItemText primary="SAIR DO SISTEMA" slotProps={{ primary: { variant: 'caption', sx: { fontWeight: 700 } } }} />
         </ListItemButton>
       </Box>
     </Box>
@@ -154,7 +161,7 @@ export function ProtectedDashboardLayout({
                 RAIL FACTORY
               </Typography>
               <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, opacity: 0.8, lineHeight: 1.15 }}>
-                CONTROL SYSTEM
+                SISTEMA DE CONTROLE
               </Typography>
             </Stack>
           </Stack>

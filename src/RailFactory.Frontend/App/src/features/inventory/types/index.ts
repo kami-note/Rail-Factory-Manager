@@ -17,3 +17,14 @@ export type InventoryBalance = {
   ncm?: string;
   gtin?: string;
 };
+
+export type MaterialSearchResult = {
+  materialCode: string;
+  officialName: string;
+  description: string;
+  imageUrl?: string;
+  category: string;
+  gtin?: string;
+  ncm?: string;
+  stockUnit?: string;
+};

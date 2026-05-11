@@ -15,7 +15,7 @@ public sealed class ImportXmlReceiptBatchTests
         var repository = new FakeSupplyChainRepository();
         var useCase = CreateUseCase(repository);
 
-        var imported = await useCase.ExecuteAsync(
+        var summary = await useCase.ExecuteAsync(
             "tester",
             [
                 new ImportXmlReceiptBatchDocument("one.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001")),
@@ -24,14 +24,15 @@ public sealed class ImportXmlReceiptBatchTests
             "corr-1",
             CancellationToken.None);
 
-        Assert.Equal(2, imported.Count);
+        Assert.Equal(2, summary.SuccessfulImports.Count);
+        Assert.Empty(summary.FailedImports);
         Assert.Equal(2, repository.Receipts.Count);
-        Assert.Equal(2, repository.OutboxMessages.Count);
-        Assert.Equal(1, repository.SaveChangesCount);
+        Assert.Empty(repository.OutboxMessages); // Blocked for association
+        Assert.Equal(2, repository.SaveChangesCount); // Two independent transactions
     }
 
     [Fact]
-    public async Task ExecuteAsync_rejects_invalid_batch_without_writes()
+    public async Task ExecuteAsync_rejects_mixed_invalid_batch_without_writes()
     {
         var repository = new FakeSupplyChainRepository();
         var useCase = CreateUseCase(repository);
@@ -39,16 +40,14 @@ public sealed class ImportXmlReceiptBatchTests
         var error = await Assert.ThrowsAsync<ImportXmlReceiptBatchValidationException>(() => useCase.ExecuteAsync(
             "tester",
             [
-                new ImportXmlReceiptBatchDocument("one.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001")),
+                new ImportXmlReceiptBatchDocument("valid.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001")),
                 new ImportXmlReceiptBatchDocument("bad.xml", "<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\" />")
             ],
             "corr-1",
             CancellationToken.None));
 
         Assert.Contains(error.Errors, x => x.FileName == "bad.xml");
-        Assert.Empty(repository.Suppliers);
         Assert.Empty(repository.Receipts);
-        Assert.Empty(repository.OutboxMessages);
         Assert.Equal(0, repository.SaveChangesCount);
     }
 
@@ -105,7 +104,7 @@ public sealed class ImportXmlReceiptBatchTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_maps_save_conflict_to_batch_validation()
+    public async Task ExecuteAsync_maps_save_conflict_to_batch_failure()
     {
         var repository = new FakeSupplyChainRepository
         {
@@ -113,15 +112,16 @@ public sealed class ImportXmlReceiptBatchTests
         };
         var useCase = CreateUseCase(repository);
 
-        var error = await Assert.ThrowsAsync<ImportXmlReceiptBatchValidationException>(() => useCase.ExecuteAsync(
+        var summary = await useCase.ExecuteAsync(
             "tester",
             [
                 new ImportXmlReceiptBatchDocument("one.xml", BuildNfe("35260599999090910270550010000000015180051273", "MAT-001"))
             ],
             "corr-1",
-            CancellationToken.None));
+            CancellationToken.None);
 
-        Assert.Contains(error.Errors, x => x.FileName == "request" && x.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(summary.SuccessfulImports);
+        Assert.Contains(summary.FailedImports, x => x.FileName == "one.xml" && x.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(1, repository.SaveChangesCount);
     }
 
@@ -185,6 +185,16 @@ public sealed class ImportXmlReceiptBatchTests
                 throw new ReceiptAlreadyExistsException(ReceiptConflictOnSave);
             }
 
+            return Task.CompletedTask;
+        }
+
+        public Task<SupplierMaterialMapping?> GetSupplierMaterialMappingAsync(string supplierFiscalId, string supplierProductCode, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<SupplierMaterialMapping?>(null);
+        }
+
+        public Task AddSupplierMaterialMappingAsync(SupplierMaterialMapping mapping, CancellationToken cancellationToken)
+        {
             return Task.CompletedTask;
         }
 

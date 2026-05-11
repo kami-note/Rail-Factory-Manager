@@ -52,7 +52,7 @@ public sealed class GetMaterialReceiptDetails(
                 return new MaterialReceiptItemResponse(
                     Id: i.Id,
                     MaterialCode: i.MaterialCode,
-                    ProductName: material?.OfficialName ?? i.OriginalDescription ?? i.MaterialCode,
+                    ProductName: i.OriginalDescription ?? material?.OfficialName ?? i.MaterialCode.Value,
                     OriginalDescription: i.OriginalDescription,
                     ExpectedQuantity: i.ExpectedQuantity,
                     CountedQuantity: i.CountedQuantity,
@@ -68,14 +68,15 @@ public sealed class GetMaterialReceiptDetails(
                 OccurredAt: a.CreatedAt
             )).ToList()
         );
-        }
+    }
 
-        private static DisplayStatus MapActionToStatus(string action) => action switch
-        {
+    private static DisplayStatus MapActionToStatus(string action) => action switch
+    {
         "receipt_created" => MaterialReceiptStatus.Registered.ToDisplayStatus(),
+        "association_blocked" => MaterialReceiptStatus.PendingAssociation.ToDisplayStatus(),
+        "association_released" => MaterialReceiptStatus.Registered.ToDisplayStatus(),
         "conference_started" => MaterialReceiptStatus.InConference.ToDisplayStatus(),
         "conference_closed" => MaterialReceiptStatus.Approved.ToDisplayStatus(),
         _ => new DisplayStatus(action, action, "default")
-        };
-        }
-
+    };
+}
