@@ -58,6 +58,7 @@ public sealed class InventoryDbContext(
             entity.HasKey(x => x.Id);
             
             entity.Property(x => x.MaterialCode)
+                .HasConversion(v => v.Value, v => MaterialCode.From(v))
                 .HasMaxLength(64)
                 .IsRequired();
 
@@ -89,7 +90,14 @@ public sealed class InventoryDbContext(
                 .HasMaxLength(256)
                 .IsRequired();
 
+            entity.Property(x => x.CreatedAt)
+                .IsRequired();
+
+            entity.Property(x => x.UpdatedAt)
+                .IsRequired();
+
             entity.Property(x => x.ReplacedBy)
+                .HasConversion(v => v == null ? null : v.Value, v => v == null ? null : MaterialCode.From(v))
                 .HasMaxLength(64);
                 
             entity.HasIndex(x => x.MaterialCode).IsUnique();
