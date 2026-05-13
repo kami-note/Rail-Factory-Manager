@@ -84,6 +84,7 @@ static AppHostDomainServices AddDomainServices(
         .WithEnvironment("Authentication__Google__ClientId", parameters.OAuth.GoogleClientId)
         .WithEnvironment("Authentication__Google__ClientSecret", parameters.OAuth.GoogleClientSecret)
         .WithEnvironment("Authentication__Google__PublicOrigin", parameters.Edge.FrontendPublicOrigin)
+        .WithEnvironment("Authentication__Google__CallbackPath", "/api/iam/auth/google/callback")
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevIamDb)
         .WaitFor(infra.Redis)

@@ -14,8 +14,13 @@ var app = builder.Build();
 
 app.UseServiceDefaults();
 app.MapDefaultEndpoints();
-app.MapGet("/", () => Results.Redirect("/info"));
-app.MapGet("/info", async (IHostEnvironment environment, GetTenantByCode getTenant, CancellationToken cancellationToken) =>
+
+// Root redirect
+app.MapGet("/", () => Results.Redirect("/api/tenancy/info"));
+
+var group = app.MapGroup("/api/tenancy");
+
+group.MapGet("/info", async (IHostEnvironment environment, GetTenantByCode getTenant, CancellationToken cancellationToken) =>
 {
     var tenant = await getTenant.ExecuteAsync("dev", cancellationToken);
 
@@ -27,7 +32,8 @@ app.MapGet("/info", async (IHostEnvironment environment, GetTenantByCode getTena
         defaultTenant = tenant.IsSuccess ? tenant.Value : null
     });
 });
-app.MapGet("/tenants/{code}", async ([AsParameters] GetTenantByCodeRequest request, GetTenantByCode getTenant, CancellationToken cancellationToken) =>
+
+group.MapGet("/tenants/{code}", async ([AsParameters] GetTenantByCodeRequest request, GetTenantByCode getTenant, CancellationToken cancellationToken) =>
 {
     var validation = RequestValidator.Validate(request);
     if (validation is not null)
@@ -41,7 +47,8 @@ app.MapGet("/tenants/{code}", async ([AsParameters] GetTenantByCodeRequest reque
         ? Results.Ok(result.Value)
         : ToHttpResult(result.Error);
 });
-app.MapGet("/tenants", async (ListTenants listTenants, CancellationToken cancellationToken) =>
+
+group.MapGet("/tenants", async (ListTenants listTenants, CancellationToken cancellationToken) =>
 {
     var result = await listTenants.ExecuteAsync(cancellationToken);
     return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);

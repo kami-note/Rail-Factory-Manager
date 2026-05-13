@@ -12,8 +12,9 @@ public static class SupplyChainHostingExtensions
     public static WebApplication UseSupplyChainHosting(this WebApplication app)
     {
         app.UseServiceDefaults();
+        app.UseAuthentication();
         app.UseTenantResolution();
-        app.UseRailFactoryHeaderIdentity(); // ELITE FIX: Enable trusted identity from headers
+        app.UseAuthorization();
         app.MapDefaultEndpoints();
         return app;
     }

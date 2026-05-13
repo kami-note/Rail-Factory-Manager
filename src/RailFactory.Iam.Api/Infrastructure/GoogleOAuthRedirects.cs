@@ -5,7 +5,7 @@ namespace RailFactory.Iam.Api.Infrastructure;
 
 internal sealed class GoogleOAuthRedirects
 {
-    private const string GoogleFinalizePath = "/auth/google/finalize";
+    private const string GoogleFinalizePath = "/api/iam/auth/google/finalize";
     private readonly GoogleOAuthOptions options;
 
     public GoogleOAuthRedirects(IOptions<GoogleOAuthOptions> options)

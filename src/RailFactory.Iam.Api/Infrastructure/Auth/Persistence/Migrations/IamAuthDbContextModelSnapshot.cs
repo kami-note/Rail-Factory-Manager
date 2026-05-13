@@ -17,7 +17,7 @@ namespace RailFactory.Iam.Api.Infrastructure.Auth.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.10")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -58,6 +58,101 @@ namespace RailFactory.Iam.Api.Infrastructure.Auth.Persistence.Migrations
                         .HasDatabaseName("ix_iam_local_users_email");
 
                     b.ToTable("iam_local_users", (string)null);
+                });
+
+            modelBuilder.Entity("RailFactory.Iam.Api.Infrastructure.Auth.Persistence.IamTenantRoleRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.PrimitiveCollection<string>("ChildRoleIds")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("child_role_ids");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.PrimitiveCollection<string>("Permissions")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("permissions");
+
+                    b.Property<string>("TenantCode")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tenant_code");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantCode")
+                        .HasDatabaseName("ix_iam_tenant_roles_tenant_code");
+
+                    b.ToTable("iam_tenant_roles", (string)null);
+                });
+
+            modelBuilder.Entity("RailFactory.Iam.Api.Infrastructure.Auth.Persistence.IamTenantUserRoleRecord", b =>
+                {
+                    b.Property<string>("TenantCode")
+                        .HasColumnType("text")
+                        .HasColumnName("tenant_code");
+
+                    b.Property<string>("ExternalProvider")
+                        .HasColumnType("text")
+                        .HasColumnName("external_provider");
+
+                    b.Property<string>("ExternalSubject")
+                        .HasColumnType("text")
+                        .HasColumnName("external_subject");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("role_id");
+
+                    b.Property<DateTimeOffset>("AssignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at");
+
+                    b.HasKey("TenantCode", "ExternalProvider", "ExternalSubject", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("ExternalProvider", "ExternalSubject");
+
+                    b.ToTable("iam_tenant_user_roles", (string)null);
+                });
+
+            modelBuilder.Entity("RailFactory.Iam.Api.Infrastructure.Auth.Persistence.IamTenantUserRoleRecord", b =>
+                {
+                    b.HasOne("RailFactory.Iam.Api.Infrastructure.Auth.Persistence.IamTenantRoleRecord", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RailFactory.Iam.Api.Infrastructure.Auth.Persistence.IamLocalUserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ExternalProvider", "ExternalSubject")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Role");
                 });
 #pragma warning restore 612, 618
         }

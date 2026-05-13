@@ -1,13 +1,18 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.WebUtilities;
+using RailFactory.BuildingBlocks.Auth;
 
 namespace RailFactory.Iam.Api.Infrastructure;
 
 public static class IamHostingExtensions
 {
+    private const string SmartAuthScheme = "SmartAuth";
+
     public static WebApplicationBuilder AddIamHosting(this WebApplicationBuilder builder)
     {
         var googleOAuth = builder.Configuration
@@ -25,19 +30,57 @@ public static class IamHostingExtensions
         });
 
         builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(GoogleOAuthOptions.SectionName));
+        builder.AddRedisDistributedCache("redis");
         builder.Services.AddSingleton<GoogleOAuthRedirects>();
         builder.Services.AddAuthorization();
         builder.Services
             .AddAuthentication(options =>
             {
-                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultScheme = SmartAuthScheme;
+                options.DefaultAuthenticateScheme = SmartAuthScheme;
                 options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+            })
+            .AddPolicyScheme(SmartAuthScheme, "Smart auth for IAM API", options =>
+            {
+                options.ForwardDefaultSelector = context =>
+                    context.Request.Headers.ContainsKey(TenantConstants.UserEmailHeaderName)
+                        ? "TrustedHeaders"
+                        : CookieAuthenticationDefaults.AuthenticationScheme;
             })
             .AddCookie(options =>
             {
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Cookie.SameSite = SameSiteMode.Lax;
+                options.Events = new CookieAuthenticationEvents
+                {
+                    OnRedirectToLogin = context =>
+                    {
+                        if (IsApiRequest(context.Request))
+                        {
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            return context.Response.WriteAsJsonAsync(AuthSessionDto.Unauthenticated);
+                        }
+
+                        context.Response.Redirect(context.RedirectUri);
+                        return Task.CompletedTask;
+                    },
+                    OnRedirectToAccessDenied = context =>
+                    {
+                        if (IsApiRequest(context.Request))
+                        {
+                            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                            return context.Response.WriteAsJsonAsync(new
+                            {
+                                code = "forbidden",
+                                message = "You do not have permission to access this resource."
+                            });
+                        }
+
+                        context.Response.Redirect(context.RedirectUri);
+                        return Task.CompletedTask;
+                    }
+                };
             })
             .AddOAuth<GoogleOptions, GoogleOAuthPublicOriginHandler>(GoogleDefaults.AuthenticationScheme, options =>
             {
@@ -64,7 +107,7 @@ public static class IamHostingExtensions
                         var redirectTarget = context.Properties?.RedirectUri;
                         if (string.IsNullOrWhiteSpace(redirectTarget))
                         {
-                            redirectTarget = "/auth/google/finalize";
+                            redirectTarget = "/api/iam/auth/google/finalize";
                         }
 
                         var safeRedirect = QueryHelpers.AddQueryString(
@@ -159,4 +202,7 @@ public static class IamHostingExtensions
             .ToLowerInvariant()
             .Replace(" ", "_", StringComparison.Ordinal);
     }
+
+    private static bool IsApiRequest(HttpRequest request)
+        => request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase);
 }

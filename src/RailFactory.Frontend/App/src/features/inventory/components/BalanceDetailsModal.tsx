@@ -110,7 +110,7 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
         <Stack spacing={4}>
           {/* Main Info */}
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <MaterialAvatar 
                   materialCode={details.materialCode} 
@@ -126,7 +126,7 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
                 </Box>
               </Box>
             </Grid>
-            <Grid item xs={12} md={6} sx={{ textAlign: { md: 'right' } }}>
+            <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: 'right' } }}>
               <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>STATUS ATUAL</Typography>
               <Box sx={{ display: 'flex', justifyContent: { md: 'flex-end' }, mt: 0.5 }}>
                 <StatusChip status={details.status} />

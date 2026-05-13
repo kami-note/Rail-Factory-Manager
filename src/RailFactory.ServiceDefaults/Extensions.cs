@@ -15,6 +15,7 @@ public static class Extensions
         builder.AddRailFactoryProblemDetails();
 
         builder.Services.AddServiceDiscovery();
+        builder.Services.AddPermissionAuthorization();
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
             // ELITE FIX: Optimize connection lifetime for containerized environments (DNS changes)
@@ -67,12 +68,6 @@ public static class Extensions
     public static WebApplication UseTenantResolution(this WebApplication app)
     {
         app.UseMiddleware<TenantResolutionMiddleware>();
-        return app;
-    }
-
-    public static WebApplication UseRailFactoryHeaderIdentity(this WebApplication app)
-    {
-        app.UseMiddleware<HeaderIdentityMiddleware>();
         return app;
     }
 }

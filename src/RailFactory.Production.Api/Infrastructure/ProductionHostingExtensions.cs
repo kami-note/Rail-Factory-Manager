@@ -12,7 +12,9 @@ public static class ProductionHostingExtensions
     public static WebApplication UseProductionHosting(this WebApplication app)
     {
         app.UseServiceDefaults();
+        app.UseAuthentication();
         app.UseTenantResolution();
+        app.UseAuthorization();
         app.MapDefaultEndpoints();
         return app;
     }

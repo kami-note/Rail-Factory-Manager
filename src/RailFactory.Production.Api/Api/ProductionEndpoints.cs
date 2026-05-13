@@ -4,13 +4,18 @@ namespace RailFactory.Production.Api.Api;
 
 public static class ProductionEndpoints
 {
-    private const string RootPath = "/";
+    private const string ApiGroup = "/api/production";
     private const string InfoPath = "/info";
 
     public static WebApplication MapProductionEndpoints(this WebApplication app)
     {
-        app.MapGet(RootPath, () => Results.Redirect(InfoPath));
-        app.MapGet(InfoPath, HandleGetInfo);
+        // Root redirect
+        app.MapGet("/", () => Results.Redirect($"{ApiGroup}{InfoPath}"));
+
+        var group = app.MapGroup(ApiGroup);
+
+        group.MapGet(InfoPath, HandleGetInfo).AllowAnonymous();
+        
         return app;
     }
 

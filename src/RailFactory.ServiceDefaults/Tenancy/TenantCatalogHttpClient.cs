@@ -25,7 +25,7 @@ public sealed class TenantCatalogHttpClient(
             return cached;
         }
 
-        using var response = await httpClient.GetAsync($"/tenants/{Uri.EscapeDataString(normalizedCode)}", cancellationToken);
+        using var response = await httpClient.GetAsync($"/api/tenancy/tenants/{Uri.EscapeDataString(normalizedCode)}", cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             cache.Set(cacheKey, TenantResolutionResult.NotFound, GetCacheLifetime(options.Value.CatalogCacheTtlSeconds));
@@ -52,7 +52,7 @@ public sealed class TenantCatalogHttpClient(
     public async Task<IReadOnlyList<TenantResolutionResult>> ListAllAsync(CancellationToken cancellationToken)
     {
         // For simplicity and because this is used mainly by background workers, we don't cache the whole list
-        using var response = await httpClient.GetAsync("/tenants", cancellationToken);
+        using var response = await httpClient.GetAsync("/api/tenancy/tenants", cancellationToken);
         response.EnsureSuccessStatusCode();
 
         var tenants = await response.Content.ReadFromJsonAsync<IReadOnlyList<TenantCatalogResponse>>(cancellationToken)

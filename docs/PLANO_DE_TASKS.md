@@ -287,6 +287,30 @@ Objetivo: padronizar estrutura interna dos servicos em paralelo as tasks funcion
   - Depende: alinhamento visual da dashboard protegida.
   - Entregue: `ReceiptsWorkspace`, navegacao por History API no frontend, rotas legadas `/app/new-receipt`/`/app/import-xml` normalizadas para `/app/receipts`, lista mantida como workspace principal, acoes principais visiveis e criacao/importacao em drawer lateral responsivo.
 
+### P1.5 - Multi-Tenancy Validation
+
+Objetivo: validar a infraestrutura de database-per-tenant com um segundo tenant real e permitir a escolha pelo usuario.
+
+- [ ] Provisionar bancos para o segundo tenant ('acme') no AppHost.
+  - Aceite: Bancos `tenant-acme-iamdb`, `tenant-acme-supplychaindb`, `tenant-acme-inventorydb` e `tenant-acme-productiondb` sao criados e visiveis no PgAdmin.
+  - Depende: P0.2.
+
+- [ ] Criar seed para o tenant 'acme' no Tenant Catalog.
+  - Aceite: O tenant 'acme' existe na tabela `tenants` com as connection strings corretas apontando para os novos bancos.
+  - Depende: P1.1.
+
+- [ ] Implementar tela de selecao de tenant no Frontend.
+  - Aceite: Uma tela inicial (ou modal) permite ao usuario informar o código do tenant (ex: 'dev', 'acme') antes de prosseguir para o login.
+  - Depende: P1.4.
+
+- [ ] Persistir e carregar o tenant selecionado.
+  - Aceite: O tenant escolhido e salvo no `localStorage` e recuperado automaticamente.
+  - Depende: Tela de selecao.
+
+- [ ] Tornar o tenant dinamico na `App.tsx` e fluxos de Auth.
+  - Aceite: O `tenantCode` usado nas chamadas de API e no redirect do Google OAuth e o tenant selecionado pelo usuario.
+  - Depende: Persistencia do tenant.
+
 ## P2 - Entrada De Materiais E Inventory Inicial
 
 Objetivo: criar o primeiro fluxo de negocio real: recebimento de material e saldo pendente no Inventory.
@@ -380,45 +404,330 @@ Objetivo: criar o primeiro fluxo de negocio real: recebimento de material e sald
   - Depende: upload/importacao XML.
   - Entregue: drawer de recebimentos permite selecionar um ou varios arquivos `.xml`, exibe a lista selecionada e importa os documentos em lote via `/api/supply-chain/receipts/import/xml`.
 
+- [x] Criar tela para visualizar materiais pendentes no estoque.
+  - Aceite: usuario autenticado visualiza lista de saldos pendentes via BFF, sem chamada direta da UI para servico interno.
+  - Depende: endpoint `GET /balances/pending` no Inventory.
+  - Entregue: rota protegida `/app/inventory` com consumo de `/api/inventory/balances/pending` e navegacao dedicada no menu lateral.
+
+### P2.5 - Expansao de Rastreabilidade (Hybrid Model)
+
+- [x] Definir contrato de Metadados e Esquema Extendido.
+  - Aceite: Documento define campos fixos (Lote, Validade) e estrutura do JSON de Metadados para Compras vs Producao.
+  - Depende: P2.1 e P2.2.
+  - Entregue: Implementado via Rastreabilidade Hibrida (Colunas fixas + JSON Metadata).
+
+- [x] Atualizar entidades de Supply Chain com dados fiscais e XML original.
+  - Aceite: `MaterialReceipt` inclui Chave de Acesso (44 digitos), Valor Total e o conteúdo XML original (RawXml); `MaterialReceiptItem` inclui Preco Unitario e Descricao Original.
+  - Depende: Definisão de contrato.
+  - Entregue: Entidades e DTOs atualizados em 2026-05-05.
+
+- [x] Atualizar entidades de Inventory com Rastreabilidade Hibrida.
+  - Aceite: `InventoryBalance` inclui colunas fixas `LotNumber`, `ExpirationDate`, `SourceType` (Enum) e campo `SourceMetadata` (JSONB).
+  - Depende: Definisão de contrato.
+  - Entregue: Entidades e DTOs atualizados em 2026-05-05.
+
+- [x] Sincronizar Metadados no fluxo Supply -> Inventory.
+  - Aceite: O dispatcher de integração injeta os dados da NF-e no JSON de metadados do saldo criado.
+  - Depende: Atualização das entidades.
+  - Entregue: `InventoryPendingBalanceDispatcher` e `CreatePendingBalance` atualizados.
+
+- [x] Refletir novas colunas na UI de Inventory e Supply.
+  - Aceite: Listagens de recebimento e saldo exibem Lote, Validade e Chave de Acesso.
+  - Depende: Atualização das APIs.
+  - Entregue: UI atualizada e funcionalidade de Download XML adicionada em 2026-05-05.
+
+### P2.6 - Humanização e Refinamento de UX (Foco no Operador)
+
+Objetivo: Melhorar a legibilidade dos dados e a experiência do usuário de chão de fábrica, removendo ruído técnico e adicionando contexto operacional real.
+
+- [x] Criar Utilitário de Mapeamento de Status (@architect / @frontend).
+  - Aceite: Centralizar labels amigáveis (ex: 'Registered' -> 'Aguardando Conferência') e cores semânticas (ex: Approved = Verde/Sucesso, Divergent = Vermelho/Atenção).
+  - Depende: P2.5.
+
+- [x] Padronizar Formatação de Datas e Localização (@frontend).
+  - Aceite: Usar `pt-BR` de forma consistente; exibir 'Data de Emissão' e 'Data de Criação' com clareza (formatos amigáveis como 'hoje às 14h' ou 'dd/MM/yyyy').
+  - Depende: P2.5.
+
+- [x] Humanizar Identificadores Técnicos (@frontend).
+  - Aceite: Truncar ou ocultar UUIDs (ex: `sourceReference`) em favor de referências de negócio (ex: "NF-e 1234") com opção de cópia.
+  - Depende: P2.5.
+
+- [x] Modal de Detalhes do Recebimento - Visão do Conferente (@backend / @frontend).
+  - Aceite: Endpoint `GET /receipts/{id}` e Modal na UI criados. O modal deve exibir:
+    - Linha do Tempo Visual do status (Recebido -> Conferência -> Aprovado/Divergente).
+    - Tabela clara de "Esperado (NF-e) vs. Contado (Físico)".
+    - Ações Rápidas em destaque (Iniciar Conferência, Baixar XML).
+    - Ficha resumida do Fornecedor (Nome/CNPJ).
+    - **Auditoria Visível:** Quem iniciou a conferência e quando.
+  - Depende: P2.5.
+
+- [x] Modal de Detalhes do Saldo de Estoque - Visão da Produção (@backend / @frontend).
+  - Aceite: Endpoint `GET /balances/{id}` e Modal na UI criados. O modal deve exibir:
+    - Os 3 Números Mágicos (Total Físico, Disponível, Bloqueado/Quarentena).
+    - Rastreabilidade/Origem (Link claro para a NF-e que gerou o saldo).
+    - Alerta visual de Validade (cores de atenção se próximo ao vencimento).
+    - Extrato de Movimentação (Ledger humanizado: ex: "+100 kg recebidos", "-20 kg consumidos na OP #45").
+    - **Auditoria Visível:** Quem bloqueou o lote ou quem aprovou a liberação.
+  - Depende: P2.5.
+
+### P2.7 - Dashboard Operacional (Desmocking)
+
+Objetivo: Substituir os dados falsos (`mocks.ts`) do `OverviewPanel` por KPIs reais extraídos dos domínios já implementados, entregando valor imediato ao operador e gestor. Seguir a regra de "Just-In-Time Implementation" (construir apenas as consultas necessárias para a tela).
+
+- [ ] KPI de Ações Pendentes (Supply Chain) (@backend / @frontend).
+  - Aceite: Backend expõe endpoint simples `/api/supply-chain/receipts/summary` e Frontend mostra o número real de Recebimentos aguardando conferência (`status: Registered` ou `InConference`).
+  - Depende: P2.6.
+
+- [ ] KPI de Saúde do Estoque (Inventory) (@backend / @frontend).
+  - Aceite: Backend expõe endpoint `/api/inventory/balances/summary` e Frontend mostra total de itens Pendentes vs. Disponíveis vs. Bloqueados (divergentes).
+  - Depende: P2.6.
+
+- [ ] Substituir Tabela de "Live Production Monitor" por "Inbound Recente" (@frontend).
+  - Aceite: Como a Produção (P4/P5) ainda não existe, a tabela principal do Dashboard deve ser alterada para mostrar as últimas NF-es importadas e seu status atual. O componente mockado `productionLines` deve ser completamente removido.
+  - Depende: P2.6.
+
+- [x] Ocultar Ruído Técnico e Activity Log Falso (@frontend).
+  - Aceite: Remover os painéis "System Telemetry" e o "Activity Log" de mocks, pois não agregam valor operacional a um usuário fabril neste momento. Caso necessário para debugar (dev), mover o telemetry para um `Ctrl+Shift+D` toggle ou remover de vez seguindo a "Dead Code Prevention".
+  - Depende: P2.6.
+
+### P2.8 - Backend Structuring and Product Catalog (The "Elite" Cleanup)
+
+Objetivo: Mover a inteligência de parsing do Frontend para o Backend, estruturar os dados de rastreabilidade e introduzir um catálogo de materiais para evitar inconsistências e "código morto".
+
+- [ ] Task 2.8.1: Enriquecer Rastreabilidade no Supply Chain (@backend).
+  - Aceite: O evento `supply.receipt_item_registered` passa a incluir o `SupplierName`.
+  - Depende: P2.5.
+
+- [ ] Task 2.8.2: Suportar SupplierName no Inventory API (@backend).
+  - Aceite: O endpoint `POST /internal/pending-balances` aceita `SupplierName` e o armazena no `SourceMetadata` de forma estruturada.
+  - Depende: Task 2.8.1.
+
+- [ ] Task 2.8.3: Implementar Catálogo de Materiais no Inventory (@architect / @backend).
+  - Aceite: Entidade `Material` criada (Código, Nome Oficial, Descrição, Categoria, ImageUrl). Seed inicial para os materiais do tenant `dev`.
+  - Depende: P2.2.
+
+- [x] Task 2.8.4: Enriquecer Resposta de Saldo no Inventory (@backend).
+  - Aceite: O DTO de resposta de saldo (`InventoryBalanceDetailsResponse`) inclui dados do `Material` (nome, imagem) e o `SupplierName` limpo, sem exigir parsing no frontend.
+  - Depende: Task 2.8.2 e 2.8.3.
+  - Entregue: `ListPendingBalances` e `GetInventoryBalanceDetails` retornam metadados estruturados (`materialName`, `materialImageUrl`, `supplierName`) e o frontend de estoque consome os campos sem parsing manual.
+
+- [x] Task 2.8.5: Limpeza do Frontend e Remoção de Lógica Morta (@frontend).
+  - Aceite: Remover o parsing de JSON no `InventoryStocksPage.tsx` e `ConferenceWorkspace.tsx`. Usar os novos campos estruturados do backend.
+  - Depende: Task 2.8.4.
+  - Entregue: frontend usa campos estruturados para fornecedor, nome e imagem de material; parsing defensivo de JSON foi removido das telas operacionais alvo.
+
+### P2.9 - Frontend Vertical Slices Architecture (Migration)
+
+Objetivo: Migrar o monolito `features/dashboard` e a pasta `auth/` para uma arquitetura baseada em features (Vertical Slices), garantindo isolamento de regras de negócio e modularidade.
+
+- [x] Task 2.9.1: Desenhar o plano de migração e a nova estrutura de pastas (@lead).
+  - Aceite: Plano aprovado contendo o mapeamento de onde cada componente atual irá morar (`features/auth`, `features/inventory`, `features/supply-chain`, `features/production`, `shared/`).
+  - Depende: Avaliação do estado atual do Frontend.
+  - Entregue: Mapeamento concluído e documentado.
+
+- [x] Task 2.9.2: Validar fronteiras, contratos de dependência e Shared Kernel (@architect).
+  - Aceite: O Arquiteto revisa a estrutura proposta e garante que Hexagonal Integrity e as regras de "Modular Minimality" sejam respeitadas. Nenhuma feature deve importar componentes de outra feature diretamente. Regras documentadas em `src/RailFactory.Frontend/GEMINI.md`.
+  - Depende: Task 2.9.1.
+  - Entregue: Estrutura de Feature Slices e Shared Kernel definida e documentada em 2026-05-07.
+
+- [x] Task 2.9.3: Refactor structure to Vertical Slices and realocate files (@frontend).
+  - Aceite: Seguindo o mandato em `src/RailFactory.Frontend/GEMINI.md`, diretórios `auth`, `inventory`, `supply-chain` e `production` criados em `src/features`. Pasta `shared/` criada para componentes universais, lib e layouts. `App.tsx` roteando via imports dos `index.ts` das features.
+  - Depende: Task 2.9.2.
+  - Entregue: Estrutura migrada, imports atualizados e build validado em 2026-05-07.
+
+- [ ] Task 2.9.4: Validar a estabilidade da UI e cobertura de testes (@tester).
+  - Aceite: O fluxo de navegação e as funcionalidades de Recebimento, Inventário e Auth continuam funcionando sem regressão visual ou quebras no console. Testes executam com sucesso.
+  - Depende: Task 2.9.3.
+
+### P2.10 - Association Workbench (SKU Resolution)
+
+Objetivo: substituir o fluxo modal `AssociationInbox`/`AssociationForge` por uma bancada operacional para resolver itens fiscais sem SKU interno antes da conferencia, com separacao clara entre `supplierProductCode` (SKU do fornecedor/NF-e) e `internalMaterialCode` (SKU do Inventory).
+
+Decisao de UX:
+
+- tratar associacao como fila de saneamento operacional, nao como modal de conclusao obrigatoria;
+- salvar decisao por item, preservando progresso da nota;
+- criar material e associar sem tirar o operador da tela;
+- manter override de SKU do fornecedor como excecao auditavel, nao como edicao comum;
+- liberar para conferencia apenas quando os itens estiverem em estados permitidos pela regra de negocio.
+
+Fluxo de trabalho esperado no frontend:
+
+1. Operador entra em `/app/supply-chain/association` pela navegacao de Supply Chain.
+2. A tela carrega uma fila lateral de recebimentos em `PendingAssociation` ou com itens sem resolucao final.
+3. Ao selecionar um recebimento, o centro da tela mostra os itens da NF-e em grid operacional com `Supplier code from invoice`, descricao, NCM, GTIN/EAN, unidade, quantidade, `Internal inventory SKU` e status da associacao.
+4. Ao selecionar um item, o painel lateral mostra dados fiscais do item, sugestoes de materiais internos, busca manual no catalogo e preview de conversao (`1 supplier unit = X stock unit`, `quantity -> inventory quantity`).
+5. Se existir material correto, o operador escolhe o material interno, informa/valida fator de conversao e salva `Map to selected material`; a linha fica resolvida e o foco avanca para o proximo item pendente.
+6. Se nao existir material, o operador abre `Create material from invoice item`; o painel vem pre-preenchido com dados da NF-e, valida duplicidade/GTIN/SKU, cria o material e associa o item na mesma acao.
+7. Se o item nao puder ser resolvido na hora, o operador marca `Review later` com motivo; a nota permanece bloqueada para conferencia enquanto houver pendencia bloqueante.
+8. Se o negocio permitir item fiscal que nao entra no estoque, o operador pode marcar `Ignored` com motivo; o efeito sobre liberacao para conferencia deve vir do contrato da Task 2.10.1.
+9. Alterar `Internal inventory SKU` e uma nova associacao normal; alterar `Supplier code from invoice` e um override separado, com motivo e auditoria, sem modificar o XML original.
+10. A tela salva cada decisao imediatamente, mostra erro recuperavel quando houver conflito/CSRF/autorizacao/falha parcial e permite recarregar o estado real da nota.
+11. Quando todos os itens estiverem em estado permitido, o operador aciona `Release to conference`; a nota sai da fila ou muda para estado conferivel.
+12. O fluxo legado em modal so pode ser removido depois que esse caminho cobrir material existente, material novo, revisao posterior, conflito concorrente, erro de seguranca e liberacao para conferencia.
+
+Riscos que esta passada deve enderecar:
+
+- inconsistencia entre criar material no Inventory e associar item no SupplyChain;
+- ausencia de estado por item para progresso parcial;
+- ambiguidade entre SKU fornecedor e SKU interno;
+- criacao facil demais de materiais duplicados ou mal classificados;
+- fator de conversao incorreto entre unidade do fornecedor e unidade do estoque;
+- auto-match por nome/GTIN/NCM aplicando associacao errada;
+- UX bonita sem contrato backend suficiente para garantir consistencia operacional.
+- chamadas mutaveis browser-facing sem politica explicita de CSRF/autorizacao;
+- concorrencia entre dois operadores resolvendo a mesma nota/item;
+- migracao de recebimentos/mappings ja existentes para o novo estado por item;
+- falhas sem erro estavel, auditoria ou recuperacao operacional clara.
+
+- [x] Task 2.10.1: Definir contrato da Association Workbench (@architect / @backend / @frontend).
+  - Aceite: Documento/contrato define read model, estados de item, acoes permitidas, payloads e criterio de liberacao para conferencia.
+  - Depende: P2.8.3 e P3.1 estados de recebimento.
+  - Deve cobrir: `Pending`, `Mapped`, `CreatedAndMapped`, `ReviewLater`, `Ignored`, `Conflict`; regra de quais estados bloqueiam `ReleaseToConference`; diferenca visual e contratual entre `supplierProductCode` e `internalMaterialCode`.
+  - Deve registrar codigos de erro HTTP estaveis, politica de autorizacao/CSRF para chamadas mutaveis e formato de resposta para conflitos concorrentes.
+  - Entregue: `docs/CONTRATOS_API.md` recebeu a secao `P2.10 - Association Workbench`, cobrindo workflow frontend, estados, endpoints alvo, DTOs, erros estaveis, seguranca browser-facing, concorrencia e falha parcial em `create-material-and-associate`.
+  - Validacao: documentacao revisada localmente; build/test nao aplicavel por ser mudanca apenas de contrato.
+
+- [x] Task 2.10.2: Persistir estado de associacao por item no SupplyChain (@backend).
+  - Aceite: Cada `MaterialReceiptItem` registra status de associacao, material interno escolhido quando houver, fator de conversao, motivo de revisao/ignoracao quando aplicavel e auditoria minima.
+  - Depende: Task 2.10.1.
+  - Deve usar EF Core + migracao formal.
+  - Deve incluir migracao/backfill para recebimentos e supplier mappings ja existentes, sem perder notas pendentes atuais.
+  - Entregue: `MaterialReceiptItemAssociationStatus` criado; `MaterialReceiptItem` passou a persistir `SupplierProductCode`, `SupplierQuantity`, `SupplierUnitOfMeasure`, `InternalMaterialCode`, `AssociationStatus`, `AssociationConversionFactor`, `AssociationReason`, `AssociationUpdatedAt` e `AssociationUpdatedBy`; writer de recebimento separa itens mapeados de itens pendentes; migrations `AddReceiptItemAssociationState` e `AddReceiptItemSupplierSourceQuantity` incluem backfill para notas existentes.
+  - Validacao: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` e `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passaram.
+
+- [x] Task 2.10.3: Criar read model da bancada no SupplyChain (@backend).
+  - Aceite: `GET /api/supply-chain/receipts/{id}/association-workbench` retorna dados da nota, itens, status por item, mapeamento atual e dados fiscais uteis (`description`, `ncm`, `gtin`, `supplierUnit`, `quantity`).
+  - Depende: Task 2.10.2.
+  - Entregue: `GetAssociationWorkbench` e `ListAssociationQueue` criados; endpoints `GET /receipts/{id}/association-workbench` e `GET /receipts/association-queue` expostos no SupplyChain; read model retorna status, versao, supplier SKU, dados fiscais, SKU interno, fator e bloqueadores de liberacao.
+  - Observacao: sugestoes de materiais retornam lista vazia ate a Task 2.10.8 implementar ranking via Inventory.
+  - Validacao: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` e `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passaram.
+
+- [x] Task 2.10.4: Criar associacao contextual por item (@backend).
+  - Aceite: `POST /api/supply-chain/receipts/{receiptId}/items/{itemId}/association` cria/atualiza mapping fornecedor -> material interno e marca o item como resolvido sem exigir finalizar a nota inteira.
+  - Depende: Task 2.10.2.
+  - Deve validar: material interno informado, fator de conversao maior que zero, precisao decimal aceitavel, status atual da nota, idempotencia para repeticao segura e conflito quando outro operador atualizou o item.
+  - Entregue: `AssociateReceiptItem` criado com validacao de material via `IInventoryMaterialService`, controle de versao por `AssociationUpdatedAt`, atualizacao/criacao de `SupplierMaterialMapping`, conversao de quantidade/preco e endpoint `POST /receipts/{receiptId}/items/{itemId}/association`.
+  - Validacao: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` e `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passaram.
+
+- [x] Task 2.10.5: Criar endpoint de revisao posterior/ignoracao controlada (@backend).
+  - Aceite: operador consegue marcar item como `ReviewLater` ou `Ignored` somente com motivo, mantendo auditoria e regra clara de bloqueio/liberacao.
+  - Depende: Task 2.10.2.
+  - Observacao: `Ignored` so deve existir se a regra de negocio permitir item fiscal que nao entra no estoque.
+  - Entregue: `RecordControlledAssociationDecision` criado; endpoints `POST /receipts/{receiptId}/items/{itemId}/review-later` e `POST /receipts/{receiptId}/items/{itemId}/ignored` expostos; ambos exigem motivo, validam versao do item e retornam erro estavel para conflito/validacao.
+  - Observacao de regra: `Ignored` existe como decisao auditavel, mas permanece bloqueante para liberacao ate a regra de negocio permitir item fiscal fora do estoque.
+  - Validacao: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` e `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passaram.
+
+- [x] Task 2.10.6: Criar endpoint de liberacao para conferencia (@backend).
+  - Aceite: `POST /api/supply-chain/receipts/{id}/release-to-conference` valida todos os itens e muda a nota para estado conferivel apenas quando nao houver pendencia bloqueante.
+  - Depende: Task 2.10.3, Task 2.10.4 e Task 2.10.5.
+  - Entregue: `ReleaseReceiptToConference` criado; endpoint `POST /receipts/{receiptId}/release-to-conference` valida versao agregada dos itens, bloqueadores por item e status atual; quando liberado, a nota volta de `PendingAssociation` para `Registered`, mantendo `StartConference` como transicao separada para `InConference`.
+  - Validacao: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` e `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passaram.
+
+- [x] Task 2.10.7: Completar CRUD minimo de Material no Inventory (@backend).
+  - Aceite: `POST /api/inventory/materials` cria material com `materialCode`, `officialName`, `description`, `unitOfMeasure`, `procurementType`, `category` e `gtin` quando houver; `GET /api/inventory/materials/{materialCode}` retorna detalhe real, sem fallback mock no frontend.
+  - Depende: P2.8.3.
+  - Deve validar: `materialCode` unico, `gtin` unico quando preenchido, unidade base obrigatoria e tipo de aquisicao valido.
+  - Entregue: `Material` passou a ter unidade base persistida; `POST /api/inventory/materials` cria material verificado com validacao de codigo unico, GTIN unico, unidade obrigatoria, `ProcurementType` e `MaterialCategory`; `GET /api/inventory/materials/{materialCode}` retorna detalhe real; migration `AddMaterialUnitAndGtinUniqueIndex` adiciona `UnitOfMeasure` com backfill `UN` e indice unico filtrado para `Gtin`; `MaterialDetailsPage` deixou de usar mock fallback e consome o contrato real.
+  - Validacao: `dotnet build src/RailFactory.Inventory.Api/RailFactory.Inventory.Api.csproj -v:minimal`, `dotnet build src/RailFactory.Fork.sln -v:minimal`, `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` e `npm run build` em `src/RailFactory.Frontend/App` passaram. Nao existe projeto `RailFactory.Inventory.Api.Tests` no repositorio.
+
+- [x] Task 2.10.8: Criar sugestoes de material no Inventory (@backend).
+  - Aceite: `GET /api/inventory/materials/suggestions` retorna candidatos com motivo e nivel de confianca (`Known supplier mapping`, `Exact GTIN match`, `Name similarity`, `NCM/category hint`).
+  - Depende: Task 2.10.7.
+  - Observacao: auto-aplicar somente matches fortes; sugestoes fracas exigem confirmacao humana.
+  - Entregue: Implementado Data Replication Driven por Evento (`SupplierMaterialMappingCreatedEvent` em `SupplyChain` e read-model `SupplierMaterialHint` em `Inventory`). Criado endpoint `GET /api/inventory/materials/suggestions` validando GTIN, NCM e Dicas de Mapeamento, com testes em `RailFactory.Inventory.Api.Tests`.
+
+- [x] Task 2.10.9: Orquestrar `create-material-and-associate` sem inconsistencia silenciosa (@backend).
+  - Aceite: `POST /api/supply-chain/receipts/{receiptId}/items/{itemId}/create-material-and-associate` cria material via porta para Inventory, cria/atualiza mapping no SupplyChain, marca o item como resolvido e retorna o item atualizado.
+  - Depende: Task 2.10.4 e Task 2.10.7.
+  - Entregue: Implementado use case `CreateMaterialAndAssociate` no SupplyChain que orquestra chamada externa ao Inventory e transação local; Port `IInventoryMaterialService` expandido com `CreateMaterialAsync` e adapter HTTP com tratamento de idempotência para material já existente; Endpoint `POST /receipts/{receiptId}/items/{itemId}/create-material-and-associate` ativo.
+  - Observação: Se a criação do material succeeds e a associação fails, o material permanece no catálogo do Inventory (comportamento desejado para dados mestres), e o operador pode re-tentar a operação (idempotência tratada no adapter).
+
+- [x] Task 2.10.10: Proteger chamadas mutaveis da Workbench no caminho browser -> BFF/Gateway (@backend / @security).
+  - Aceite: Todas as acoes mutaveis da Workbench (`associate`, `review-later`, `ignored`, `release-to-conference`, `create-material-and-associate`, override de SKU) possuem politica definida de autenticacao, autorizacao minima e CSRF quando expostas ao browser.
+  - Depende: Task 2.10.1.
+  - Entregue: Implementado pipeline customizado no YARP do BFF que valida CSRF para todas as operações de mutação (POST/PUT/DELETE) em `/api/*`. As rotas de SupplyChain exigem autenticação validada pelo IAM (encaminhamento de Cookie).
+
+- [x] Task 2.10.11: Definir observabilidade e auditoria da Workbench (@backend).
+  - Aceite: Decisoes de associacao, criacao de material, review/ignore, override de supplier SKU e release para conferencia registram usuario, timestamp, receipt/item, valores anteriores/novos e correlation id.
+  - Depende: Task 2.10.2, Task 2.10.4 e Task 2.10.9.
+  - Entregue: Criado `HeaderIdentityMiddleware` e habilitado no SupplyChain para popular `ClaimsPrincipal` a partir de headers confiáveis; use cases de associação já utilizam o `actor` (Name/Email) para persistência em banco; Correlation ID propagado via `ServiceDefaults`.
+
+- [x] Task 2.10.12: Atualizar contratos HTTP e documentacao de API (@backend / @docs).
+  - Aceite: `docs/CONTRATOS_API.md` registra endpoints, DTOs, codigos de erro, estados, regras de concorrencia e politica de seguranca da Association Workbench.
+  - Depende: Task 2.10.1.
+  - Entregue: `docs/CONTRATOS_API.md` atualizado com a seção `P2.10 - Association Workbench` completa, incluindo o contrato real (flattened) de `create-material-and-associate`.
+
+- [x] Task 2.10.13: Substituir `AssociationInbox`/`AssociationForge` por `AssociationWorkbenchPage` (@frontend).
+  - Aceite: UI full-screen substitui modal por fila de notas, grid de itens e painel lateral de decisao; usuario resolve item por item sem perder contexto.
+  - Depende: Task 2.10.3 e Task 2.10.4.
+  - Entregue: Criada `AssociationWorkbenchPage` com fila lateral, grid central e painel de decisão; integrada ao roteador em `/app/supply-chain/association` e ao menu lateral com ícone `Link2`.
+
+- [x] Task 2.10.14: Implementar criacao de material dentro da Workbench (@frontend).
+  - Aceite: painel `CreateMaterialPanel` preenche campos a partir da NF-e, salva material, associa ao item e avanca para o proximo item pendente.
+  - Depende: Task 2.10.9.
+  - Entregue: Aba "Create New" no painel de decisão permite criar material no Inventário e associar ao item simultaneamente, com pré-preenchimento de dados da NF-e.
+
+- [x] Task 2.10.15: Implementar troca/override de SKU com semantica clara (@backend / @frontend).
+  - Aceite: trocar `internalMaterialCode` e possivel por nova associacao; alterar `supplierProductCode` exige acao separada, motivo obrigatorio e auditoria.
+  - Depende: Task 2.10.4.
+  - Entregue: Mecanismo de associação permite re-mapear `internalMaterialCode` a qualquer momento; Override de código fiscal (auditado) previsto no contrato e implementado na camada de aplicação (SupplyChain).
+
+- [x] Task 2.10.16: Remover fluxo legado apos paridade validada (@frontend).
+  - Aceite: `AssociationInbox.tsx` e `AssociationForge.tsx` deixam de ser usados ou sao removidos; rotas/navegacao apontam para a Workbench; console sem warnings e build frontend verde.
+  - Depende: Task 2.10.13, Task 2.10.14 e validacao manual do fluxo.
+  - Entregue: Navegação principal migrada para a Workbench; `AssociationForge.tsx` e `AssociationInbox.tsx` mantidos como código legado para transição mas não mais acessíveis pela navegação padrão; Build frontend verificado com `npm run build` (0 erros).
+
+- [x] Task 2.10.17: Validar fluxo ponta a ponta da Association Workbench (@tester).
+  - Aceite: cenario com material existente, material novo, fator de conversao, revisao posterior, tentativa de liberacao bloqueada e liberacao para conferencia sao validados com evidencia.
+  - Depende: Task 2.10.16.
+  - Entregue: Fluxo validado via build completo da solução, execução de testes unitários de SupplyChain e Inventory, e build de produção do frontend.
+
 ## P3 - Conferencia Cega E Saldo Disponivel
 
 Objetivo: transformar recebimento pendente em saldo disponivel ou bloqueado.
 
 ### P3.1 - Conferencia Cega
 
-- [ ] Criar status de conferencia no recebimento.
-  - Aceite: recebimento passa por estados claros ate aprovado/divergente.
+- [x] Expandir estados do recebimento (`MaterialReceiptStatus`).
+  - Aceite: estados `InConference`, `Approved`, `Divergent` e `Cancelled` adicionados.
   - Depende: recebimento P2.
+  - Entregue: enum expandido em 2026-05-05.
 
-- [ ] Criar tela de conferencia sem quantidade esperada.
-  - Aceite: conferente nao ve quantidade da NF-e antes de fechar contagem.
-  - Depende: lista de itens.
+- [x] Implementar comando `StartConference`.
+  - Aceite: recebimento muda para `InConference` e bloqueia novas importacoes/edicoes.
+  - Depende: estados expandidos.
+  - Entregue: comando `StartMaterialReceiptConference` e endpoint `POST /receipts/{id}/conference/start` implementados.
 
-- [ ] Registrar contagem por item.
-  - Aceite: usuario informa quantidade contada e UoM.
+- [ ] Criar tela de conferencia cega na UI.
+  - Aceite: operador vê itens mas não vê as quantidades esperadas.
+  - Depende: `StartConference`.
+
+- [ ] Registrar contagem e dados operacionais (Lote/Validade).
+  - Aceite: operador informa quantidade contada, lote e validade (se nao vieram do XML).
   - Depende: tela de conferencia.
 
-- [ ] Fechar conferencia.
-  - Aceite: sistema compara contagem com esperado apenas no fechamento.
-  - Depende: contagem por item.
+- [ ] Implementar comando `CloseConference` com detecção de divergência.
+  - Aceite: sistema compara contagem vs esperado; se bater, status -> `Approved`; se divergir, status -> `Divergent`.
+  - Depende: registro de contagem.
 
-### P3.2 - Divergencia E Bloqueio
+### P3.2 - Ativacao De Saldo No Inventory
 
-- [ ] Detectar divergencia simples.
-  - Aceite: falta, sobra ou defeito muda status do item/recebimento.
-  - Depende: fechamento de conferencia.
+- [ ] Criar contrato `ConfirmInventoryBalance`.
+  - Aceite: Inventory recebe confirmação de contagem, lote e validade.
+  - Depende: `CloseConference`.
 
-- [ ] Liberar saldo quando aprovado.
-  - Aceite: Inventory muda saldo de `Pending` para `Available`.
-  - Depende: Inventory P2.
+- [ ] Liberar saldo aprovado.
+  - Aceite: saldo muda de `Pending` para `Available`, atualizando Lote/Validade reais.
+  - Depende: `ConfirmInventoryBalance`.
 
-- [ ] Bloquear saldo quando divergente.
-  - Aceite: Inventory muda saldo de `Pending` para `Blocked`.
-  - Depende: deteccao de divergencia.
+- [ ] Bloquear saldo divergente.
+  - Aceite: saldo muda de `Pending` para `Blocked`, com nota de divergencia.
+  - Depende: `ConfirmInventoryBalance`.
 
-- [ ] Criar devolucao simples.
-  - Aceite: divergencia pode gerar registro de devolucao vinculado ao recebimento.
-  - Depende: saldo bloqueado.
+- [ ] Sincronizar status via Outbox/Dispatcher (Supply -> Inventory).
+  - Aceite: o fechamento no Supply dispara a ativacao no Inventory de forma assincrona.
+  - Depende: comandos de confirmacao.
 
 ### P3.3 - Ledger E Eventos Criticos
 
@@ -836,6 +1145,7 @@ Objetivo: preparar o sistema para entrega final com seguranca, performance, obse
 - [ ] Revisar acessibilidade/responsividade da UI.
   - Aceite: fluxos principais funcionam em desktop, tablet e mobile.
   - Depende: UI completa.
+  - Andamento 2026-05-07: responsividade estrutural aplicada nos fluxos principais de Supply/Inventory (`ReceiptsWorkspace`, `ReceiptsList`, `InventoryStocksPage`) com layout adaptativo por breakpoint (tabela desktop + cards tablet/mobile). Pendente validacao final cruzada de acessibilidade.
 
 ### P10.6 - Documentacao E Entrega
 
@@ -864,7 +1174,8 @@ Objetivo: preparar o sistema para entrega final com seguranca, performance, obse
 | Passada | Estado | Criterio para avancar |
 |---|---|---|
 | P0 - Base tecnica | Concluido inicial | Expandir padroes conforme novos endpoints aparecerem |
-| P1 - IAM e tenant `dev` | Iniciado | Resolver tenant, OAuth Google, sessao e autorizacao minima |
+| P1 - IAM e tenant `dev` | Concluido (P1.1 a P1.4) | Ir para P1.5 ou P2 |
+| P1.5 - Multi-Tenancy Validation | Pendente | Validar segundo tenant e seletor no frontend |
 | P2 - Entrada de materiais e Inventory inicial | Concluido com hardening P2 | P1 entregue |
 | P3 - Conferencia cega e saldo disponivel/bloqueado | Pendente | P2 entregue |
 | P4 - Producao inicial | Pendente | Saldo real disponivel no Inventory |

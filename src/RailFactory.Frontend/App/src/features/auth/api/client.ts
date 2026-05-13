@@ -16,7 +16,7 @@ export function clearOAuthQueryFlag() {
 }
 
 export async function fetchSession(tenantCode: string): Promise<{ statusCode: number; payload: AuthSession }> {
-  const response = await fetch('/api/auth/session', {
+  const response = await fetch('/api/iam/auth/session', {
     credentials: 'include',
     headers: {
       'X-Tenant-Code': tenantCode
@@ -41,11 +41,11 @@ export async function fetchSession(tenantCode: string): Promise<{ statusCode: nu
 }
 
 export function buildLoginHref(tenantCode: string, returnUrl = '/app') {
-  return `/api/auth/google/start?tenantCode=${encodeURIComponent(tenantCode)}&returnUrl=${encodeURIComponent(returnUrl)}`;
+  return `/api/iam/auth/google/start?tenantCode=${encodeURIComponent(tenantCode)}&returnUrl=${encodeURIComponent(returnUrl)}`;
 }
 
 export async function logout(tenantCode: string): Promise<void> {
-  const csrfResponse = await fetch('/api/auth/csrf', {
+  const csrfResponse = await fetch('/api/iam/auth/csrf', {
     credentials: 'include',
     headers: {
       'X-Tenant-Code': tenantCode
@@ -61,7 +61,7 @@ export async function logout(tenantCode: string): Promise<void> {
     throw new Error('Missing CSRF token.');
   }
 
-  const logoutResponse = await fetch('/api/auth/logout', {
+  const logoutResponse = await fetch('/api/iam/auth/logout', {
     method: 'POST',
     credentials: 'include',
     headers: {

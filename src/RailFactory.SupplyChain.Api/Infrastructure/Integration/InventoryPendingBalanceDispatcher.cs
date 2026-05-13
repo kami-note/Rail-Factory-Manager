@@ -126,6 +126,8 @@ public sealed class InventoryPendingBalanceDispatcher(
                     payload.UnitPrice,
                     payload.OriginalDescription,
                     payload.AccessKey,
+                    payload.Ncm,
+                    payload.Gtin,
                     source = string.IsNullOrWhiteSpace(payload.Source) ? "supply-chain" : payload.Source
                 }
             })
@@ -166,7 +168,8 @@ public sealed class InventoryPendingBalanceDispatcher(
 
     private async Task HandleSupplierMaterialMappingCreatedAsync(SupplyOutboxMessage message, TenantResolutionResult tenant, HttpClient client, CancellationToken cancellationToken)
     {
-        var payload = DeserializePayload<SupplierMaterialMappingCreatedEvent>(message);
+        // ELITE FIX: Use primitive DTO instead of record with Value Objects to avoid NotSupportedException during deserialization.
+        var payload = DeserializePayload<SupplierMaterialMappingPayload>(message);
         if (payload is null) return;
 
         var request = new HttpRequestMessage(HttpMethod.Post, IntegrationConstants.ApiPaths.InternalSupplierMaterialMapping)
@@ -179,9 +182,9 @@ public sealed class InventoryPendingBalanceDispatcher(
                 payload = new
                 {
                     tenantCode = tenant.Code,
-                    supplierFiscalId = payload.SupplierFiscalId?.Value,
+                    supplierFiscalId = payload.SupplierFiscalId,
                     supplierProductCode = payload.SupplierProductCode,
-                    materialCode = payload.MaterialCode?.Value
+                    materialCode = payload.MaterialCode
                 }
             })
         };
@@ -197,9 +200,10 @@ public sealed class InventoryPendingBalanceDispatcher(
                 message.PayloadJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
-            logger.LogError(ex, "Invalid outbox payload for message {MessageId}.", message.Id);
+            // ELITE FIX: Catch NotSupportedException which happens when trying to deserialize types without public constructors (like Value Objects).
+            logger.LogError(ex, "Invalid outbox payload for message {MessageId}. Type: {TypeName}", message.Id, typeof(T).Name);
             message.MarkDeadLetter($"Invalid JSON payload: {ex.Message}");
             return null;
         }
@@ -265,7 +269,9 @@ public sealed class InventoryPendingBalanceDispatcher(
         string? OriginalDescription,
         string? AccessKey,
         string? Source,
-        string? SupplierName);
+        string? SupplierName,
+        string? Ncm,
+        string? Gtin);
 
     private sealed record BalanceConfirmationPayload(
         Guid ReceiptId,
@@ -276,4 +282,9 @@ public sealed class InventoryPendingBalanceDispatcher(
         string? LotNumber,
         DateTimeOffset? ExpirationDate,
         string? Source);
+
+    private sealed record SupplierMaterialMappingPayload(
+        string SupplierFiscalId,
+        string SupplierProductCode,
+        string MaterialCode);
 }

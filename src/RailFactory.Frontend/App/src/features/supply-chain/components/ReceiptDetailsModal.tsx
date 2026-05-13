@@ -123,12 +123,12 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
         <Stack spacing={4}>
           {/* Header Info */}
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>FORNECEDOR</Typography>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>{details.supplier?.name || 'Desconhecido'}</Typography>
               <Typography variant="body2" color="text.secondary">CNPJ: {details.supplier?.taxId}</Typography>
             </Grid>
-            <Grid item xs={12} md={6} sx={{ textAlign: { md: 'right' } }}>
+            <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: 'right' } }}>
               <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>STATUS ATUAL</Typography>
               <Box sx={{ display: 'flex', justifyContent: { md: 'flex-end' }, mt: 0.5 }}>
                 <StatusChip status={details.status} />
@@ -249,12 +249,12 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
               TRILHA DE AUDITORIA
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography variant="caption" sx={{ display: 'block' }}>Criação: <strong>{formatRelativeDate(details.audit.createdAt)}</strong></Typography>
                 <Typography variant="caption" sx={{ display: 'block' }}>Por: <strong>{details.audit.createdBy}</strong></Typography>
               </Grid>
               {details.audit.conferenceStartedAt && (
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" sx={{ display: 'block' }}>Início Conf.: <strong>{formatRelativeDate(details.audit.conferenceStartedAt)}</strong></Typography>
                   <Typography variant="caption" sx={{ display: 'block' }}>Por: <strong>{details.audit.conferenceStartedBy}</strong></Typography>
                 </Grid>

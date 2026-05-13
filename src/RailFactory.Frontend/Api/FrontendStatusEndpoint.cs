@@ -5,6 +5,8 @@ namespace RailFactory.Frontend.Api;
 
 internal static class FrontendStatusEndpoint
 {
+    private const string GatewayInfoPath = "/api/gateway/info";
+
     public static async Task<IResult> HandleGet(
         HttpContext httpContext,
         IHttpClientFactory httpClientFactory,
@@ -24,7 +26,7 @@ internal static class FrontendStatusEndpoint
         object gatewayStatus;
         try
         {
-            gatewayStatus = await gateway.GetFromJsonAsync<object>("/info", cancellationToken)
+            gatewayStatus = await gateway.GetFromJsonAsync<object>(GatewayInfoPath, cancellationToken)
                 ?? new { status = "empty" };
         }
         catch (Exception ex)

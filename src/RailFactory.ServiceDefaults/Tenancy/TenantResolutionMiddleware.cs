@@ -13,29 +13,24 @@ internal sealed class TenantResolutionMiddleware(
     public async Task InvokeAsync(HttpContext context, ILogger<TenantResolutionMiddleware> logger)
     {
         var path = context.Request.Path;
-        var isGoogleOAuthPath = path.StartsWithSegments("/auth/google", StringComparison.OrdinalIgnoreCase) ||
-                               path.StartsWithSegments("/api/iam/auth/google", StringComparison.OrdinalIgnoreCase);
-        var isGoogleOAuthCallbackPath = path.StartsWithSegments("/auth/google/callback", StringComparison.OrdinalIgnoreCase) ||
-                                        path.StartsWithSegments("/api/iam/auth/google/callback", StringComparison.OrdinalIgnoreCase);
-        var isTenancyDiscoveryPath = path.StartsWithSegments("/api/tenancy", StringComparison.OrdinalIgnoreCase) || 
-                                     path.StartsWithSegments("/tenants", StringComparison.OrdinalIgnoreCase);
-        var isStatusPath = path.StartsWithSegments("/api/status", StringComparison.OrdinalIgnoreCase) ||
-                           path.StartsWithSegments("/info", StringComparison.OrdinalIgnoreCase);
 
-        if (isGoogleOAuthCallbackPath || isTenancyDiscoveryPath || isStatusPath)
+        if (ShouldBypassTenantResolution(path))
         {
             await next(context);
             return;
         }
 
         var tenantCode = context.Request.Headers[TenantConstants.TenantCodeHeaderName].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(tenantCode) && isGoogleOAuthPath)
+        
+        // Fallback to query string for OAuth start/callback redirects where headers cannot be injected
+        if (string.IsNullOrWhiteSpace(tenantCode) && IsOAuthNavigationPath(path))
         {
             tenantCode = context.Request.Query["tenantCode"].FirstOrDefault();
         }
 
         if (string.IsNullOrWhiteSpace(tenantCode))
         {
+            logger.LogWarning("Tenant resolution failed: No tenant code found in header or query. Path: {Path}", path);
             await TenantProblemResults.WriteCodeRequiredAsync(context);
             return;
         }
@@ -43,15 +38,19 @@ internal sealed class TenantResolutionMiddleware(
         var result = await tenantCatalogClient.ResolveAsync(tenantCode, context.RequestAborted);
         if (!result.Found)
         {
+            logger.LogWarning("Tenant resolution failed: Tenant '{TenantCode}' not found in catalog. Path: {Path}", tenantCode, path);
             await TenantProblemResults.WriteNotFoundAsync(context);
             return;
         }
 
         if (!result.IsActive)
         {
+            logger.LogWarning("Tenant resolution failed: Tenant '{TenantCode}' is inactive. Path: {Path}", tenantCode, path);
             await TenantProblemResults.WriteInactiveAsync(context);
             return;
         }
+
+        logger.LogDebug("Tenant resolved successfully: {TenantCode} for Path: {Path}", tenantCode, path);
 
         var tenantContext = new TenantContext(result.Code, result.Locale, result.TimeZone, result.ConnectionStrings);
         var tenantContextAccessor = context.RequestServices.GetRequiredService<ITenantContextAccessor>();
@@ -74,5 +73,21 @@ internal sealed class TenantResolutionMiddleware(
         {
             await next(context);
         }
+    }
+
+    private static bool ShouldBypassTenantResolution(PathString path)
+    {
+        return path.StartsWithSegments("/auth/google/callback", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/api/iam/auth/google/callback", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/api/tenancy", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/tenants", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/api/status", StringComparison.OrdinalIgnoreCase) ||
+               (path.Value?.EndsWith("/info", StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private static bool IsOAuthNavigationPath(PathString path)
+    {
+        return path.StartsWithSegments("/auth/google", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/api/iam/auth/google", StringComparison.OrdinalIgnoreCase);
     }
 }

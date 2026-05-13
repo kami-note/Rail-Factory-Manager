@@ -1,0 +1,225 @@
+<?xml version='1.0' encoding='utf-8'?>
+<NFe xmlns="http://www.portalfiscal.inf.br/nfe" xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+  <infNFe Id="NFe35260564913382415254550010000000071912565748" versao="4.00">
+    <ide>
+      <cUF>35</cUF>
+      <cNF>91256574</cNF>
+      <natOp>Compra para industrializacao</natOp>
+      <mod>55</mod>
+      <serie>1</serie>
+      <nNF>7</nNF>
+      <dhEmi>2026-05-11T09:00:00-03:00</dhEmi>
+      <dhSaiEnt>2026-05-11T11:00:00-03:00</dhSaiEnt>
+      <tpNF>1</tpNF>
+      <idDest>1</idDest>
+      <cMunFG>3509502</cMunFG>
+      <tpImp>1</tpImp>
+      <tpEmis>1</tpEmis>
+      <cDV>8</cDV>
+      <tpAmb>2</tpAmb>
+      <finNFe>1</finNFe>
+      <indFinal>0</indFinal>
+      <indPres>2</indPres>
+      <procEmi>0</procEmi>
+      <verProc>GERADOR-MAT-1.0</verProc>
+    </ide>
+    <emit>
+      <CNPJ>64913382415254</CNPJ>
+      <xNome>Metalurgica Horizonte Ltda</xNome>
+      <xFant>MH Metais</xFant>
+      <enderEmit>
+        <xLgr>Avenida Brasil</xLgr>
+        <nro>2591</nro>
+        <xCpl>Galpao 9</xCpl>
+        <xBairro>Jardim Europa</xBairro>
+        <cMun>3509502</cMun>
+        <xMun>Campinas</xMun>
+        <UF>SP</UF>
+        <CEP>13070178</CEP>
+        <cPais>1058</cPais>
+        <xPais>BRASIL</xPais>
+        <fone>1932334455</fone>
+      </enderEmit>
+      <IE>977926205476</IE>
+      <CRT>3</CRT>
+    </emit>
+    <dest>
+      <CNPJ>40391549144332</CNPJ>
+      <xNome>Fabrica Vetor de Sistemas Mecanicos S.A.</xNome>
+      <enderDest>
+        <xLgr>Rua Projetada</xLgr>
+        <nro>2409</nro>
+        <xCpl>Galpao 12</xCpl>
+        <xBairro>Jardim Europa</xBairro>
+        <cMun>3509502</cMun>
+        <xMun>Campinas</xMun>
+        <UF>SP</UF>
+        <CEP>39179896</CEP>
+        <cPais>1058</cPais>
+        <xPais>BRASIL</xPais>
+        <fone>1942178831</fone>
+      </enderDest>
+      <indIEDest>1</indIEDest>
+      <IE>093395797528</IE>
+    </dest>
+    <det nItem="1">
+      <prod>
+        <cProd>MAT-ACO-1020</cProd>
+        <cEAN>SEM GTIN</cEAN>
+        <xProd>Chapa de Aco Carbono SAE 1020 - 1/4 pol</xProd>
+        <NCM>72083910</NCM>
+        <CFOP>1101</CFOP>
+        <uCom>KG</uCom>
+        <qCom>600.0000</qCom>
+        <vUnCom>12.5000</vUnCom>
+        <vProd>7500.00</vProd>
+        <cEANTrib>SEM GTIN</cEANTrib>
+        <uTrib>KG</uTrib>
+        <qTrib>600.0000</qTrib>
+        <vUnTrib>12.5000</vUnTrib>
+        <indTot>1</indTot>
+        <xPed>PC-2026-MAT-089</xPed>
+        <nItemPed>1</nItemPed>
+      </prod>
+      <imposto>
+        <vTotTrib>1350.00</vTotTrib>
+        <ICMS>
+          <ICMS00>
+            <orig>0</orig>
+            <CST>00</CST>
+            <modBC>3</modBC>
+            <vBC>7500.00</vBC>
+            <pICMS>18.00</pICMS>
+            <vICMS>1350.00</vICMS>
+          </ICMS00>
+        </ICMS>
+        <PIS>
+          <PISAliq>
+            <CST>01</CST>
+            <vBC>7500.00</vBC>
+            <pPIS>1.65</pPIS>
+            <vPIS>123.75</vPIS>
+          </PISAliq>
+        </PIS>
+        <COFINS>
+          <COFINSAliq>
+            <CST>01</CST>
+            <vBC>7500.00</vBC>
+            <pCOFINS>7.60</pCOFINS>
+            <vCOFINS>570.00</vCOFINS>
+          </COFINSAliq>
+        </COFINS>
+      </imposto>
+    </det>
+    <det nItem="2">
+      <prod>
+        <cProd>MAT-LUB-ISO68</cProd>
+        <cEAN>SEM GTIN</cEAN>
+        <xProd>Oleo Lubrificante Industrial ISO VG 68</xProd>
+        <NCM>27101932</NCM>
+        <CFOP>1101</CFOP>
+        <uCom>L</uCom>
+        <qCom>250.0000</qCom>
+        <vUnCom>25.0000</vUnCom>
+        <vProd>6250.00</vProd>
+        <cEANTrib>SEM GTIN</cEANTrib>
+        <uTrib>L</uTrib>
+        <qTrib>250.0000</qTrib>
+        <vUnTrib>25.0000</vUnTrib>
+        <indTot>1</indTot>
+        <xPed>PC-2026-MAT-089</xPed>
+        <nItemPed>2</nItemPed>
+      </prod>
+      <imposto>
+        <vTotTrib>1125.00</vTotTrib>
+        <ICMS>
+          <ICMS00>
+            <orig>0</orig>
+            <CST>00</CST>
+            <modBC>3</modBC>
+            <vBC>6250.00</vBC>
+            <pICMS>18.00</pICMS>
+            <vICMS>1125.00</vICMS>
+          </ICMS00>
+        </ICMS>
+        <PIS>
+          <PISAliq>
+            <CST>01</CST>
+            <vBC>6250.00</vBC>
+            <pPIS>1.65</pPIS>
+            <vPIS>103.13</vPIS>
+          </PISAliq>
+        </PIS>
+        <COFINS>
+          <COFINSAliq>
+            <CST>01</CST>
+            <vBC>6250.00</vBC>
+            <pCOFINS>7.60</pCOFINS>
+            <vCOFINS>475.00</vCOFINS>
+          </COFINSAliq>
+        </COFINS>
+      </imposto>
+    </det>
+    <total>
+      <ICMSTot>
+        <vBC>13750.00</vBC>
+        <vICMS>2475.00</vICMS>
+        <vICMSDeson>0.00</vICMSDeson>
+        <vFCP>0.00</vFCP>
+        <vBCST>0.00</vBCST>
+        <vST>0.00</vST>
+        <vFCPST>0.00</vFCPST>
+        <vFCPSTRet>0.00</vFCPSTRet>
+        <vProd>13750.00</vProd>
+        <vFrete>0.00</vFrete>
+        <vSeg>0.00</vSeg>
+        <vDesc>0.00</vDesc>
+        <vII>0.00</vII>
+        <vIPI>0.00</vIPI>
+        <vIPIDevol>0.00</vIPIDevol>
+        <vPIS>226.88</vPIS>
+        <vCOFINS>1045.00</vCOFINS>
+        <vOutro>0.00</vOutro>
+        <vNF>13750.00</vNF>
+      </ICMSTot>
+    </total>
+    <transp>
+      <modFrete>1</modFrete>
+      <vol>
+        <qVol>12</qVol>
+        <esp>TAMBORES/FARDOS</esp>
+        <pesoL>850.000</pesoL>
+        <pesoB>875.000</pesoB>
+      </vol>
+    </transp>
+    <pag>
+      <detPag>
+        <tPag>15</tPag>
+        <vPag>13750.00</vPag>
+      </detPag>
+    </pag>
+    <infAdic>
+      <infCpl>Pedido PC-2026-MAT-089. Materiais para producao mecanica.</infCpl>
+    </infAdic>
+  </infNFe>
+  <ds:Signature Id="SIG-MAT-2026-2">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" />
+      <ds:Reference URI="#NFe35260564913382415254550010000000071912565748">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
+          <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+        <ds:DigestValue>TUFURVJJQUxTLVBVUkNIQVNFLTIwMjYtMg==</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>U0lHTkFUVVJFLVZBTFVFLVJFQUwtTU9DSy1NVEwtMjAyNi0y</ds:SignatureValue>
+    <ds:KeyInfo>
+      <ds:X509Data>
+        <ds:X509Certificate>MIIBjjCCATWgAwIBAgICBCEwDQYJKoZIhvcNAQELBQAwSTELMAkGA1UEBhMCVlMxRzAVBgNVBAgMDk5yYkc9sZGUuZGEgU01QMRUwEwYDVQQKDAhTaW1wbGZ6MRUwEwYDVQQDDA5SdWxseWNlcm1pbmcucmVsMS0wEwYJKoZIhvcNAQkBFhchbGUkdHlwZXJlcm1pbmcucmVsQ0FMF4XDTExMDQyOEVWMTBWRDQ0MFoXDTExMDQyOEVWMTBWRDQ0MFowSTELMAkGA1UEBhMCVlMxRzAVBgNVBAgMDk5yYkc9sZGUuZGEgU01QMRUwEwYDVQQKDAhTaW1wbGZ6MRUwEwYDVQQDDA5SdWxseWNlcm1pbmcucmVsMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3wNT</ds:X509Certificate>
+      </ds:X509Data>
+    </ds:KeyInfo>
+  </ds:Signature>
+</NFe>

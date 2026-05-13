@@ -195,7 +195,7 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
                     </Typography>
                   </Box>
 
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', useFlexGap: true }}>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                     <Button size="small" variant="outlined" startIcon={<InfoOutlinedIcon size={14} />} onClick={() => setSelectedReceiptId(receipt.id)}>
                       Detalhes
                     </Button>

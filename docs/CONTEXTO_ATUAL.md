@@ -1,6 +1,6 @@
 # Contexto Atual De Implementacao
 
-Atualizado em: 2026-05-04.
+Atualizado em: 2026-05-07.
 
 Este arquivo e a fonte principal do estado real do fork. Os outros documentos descrevem arquitetura, requisitos e plano; este documento registra o que existe no codigo agora, o que foi validado e o que falta para a proxima etapa.
 
@@ -12,8 +12,12 @@ O fork possui uma base tecnica executavel em `src/`.
 |---|---|---|
 | P0 - Base tecnica | Concluido inicial | Base operacional, defaults, contratos iniciais e grafo Aspire validados |
 | P1 - IAM e tenant `dev` | Em andamento | Resolver/middleware por `X-Tenant-Code` implementados, baseline em camadas aplicado e fluxo OAuth Google iniciado no encadeamento Frontend -> BFF -> Gateway -> IAM |
-| P2 - Entrada de materiais e inventory inicial | Concluido | Fluxo de recebimento manual/XML com criacao assincrona de saldo pendente implementado |
-| P3+ | Nao iniciado | Fluxos de negocio avancados ainda nao foram implementados |
+| P2 - Entrada de materiais e inventory inicial | Concluido | Fluxo de recebimento manual/XML com criacao assincrona de saldo pendente e rastreabilidade expandida (Lote, Validade, Metadados JSON e Raw XML) implementado |
+| P3 - Conferencia cega e saldo disponivel | Em andamento | Fluxo de conferencia cega (SupplyChain) e ativacao assincrona de saldo (Inventory) implementados com suporte a Lote/Validade |
+
+### Migracao Frontend (Vertical Slices)
+- Mandato arquitetural definido e documentado em `src/RailFactory.Frontend/GEMINI.md`.
+- Task 2.9.2 concluida: fronteiras e Shared Kernel validados pelo @architect.
 
 Foram criados:
 
@@ -128,6 +132,30 @@ Rail-Factory-Fork/src/RailFactory.Frontend/App
 
 Resultado validado: testes de UI auth (`useAuthSession`) verdes (2 testes).
 
+```bash
+npm run deadcode
+```
+
+Executar em:
+
+```bash
+Rail-Factory-Fork/src/RailFactory.Frontend/App
+```
+
+Resultado validado: analise estatica local de alcance TS/TSX executa com sucesso e lista candidatos a codigo morto por alcance (runtime e runtime+testes).
+
+```bash
+./scripts/find-dead-code-csharp.sh
+```
+
+Executar em:
+
+```bash
+Rail-Factory-Fork
+```
+
+Resultado validado: build com analyzers Roslyn focados em codigo morto/nao utilizado (CS0162, CS0219, IDE0044, IDE0051, IDE0052, IDE0058, IDE0059, IDE0060) executado sem ocorrencias no estado atual.
+
 Estado funcional validado:
 
 - middleware tenant-aware ativo e erros padronizados para tenant ausente/inexistente;
@@ -160,11 +188,17 @@ Estado funcional validado:
 - AppHost pronto para deploy Aspire Docker Compose (`AddDockerComposeEnvironment`) com exposicao externa apenas do `frontend`;
 - credenciais Google e origem publica injetadas por parametros externos do AppHost (`google-client-id`, `google-client-secret`, `frontend-public-origin`) no IAM e no Frontend/BFF, enquanto o Vite dev server usa a configuracao local do proprio frontend para o host allowlist.
 - parametro `frontend-public-origin` ajustado no AppHost para `secret: true`, alinhando persistencia via `aspire secret set` com os demais parametros OAuth.
+- parametro `frontend-public-origin` ajustado no AppHost para `secret: true`, alinhando persistencia via `aspire secret set` com os demais parametros OAuth.
 - persistencia local do IAM simplificada para identificacao por provedor externo (`external_provider + external_subject`) sem coluna `tenant_code` em `iam_local_users`, com migracao automatica no initializer para remover coluna/indice/chave antigos.
 - persistencia do IAM local users migrada de SQL direto (`NpgsqlDataSource`/command text) para ORM (EF Core + provider PostgreSQL), mantendo a mesma tabela/contrato funcional;
 - migrations EF adicionadas em `Infrastructure/Auth/Persistence/Migrations` (`InitialIamLocalUsers` e `LegacyTenantCodeCleanup`) para versionar criacao do schema e limpeza legada de `tenant_code`.
 - inicializador de schema do IAM endurecido para compatibilidade com base legada: quando `iam_local_users` ja existe sem historico EF, o servico reconcilia `__EFMigrationsHistory` antes de `MigrateAsync`, evitando falha de startup por `relation "iam_local_users" already exists`;
 - correção de ciclo de vida de conexao nos initializers de schema (IAM e Tenancy): leitura de tabela legada usa `DbConnection` do `DbContext` sem dispose manual, evitando `ObjectDisposedException` durante `MigrateAsync` (`NpgsqlConnection`);
+- resolução de connection string tenant-aware endurecida para startup sem contexto HTTP: `TenantConnectionResolver` agora aplica fallback explicito para alias `tenant-{defaultTenantCode}-{serviceKey}` quando `TenantRouting__DefaultTenantCode` estiver configurado, evitando falha de boot dos `IHostedService` com tenant `unknown`;
+- migration do Tenant Catalog `AddTenantConnectionStrings` corrigida para bases legadas com dados: adicao da coluna `connection_strings` usa default SQL `'{}'::jsonb`, evitando falha `23502` ao aplicar `NOT NULL` em linhas ja existentes;
+- mapeamento EF/Npgsql do Tenant Catalog ajustado para `connection_strings` (`jsonb`): `TenancyDbContext` usa `ValueConverter` (`Dictionary<string,string>` <-> JSON string) e `ValueComparer`, evitando erro de startup do Npgsql 10 por dynamic JSON nao habilitado globalmente;
+- `TenantConnectionResolver` endurecido para isolamento multi-tenant: resolucao de banco agora exige `TenantContext` e `connection_strings` do catalog do tenant atual, sem fallback implicito para aliases/default tenant;
+- initializers de schema tenant-aware (IAM, SupplyChain, Inventory) atualizados para montar `TenantContext` explicitamente no startup via `TenantRouting:DefaultTenantCode` + Tenant Catalog antes de resolver `DbContext`, mantendo boot previsivel sem degradar isolamento;
 - persistencia do Tenancy migrada de SQL direto para ORM (EF Core + provider PostgreSQL), com `TenancyDbContext`, repositorio EF e migration `InitialTenantCatalog` em `Infrastructure/Persistence/Migrations`;
 - inicializador do Tenancy endurecido para compatibilidade com schema legado: quando a tabela `tenants` ja existe sem historico EF, o servico reconcilia `__EFMigrationsHistory` antes de `MigrateAsync`, evitando falha de startup por `relation "tenants" already exists`;
 - auditoria dos micros concluida em 2026-05-03: nao ha uso ativo de `NpgsqlDataSource/CreateCommand` em `src/`; persistencia relacional nesta passada esta padronizada em ORM nos servicos com banco (IAM e Tenancy).
@@ -173,30 +207,58 @@ Estado funcional validado:
 - AI agent rule documents consolidated in English: `docs/REGRAS_PARA_IAS.md` is the detailed engineering-quality source, `AGENTS.md` is the short entry guide, and the local skill reference is aligned with the established standards.
 - P2 implementado em SupplyChain/Inventory/UI:
   - SupplyChain com persistencia EF Core + migrations (`suppliers`, `material_receipts`, `material_receipt_items`, `supply_audit_entries`, `supply_outbox_messages`);
+  - `MaterialReceipt` expandido com `AccessKey`, `TotalValue` e `RawXml`; `MaterialReceiptItem` expandido com `UnitPrice` e `OriginalDescription`;
+  - UI de associacao de itens refinada no `AssociationInbox` e `AssociationForge` para reduzir ambiguidade operacional: inbox com filtro por recebimento/documento/chave de acesso e contexto de itens pendentes; forge com comparacao lado a lado entre item do fornecedor e material interno selecionado, progresso explicito (`pending`/`done` + barra), busca com debounce e feedback de estado, validacao de fator de conversao (> 0) e submissao em lote somente no final (itens avancam localmente sem POST por etapa).
   - endpoints novos em SupplyChain: `POST /suppliers`, `POST /receipts`, `GET /receipts`, `POST /receipts/import/xml`;
   - provider XML interno substituivel (`INfeProvider` + `BasicXmlNfeProvider`) para importacao inicial, com suporte ao XML simplificado legado e ao formato NF-e assinado com namespace `http://www.portalfiscal.inf.br/nfe`;
+  - parser NF-e expandido para extrair `AccessKey`, `TotalValue`, `UnitPrice` e `OriginalDescription`;
   - auditoria basica de entrada registrada em `supply_audit_entries` com usuario/tenant/acao/metadata;
-  - integracao assincrona Supply -> Inventory via outbox + dispatcher HTTP para `POST /internal/pending-balances`;
+  - integracao assincrona Supply -> Inventory via outbox + dispatcher HTTP para `POST /internal/pending-balances`, agora enviando dados de rastreabilidade;
   - Inventory com persistencia EF Core + migrations (`stock_locations`, `inventory_balances`, `inventory_ledger_entries`, `inventory_processed_integration_messages`);
-  - Inventory implementa `CreatePendingBalance` com idempotencia por `eventId` e gera ledger append-only em criacao de saldo `Pending`;
+  - `InventoryBalance` expandido com `LotNumber`, `ExpirationDate`, `SourceType` e `SourceMetadata` (JSONB);
+  - Inventory implementa `CreatePendingBalance` com idempotencia por `eventId`, gera ledger append-only e popula metadados de rastreabilidade a partir da origem (Purchase);
   - endpoint funcional para consulta de pendencias: `GET /balances/pending`;
+
+- P3 iniciado e funcional (Passada P3.1):
+  - `MaterialReceiptStatus` expandido (`InConference`, `Approved`, `Divergent`, `Cancelled`);
+  - Comando `StartConference` no SupplyChain muda status e bloqueia edicoes;
+  - Workspace de Conferencia Cega na UI (`ConferenceWorkspace`) permite registro de contagem, lote e validade sem viés;
+  - Comando `CloseConference` no SupplyChain detecta divergencias, atualiza itens e emite eventos via outbox;
+  - Integracao Supply -> Inventory atualizada para processar `supply.receipt_item_conferred`;
+  - Inventory implementa `ConfirmInventoryBalance`, atualizando quantidade/lote/validade e mudando status para `Available` ou `Blocked` (divergente);
+  - Ledger de inventario registra delta de conferencia e transicao de status.
 - UI React/Vite com rotas protegidas P2 (`/app/receipts`, `/app/new-receipt`, `/app/import-xml`) consumindo BFF/Gateway para lista, criacao manual e importacao XML.
 - UI React/Vite com dashboard protegido inicial em `/app` (topbar, navegacao, cards de KPI e modulos), mantendo sessao server-side via BFF como fonte de verdade e sem acesso direto da UI aos servicos internos.
-- UI React/Vite com shell protegido visualmente alinhado ao projeto legado: appbar azul contextual, sidebar segmentada, overview com stat cards, tabela de linhas ativas, timeline de eventos e navegacao mobile inferior, preservando os fluxos `/app/receipts`, `/app/new-receipt` e `/app/import-xml`.
+- UI React/Vite com shell protegido visualmente alinhado ao projeto legado: appbar azul contextual, sidebar segmentada, overview with stat cards, tabela de linhas ativas, timeline de eventos e navegacao mobile inferior, preservando os fluxos `/app/receipts`, `/app/new-receipt` e `/app/import-xml`.
 - UI React/Vite com navegacao protegida em SPA local via History API entre `/app` e `/app/receipts`; a tela de recebimentos mantem a lista como workspace principal, expoe acoes visiveis (`New receipt`, `Import XML`, `Refresh`) e abre criacao/importacao em drawer lateral responsivo. As rotas legadas `/app/new-receipt` e `/app/import-xml` sao normalizadas para `/app/receipts` abrindo o drawer correspondente.
 - UI React/Vite com importacao XML por arquivo local unitario ou em lote: o drawer de importacao aceita selecao multipla de `.xml`, le os arquivos no browser e envia cada documento ao BFF em `/api/supply-chain/receipts/import/xml`, mantendo a UI sem chamada direta a servicos internos.
+- UI React/Vite com correcoes de UX na importacao XML: fluxo migrado para modal central responsiva (mobile/desktop), com fechamento sincronizando rota (`/app/import-xml` -> `/app/receipts`) para evitar estado de tela cheia que bloqueava retorno/navegacao apos erro.
+- UI React/Vite com simplificacao estrutural no shell/dashboard: `App.tsx` e `ProtectedDashboardLayout.tsx` tiveram reducao de estado/props redundantes e navegação unificada, diminuindo acoplamento entre rota, layout e fluxo protegido.
+- UI React/Vite com simplificacao de cliente HTTP: utilitario compartilhado `src/lib/http.ts` centraliza headers tenant-aware e parse de erro, reduzindo duplicacao de `fetch` em `App`, `TenantSelector`, `ReceiptsList`, `InventoryStocksPage` e `ImportXmlForm`.
 - UI React/Vite ajustada para MUI 9 no dashboard protegido: removido crash em runtime (`alpha` import em `ProtectedDashboardLayout`) e removidos warnings React de props invalidas no DOM por migracao de `Grid item` para `Grid size` e de `*TypographyProps`/`InputProps` para `slotProps`.
+- UI React/Vite com tela protegida de estoque pendente em `/app/inventory`, consumindo `/api/inventory/balances/pending` via BFF e exibindo `material`, `quantity`, `uom`, `status`, `sourceReference` e `createdAt`; navegacao adicionada no menu lateral (`INVENTORY`).
 - hardening de XML/NF-e aplicado em P2:
   - `BasicXmlNfeProvider` foi dividido em loader XML seguro, parser legado, parser NF-e, locator e validador XSD; NF-e 4.00 valida o elemento `NFe` contra o pacote oficial `PL_010c_NT2022_002v1.30` versionado no repo (`Infrastructure/Integration/Schemas/NFe4.00`);
   - XML `nfeProc` 4.00 e `NFe` 4.00 sao aceitos; como o pacote oficial atual nao traz `procNFe_v4.00.xsd`, o wrapper `nfeProc` e localizado e o elemento `NFe` interno e validado contra `nfe_v4.00.xsd`;
   - NF-e `1.10` permanece aceito apenas como compatibilidade legado/dev sem garantia fiscal oficial por XSD;
   - contrato simplificado legado `<receipt>` continua aceito sem XSD apenas para dev/sample;
   - NF-e passa a usar `receiptNumber = NFE-{accessKey}`, mantendo o indice unico existente por `{ TenantCode, ReceiptNumber }` e evitando colisao por serie/numero;
-  - endpoint `POST /receipts/import/xml/batch` implementado em SupplyChain com semantica atomica: parse/validacao de todos os documentos antes de escrita, transacao EF para gravacao e resposta `receipt.batch_invalid` por arquivo em falha;
+  - endpoint `POST /receipts/import/xml/batch` implementado em SupplyChain with semantica atomica: parse/validacao de todos os documentos antes de escrita, transacao EF para gravacao e resposta `receipt.batch_invalid` por arquivo em falha;
   - UI usa endpoint unitario para um XML e endpoint batch para multiplos arquivos, exibindo erros por arquivo;
   - dispatcher Supply -> Inventory agora persiste estado de outbox (`Pending`, `Dispatched`, `DeadLetter`), tentativas, ultimo erro e dead-letter; payload invalido/`400` permanente nao e marcado como dispatched;
   - API operacional `GET /outbox/dead-letters` lista dead letters por tenant;
   - AppHost agora injeta referencia de service discovery do Inventory no SupplyChain (`supply-chain` -> `inventory`).
+- refinamento operacional de NF-e/UI aplicado em 2026-05-06:
+  - preview de importacao XML enriquecido com campos adicionais da NF-e para o frontend (`natOp`, `NCM`, `CFOP`, `EAN`, `xPed`, `nItemPed`, `vProd`), alem de nome do produto (`xProd`) e preco unitario;
+  - detalhes de recebimento (`GET /receipts/{id}`) agora expõem `productName`, `originalDescription` e `unitPrice` por item para remover dependencia de parsing adicional no frontend;
+  - listagem de saldos pendentes do Inventory inclui `materialImageUrl` e o frontend passa a renderizar imagem real do material quando `ImageUrl` estiver preenchido no catalogo (fallback para avatar deterministico quando ausente).
+  - upload operacional de imagem de material implementado em fluxo ponta a ponta (`POST /api/materials/{materialCode}/image` no BFF + `PUT /materials/{materialCode}/image` no Inventory), com politica de arquivo `PNG/JPG/WEBP` ate `5MB`, persistencia de `imageUrl` no catalogo e exibicao imediata no modal/listagem de estoque;
+  - `GET /receipts` reduzido para payload de resumo (sem `items` embutido), mantendo detalhes completos em `GET /receipts/{id}`;
+  - correcoes de UI para valores monetarios zero (`0`) no preview/modal, evitando renderizacao incorreta como `N/A`/`---`.
+- refinamento de responsividade/layout aplicado em 2026-05-07:
+  - `ReceiptsList` agora alterna entre tabela densa (desktop) e cards operacionais com acoes touch-friendly em `md` para baixo, preservando os fluxos de detalhes, conferencia e download XML;
+  - `InventoryStocksPage` agora alterna entre tabela completa (desktop) e cards resumidos (tablet/mobile), mantendo filtro por status e acesso ao ledger detalhado;
+  - `ReceiptsWorkspace` recebeu reorganizacao de toolbar para stack adaptativo (acoes principais em largura total no mobile), evitando overflow e mantendo hierarquia visual em telas reduzidas.
 - packages .NET centralizados em `src/Directory.Packages.props` com `ManagePackageVersionsCentrally=true`; `Version=` foi removido dos `PackageReference` dos `.csproj`; EF/Npgsql sairam de preview/rc para versoes estaveis (`Microsoft.EntityFrameworkCore` 10.0.7, `Npgsql` 10.0.2, `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.1) e MSBuild permanece pinado em `17.14.28`.
 
 P1.2 validado operacionalmente em 2026-05-02:
@@ -258,6 +320,11 @@ Validacao tecnica adicional executada em 2026-05-03 (UTC-3), apos permitir uploa
 - `npm test` em `src/RailFactory.Frontend/App` -> `Test Files 1 passed` / `Tests 2 passed`;
 - `npm run build` em `src/RailFactory.Frontend/App` -> build Vite concluido com sucesso.
 
+Validacao tecnica adicional executada em 2026-05-05 (UTC-3), apos criacao da tela de visualizacao de estoque pendente:
+
+- `npm test -- --run` em `src/RailFactory.Frontend/App` -> `Test Files 2 passed` / `Tests 5 passed`.
+- `npm run build` em `src/RailFactory.Frontend/App` -> build Vite concluido com sucesso.
+
 Validacao tecnica adicional executada em 2026-05-03 (UTC-3), apos correção do parser NF-e:
 
 - `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` -> `Build succeeded` (0 erros; warnings NU1603/NU1903 existentes);
@@ -300,13 +367,13 @@ Rodada negativa operacional em 2026-05-04 (UTC-3), ainda contra o AppHost reinic
 - XML malformado em `POST http://localhost:44947/receipts/import/xml` -> `400`, `code=receipt.invalid_xml`, sem erro 500.
 - NF-e 4.00 com `qCom` invalido (`not-a-number`) -> `400`, `code=receipt.invalid_xml`, mensagem de falha XSD no tipo `TDec_1104v`.
 - Lote misto em `POST http://localhost:44947/receipts/import/xml/batch` com um XML valido novo e um XML malformado -> `400`, `code=receipt.batch_invalid`, erro associado ao arquivo `broken.xml`.
-- Verificacao posterior em `GET http://localhost:44947/receipts` confirmou que o XML valido do lote misto (`SMOKE-MAT-1006` / chave `35260599999090910270550010000001006180051273`) nao foi gravado.
+- Verificacao posterior em `GET http://localhost:44947/receipts` confirmou que the XML valido do lote misto (`SMOKE-MAT-1006` / chave `35260599999090910270550010000001006180051273`) nao foi gravado.
 - Reenvio de NF-e ja importada -> `400` com mensagem clara de recibo duplicado (`Receipt number 'NFE-35260599999090910270550010000001005180051273' already exists.`).
 - Chamada sem `X-Tenant-Code` -> `400`, `code=tenant.code_required`.
 
 Rodada de resiliencia operacional em 2026-05-04 (UTC-3):
 
-- Payload XXE/DTD em XML simplificado -> `400`, `code=receipt.invalid_xml`, com DTD proibido pelo loader XML seguro.
+- Payload XXE/DTD em XML simplificado -> `400`, `code=receipt.invalid_xml`, with DTD proibido pelo loader XML seguro.
 - Payload XML malformado com aproximadamente 2 MB -> `400`, `code=receipt.invalid_xml`, sem queda do processo.
 - Lote com 10 documentos invalidos por XSD/XML -> `400`, `code=receipt.batch_invalid`; verificacao posterior confirmou que nenhum item `SMOKE-MAT-1008..1016` foi gravado.
 - Concorrencia real com 8 imports simultaneos da mesma NF-e inicialmente expôs bug de producao: 1 request retornava `201`, mas os 7 concorrentes retornavam `500` por `DbUpdateException` de indice unico em `IX_material_receipts_TenantCode_ReceiptNumber`.
@@ -420,6 +487,12 @@ curl -sS -D - -H 'X-Correlation-Id: smoke-tenancy' http://localhost:<gateway-por
 
 Usar o dashboard Aspire para descobrir a porta atual do Gateway.
 
+## Tenant Onboarding Strategy (Documentation)
+
+- Added `docs/TENANT_ONBOARDING_STRATEGY.md` to define the argumentative and execution strategy for creating a new tenant safely.
+- Scope aligned with `P1.5 - Multi-Tenancy Validation` in `docs/PLANO_DE_TASKS.md`.
+- No task status changed in this update; this is a planning and alignment artifact to reduce onboarding risk before implementation.
+
 ## AI Agent Rules
 
 Every AI agent working on this fork must follow:
@@ -431,3 +504,123 @@ Every AI agent working on this fork must follow:
 Specialized agent profiles available:
 
 - `.codex/skills/rail-factory-engineering/agents/frontend.yaml`: frontend specialist for React/Vite UI work, BFF-only API access, protected route behavior, accessibility, responsive layout, Figma adaptation, and evidence-informed UX practices.
+
+## 2026-05-09 - Frontend Fix: Association Forge Autocomplete (MUI v9)
+
+- Fixed runtime crash in `AssociationForge.tsx` where `Autocomplete` `renderInput` could fail with `params.InputProps` undefined after MUI v9 migration.
+- Updated `renderInput` to normalize legacy `InputProps`/`inputProps`/`InputLabelProps` into `TextField` `slotProps`, preventing invalid DOM prop forwarding and preserving autocomplete behavior.
+- Replaced direct `Stack` layout props (`alignItems`, `justifyContent`) with `sx` in `AssociationForge.tsx` and `AssociationInbox.tsx` to avoid React unknown prop warnings on DOM elements.
+- Validation: `npm run build` succeeded in `src/RailFactory.Frontend/App`.
+
+## 2026-05-09 - Plan Opened: Association Workbench
+
+- Opened `P2.10 - Association Workbench (SKU Resolution)` in `docs/PLANO_DE_TASKS.md`.
+- Direction: replace the modal-based `AssociationInbox`/`AssociationForge` flow with a full-screen operational workbench for resolving supplier SKU -> internal material SKU decisions before blind conference.
+- Scope includes SupplyChain item-level association state, Inventory material creation/suggestions, create-material-and-associate orchestration, frontend workbench replacement, supplier SKU override audit rules and end-to-end validation.
+- Follow-up review added explicit coverage for browser-facing mutation security (auth/CSRF), concurrency between operators, migration/backfill of existing pending receipts, API error contracts, observability/audit and partial-failure recovery.
+- Frontend workflow is now explicitly documented in `P2.10`, covering queue selection, item grid, decision panel, material search, create-material-from-invoice, review later, ignored items, SKU override semantics, immediate saves, conflict/security errors and release to conference.
+- No implementation task was marked complete; this update only records the executable plan and known resistance points.
+
+## 2026-05-09 - P2.10.1 Completed: Association Workbench Contract
+
+- Completed `P2.10.1 - Definir contrato da Association Workbench`.
+- Added `docs/CONTRATOS_API.md` section `P2.10 - Association Workbench` with the target contract for frontend workflow, item association states, queue/read model, item-level association, review-later, ignored item, supplier-code override, release-to-conference, Inventory material creation/details/suggestions and `create-material-and-associate`.
+- Contract explicitly records browser-facing mutation security expectations, CSRF/auth errors, concurrency token behavior, stable association/material error codes and partial failure handling.
+- Validation: documentation-only change; build/test not applicable.
+
+## 2026-05-09 - P2.10.2 Completed: Receipt Item Association State
+
+- Completed `P2.10.2 - Persistir estado de associacao por item no SupplyChain`.
+- Added `MaterialReceiptItemAssociationStatus` and persisted association fields on `MaterialReceiptItem`: supplier product code, internal material code, association status, conversion factor, reason, updated timestamp and actor.
+- Added source fiscal quantity/unit fields (`SupplierQuantity`, `SupplierUnitOfMeasure`) so later association/correction flows can preserve supplier data while converting to stock quantities.
+- Updated receipt staging so known supplier mappings create `Mapped` items while unknown supplier codes create `Pending` association items without losing the original supplier SKU.
+- Generated EF migrations `AddReceiptItemAssociationState` and `AddReceiptItemSupplierSourceQuantity` with backfill: existing `PendingAssociation` receipt items become `Pending`; existing non-pending items become `Mapped` with conversion factor `1`; source quantity/unit are initialized from existing expected quantity/unit.
+- Aligned the batch import test with the documented atomic batch behavior for invalid XML batches.
+- Validation: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` passed; `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`11` tests).
+
+## 2026-05-09 - P2.10.3 Completed: Association Workbench Read Model
+
+- Completed `P2.10.3 - Criar read model da bancada no SupplyChain`.
+- Added `ListAssociationQueue` and `GetAssociationWorkbench` application queries.
+- Exposed `GET /receipts/association-queue` and `GET /receipts/{id}/association-workbench` in SupplyChain.
+- Workbench read model returns receipt release blockers, item association status, version token, supplier product code, fiscal item data, internal material code, conversion factor and inventory quantity preview.
+- Material suggestions intentionally return an empty list until `P2.10.8` implements Inventory-backed suggestions.
+- Validation: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` passed; `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`11` tests).
+
+## 2026-05-09 - P2.10.4 Completed: Contextual Item Association
+
+- Completed `P2.10.4 - Criar associacao contextual por item`.
+- Added `AssociateReceiptItem` application use case and `POST /receipts/{receiptId}/items/{itemId}/association`.
+- The use case validates conversion factor, checks the internal material through `IInventoryMaterialService`, rejects stale item versions with `association.item_conflict`, creates or corrects `SupplierMaterialMapping`, maps the receipt item to the internal material and recalculates stock quantity/price from preserved supplier quantity/unit.
+- Endpoint returns stable `ProblemDetails` codes for validation/conflict scenarios.
+- Validation: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` passed; `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`11` tests).
+
+## 2026-05-09 - P2.10.5 Completed: Controlled Review/Ignore Decisions
+
+- Completed `P2.10.5 - Criar endpoint de revisao posterior/ignoracao controlada`.
+- Added `RecordControlledAssociationDecision` application use case.
+- Added `POST /receipts/{receiptId}/items/{itemId}/review-later` and `POST /receipts/{receiptId}/items/{itemId}/ignored`.
+- Both actions require a reason, validate the item version with the same conflict behavior used by contextual association and persist the actor/timestamp through the existing item association fields.
+- `Ignored` is implemented as an auditable decision but remains blocking for release until business rules explicitly allow fiscal items outside stock intake.
+- Validation: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` passed; `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`11` tests).
+
+## 2026-05-09 - P2.10.6 Completed: Release To Conference
+
+- Completed `P2.10.6 - Criar endpoint de liberacao para conferencia`.
+- Added `ReleaseReceiptToConference` application use case and `POST /receipts/{receiptId}/release-to-conference`.
+- Release validates the aggregate association version, current receipt status and per-item blockers before transitioning a receipt from `PendingAssociation` back to `Registered`.
+- `StartConference` remains the separate command that moves `Registered` receipts to `InConference`.
+- Validation: `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` passed; `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`11` tests).
+
+## 2026-05-09 - P2.10.7 Completed: Inventory Material CRUD Minimum
+
+- Completed `P2.10.7 - Completar CRUD minimo de Material no Inventory`.
+  - Added base material unit (`UnitOfMeasure`) to the Inventory `Material` aggregate and EF mapping.
+  - Added `CreateMaterial` and `GetMaterialDetails` application use cases plus `POST /api/inventory/materials` and `GET /api/inventory/materials/{materialCode}`.
+  - Material creation validates required code/name/description/unit, unique material code, unique GTIN when provided, valid `ProcurementType` and valid `MaterialCategory`.
+  - Generated migration `AddMaterialUnitAndGtinUniqueIndex` with `UnitOfMeasure` backfill/default `UN` and a unique filtered `Gtin` index.
+  - Updated `MaterialDetailsPage` to use the real material details endpoint, fixed the route parameter mismatch (`materialCode`) and removed the mock fallback.
+  - Validation: `dotnet build src/RailFactory.Inventory.Api/RailFactory.Inventory.Api.csproj -v:minimal` passed; `dotnet build src/RailFactory.Fork.sln -v:minimal` passed; `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`11` tests); `npm run build` passed in `src/RailFactory.Frontend/App`. There is no `RailFactory.Inventory.Api.Tests` project in the repository.
+
+- Completed `P2.10.9 - Orquestrar create-material-and-associate sem inconsistencia silenciosa`.
+  - Added `CreateMaterialAndAssociate` application use case in SupplyChain.
+  - Expanded `IInventoryMaterialService` port and implemented `CreateMaterialAsync` in the integration adapter with HTTP 409 (Conflict) handling for idempotency.
+  - Exposed `POST /receipts/{receiptId}/items/{itemId}/create-material-and-associate` in SupplyChain.
+  - The use case orchestrates the external Inventory call followed by a local SupplyChain transaction to create/update mappings and update the item status to `CreatedAndMapped`.
+  - Validation: Full solution build passed; SupplyChain and Inventory API tests passed.
+
+## 2026-05-09 - Association Workbench (Full-Screen) Delivered
+
+- Completed `P2.10 - Association Workbench (SKU Resolution)` milestone.
+- **Backend/Security:**
+  - Implemented `HeaderIdentityMiddleware` in `ServiceDefaults` for trusted operator identity propagation via `X-RF-User-Email` and `X-RF-User-Name`.
+  - Secured BFF edge with mandatory CSRF validation for all mutation proxies (`POST/PUT/DELETE`) via custom YARP pipeline.
+  - Implemented `CreateMaterialAndAssociate` orchestration between SupplyChain and Inventory domains.
+  - Ensured concurrency control with timestamp-based versioning (`AssociationUpdatedAt`) across association endpoints.
+- **Frontend/UX:**
+  - Replaced legacy modal-based flow with `AssociationWorkbenchPage` (`/app/supply-chain/association`).
+
+## 2026-05-13 - IAM API Auth Redirect Hardening (CORS fix)
+
+- Fixed IAM cookie auth redirect behavior for API routes (`/api/*`): unauthorized requests now return `401` JSON and forbidden requests return `403` JSON, instead of browser redirects to `/Account/AccessDenied`.
+- This prevents cross-origin failures observed in browser XHR/OPTIONS when gateway returned redirect locations pointing to internal localhost addresses.
+- File changed: `src/RailFactory.Iam.Api/Infrastructure/IamHostingExtensions.cs`.
+  - Implemented full-screen layout with receipt queue, item grid, and decision panel (Match Existing vs. Create New).
+  - Integrated `Link2` icon in sidebar navigation for discoverability.
+  - Resolved 31 TypeScript and MUI 9 migration errors in related components (`InventoryStocksPage`, `ReceiptsList`, `MaterialDetailsPage`, `AssociationForge`).
+- **Validation:**
+  - Full .NET solution build succeeded (`dotnet build RailFactory.Fork.sln`).
+  - Unit tests passed for SupplyChain (`11` tests) and Inventory (`2` tests).
+  - Frontend production build succeeded (`npm run build` in `RailFactory.Frontend/App`).
+
+## 2026-05-13 - IAM RBAC TrustedHeaders vs Cookie Scheme Fix
+
+- Fixed `403` on IAM admin routes (`/api/iam/users`, `/api/iam/roles`, `/api/iam/permissions`) when the same session already had access to SupplyChain/Inventory routes.
+- Root cause: IAM configured cookie as default authenticate scheme, so `RequirePermission(...)` evaluated a cookie principal without `permission` claims and ignored trusted edge headers.
+- Implemented a policy auth scheme (`SmartAuth`) in IAM:
+  - if `X-RF-User-Email` header exists, authenticate with `TrustedHeaders`;
+  - otherwise authenticate with `Cookies` (keeps browser session/auth endpoints behavior).
+- File changed: `src/RailFactory.Iam.Api/Infrastructure/IamHostingExtensions.cs`.
+- Validation evidence:
+  - `dotnet build src/RailFactory.Iam.Api/RailFactory.Iam.Api.csproj -v:minimal` passed.
+  - `dotnet test src/RailFactory.Iam.Api.Tests/RailFactory.Iam.Api.Tests.csproj -v:minimal` passed (`10` tests).

@@ -7,24 +7,35 @@ namespace RailFactory.Frontend.Api;
 public static class FrontendEndpoints
 {
     private const string RootPath = "/";
-    private const string StatusPath = "/api/status";
-    private const string AuthGoogleStartPath = "/api/auth/google/start";
-    private const string AuthSessionPath = "/api/auth/session";
-    private const string AuthCsrfPath = "/api/auth/csrf";
-    private const string AuthLogoutPath = "/api/auth/logout";
-    private const string MaterialImageUploadPath = "/api/materials/{materialCode}/image";
+    private const string StatusPath = "/api/frontend/status";
+    private const string AuthGoogleStartPath = "/api/iam/auth/google/start";
+    private const string AuthSessionPath = "/api/iam/auth/session";
+    private const string AuthCsrfPath = "/api/iam/auth/csrf";
+    private const string AuthLogoutPath = "/api/iam/auth/logout";
+    private const string MaterialImageUploadPath = "/api/inventory/materials/{materialCode}/image";
     private const string MaterialImageServingPath = "/api/inventory/materials/images/{tenantCode}/{fileName}";
 
     public static WebApplication MapFrontendEndpoints(this WebApplication app, FrontendHostingExtensions.FrontendStaticUiState staticUi)
     {
+        // Root redirect
         app.MapGet(RootPath, () => Results.Redirect(StatusPath));
-        app.MapGet(AuthGoogleStartPath, GoogleLoginEndpoint.HandleStart);
-        app.MapGet(AuthSessionPath, FrontendAuthSessionEndpoint.HandleGet);
-        app.MapGet(AuthCsrfPath, FrontendCsrfEndpoint.HandleGet);
-        app.MapPost(AuthLogoutPath, FrontendLogoutEndpoint.HandlePost);
-        app.MapPost(MaterialImageUploadPath, MaterialImageUploadEndpoint.HandlePost);
-        app.MapGet(MaterialImageServingPath, MaterialImageServingEndpoint.HandleGet);
-        app.MapGet(StatusPath, FrontendStatusEndpoint.HandleGet);
+
+        var group = app.MapGroup("/api");
+
+        group.MapGet("/frontend/status", FrontendStatusEndpoint.HandleGet);
+        group.MapGet("/status", FrontendStatusEndpoint.HandleGet); // Alias for frontend usage
+        
+        // IAM Group
+        var iamGroup = group.MapGroup("/iam");
+        iamGroup.MapGet("/auth/google/start", GoogleLoginEndpoint.HandleStart);
+        iamGroup.MapGet("/auth/session", FrontendAuthSessionEndpoint.HandleGet);
+        iamGroup.MapGet("/auth/csrf", FrontendCsrfEndpoint.HandleGet);
+        iamGroup.MapPost("/auth/logout", FrontendLogoutEndpoint.HandlePost);
+
+        // Inventory Group
+        var inventoryGroup = group.MapGroup("/inventory");
+        inventoryGroup.MapPut("/materials/{materialCode}/image", MaterialImageUploadEndpoint.HandlePut);
+        inventoryGroup.MapGet("/materials/images/{tenantCode}/{fileName}", MaterialImageServingEndpoint.HandleGet);
         
         app.MapReverseProxy(proxyPipeline =>
         {
@@ -65,9 +76,26 @@ public static class FrontendEndpoints
                     
                     using var request = new HttpRequestMessage(HttpMethod.Get, "/api/iam/auth/session");
                     request.Headers.Add(TenantConstants.TenantCodeHeaderName, tenantCode);
+                    
+                    // Propagate authentication cookie
                     if (context.Request.Headers.TryGetValue("Cookie", out var cookies))
                     {
                         request.Headers.Add("Cookie", cookies.ToString());
+                    }
+
+                    // Propagate forwarding headers to ensure IAM respects Secure/SameSite cookie policies
+                    if (context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var proto))
+                    {
+                        request.Headers.Add("X-Forwarded-Proto", proto.ToString());
+                    }
+                    else if (context.Request.IsHttps)
+                    {
+                        request.Headers.Add("X-Forwarded-Proto", "https");
+                    }
+
+                    if (context.Request.Headers.TryGetValue("X-Forwarded-Host", out var host))
+                    {
+                        request.Headers.Add("X-Forwarded-Host", host.ToString());
                     }
 
                     try
@@ -78,9 +106,24 @@ public static class FrontendEndpoints
                             var session = await response.Content.ReadFromJsonAsync<AuthSessionDto>(context.RequestAborted);
                             if (session?.Authenticated == true && session.User != null)
                             {
+                                var resolvedUserEmail = FirstNonEmpty(session.User.Email, session.User.Name);
+                                var resolvedUserName = FirstNonEmpty(session.User.Name, session.User.Email);
+
                                 // Inject trusted headers for internal microservices
-                                context.Request.Headers[TenantConstants.UserEmailHeaderName] = session.User.Email;
-                                context.Request.Headers[TenantConstants.UserNameHeaderName] = session.User.Name;
+                                if (!string.IsNullOrWhiteSpace(resolvedUserEmail))
+                                {
+                                    context.Request.Headers[TenantConstants.UserEmailHeaderName] = resolvedUserEmail;
+                                }
+
+                                if (!string.IsNullOrWhiteSpace(resolvedUserName))
+                                {
+                                    context.Request.Headers[TenantConstants.UserNameHeaderName] = resolvedUserName;
+                                }
+
+                                if (session.User.Permissions.Any())
+                                {
+                                    context.Request.Headers[TenantConstants.UserPermissionsHeaderName] = string.Join(",", session.User.Permissions);
+                                }
                             }
                         }
                     }
@@ -102,5 +145,15 @@ public static class FrontendEndpoints
         }
 
         return app;
+    }
+
+    private static string? FirstNonEmpty(string? first, string? second)
+    {
+        if (!string.IsNullOrWhiteSpace(first))
+        {
+            return first;
+        }
+
+        return string.IsNullOrWhiteSpace(second) ? null : second;
     }
 }
