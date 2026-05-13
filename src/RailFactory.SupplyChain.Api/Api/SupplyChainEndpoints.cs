@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using RailFactory.BuildingBlocks.Auth;
+using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.SupplyChain.Api.Api.Requests;
 using RailFactory.SupplyChain.Api.Api.Responses;
 using RailFactory.SupplyChain.Api.Api.Validation;
@@ -13,7 +15,7 @@ namespace RailFactory.SupplyChain.Api.Api;
 
 public static class SupplyChainEndpoints
 {
-    private const string RootPath = "/";
+    private const string ApiGroup = "/api/supply-chain";
     private const string InfoPath = "/info";
     private const string SuppliersPath = "/suppliers";
     private const string ReceiptsPath = "/receipts";
@@ -40,30 +42,85 @@ public static class SupplyChainEndpoints
 
     public static WebApplication MapSupplyChainEndpoints(this WebApplication app)
     {
-        app.MapGet(RootPath, () => Results.Redirect(InfoPath));
-        app.MapGet(InfoPath, HandleGetInfo);
-        app.MapPost(SuppliersPath, HandleCreateSupplier);
-        app.MapGet(ReceiptsPath, HandleListReceipts);
-        app.MapGet(AssociationQueuePath, HandleListAssociationQueue);
-        app.MapGet(ReceiptDetailsPath, HandleGetReceiptDetails);
-        app.MapGet(AssociationWorkbenchPath, HandleGetAssociationWorkbench);
-        app.MapGet(ReceiptItemsToAssociatePath, HandleGetItemsToAssociate);
-        app.MapPost(AssociateReceiptItemPath, HandleAssociateReceiptItem);
-        app.MapPost(CreateMaterialAndAssociatePath, HandleCreateMaterialAndAssociate);
-        app.MapPost(ReviewAssociationItemLaterPath, HandleReviewAssociationItemLater);
-        app.MapPost(IgnoreAssociationItemPath, HandleIgnoreAssociationItem);
-        app.MapPost(OverrideSupplierSkuPath, HandleOverrideSupplierSku);
-        app.MapPost(ReleaseToConferencePath, HandleReleaseToConference);
-        app.MapPost(MappingsPath, HandleCreateMapping);
-        app.MapGet(ReceiptXmlPath, HandleGetReceiptXml);
-        app.MapPost(StartConferencePath, HandleStartConference);
-        app.MapPost(CloseConferencePath, HandleCloseConference);
-        app.MapGet(ConferenceItemsPath, HandleGetConferenceItems);
-        app.MapPost(ImportXmlPath, HandleImportXmlReceipt).DisableAntiforgery();
-        app.MapPost(ImportXmlPreviewPath, HandlePreviewXmlReceipt).DisableAntiforgery();
-        app.MapPost(ImportXmlBatchPath, HandleImportXmlReceiptBatch).DisableAntiforgery();
-        app.MapGet(OutboxDeadLettersPath, HandleListOutboxDeadLetters);
-        app.MapPost(ReplayOutboxDeadLettersPath, HandleReplayOutboxDeadLetters);
+        // Root redirect
+        app.MapGet("/", () => Results.Redirect($"{ApiGroup}{InfoPath}"));
+
+        var group = app.MapGroup(ApiGroup);
+
+        group.MapGet(InfoPath, HandleGetInfo).AllowAnonymous();
+        
+        // SECURE PUBLIC API
+        var secureGroup = group.MapGroup("/").RequireAuthorization();
+
+        secureGroup.MapPost(SuppliersPath, HandleCreateSupplier)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapGet(ReceiptsPath, HandleListReceipts)
+            .RequirePermission(SystemPermissions.SupplyChain.Read);
+        
+        secureGroup.MapGet(AssociationQueuePath, HandleListAssociationQueue)
+            .RequirePermission(SystemPermissions.SupplyChain.Read);
+        
+        secureGroup.MapGet(ReceiptDetailsPath, HandleGetReceiptDetails)
+            .RequirePermission(SystemPermissions.SupplyChain.Read);
+        
+        secureGroup.MapGet(AssociationWorkbenchPath, HandleGetAssociationWorkbench)
+            .RequirePermission(SystemPermissions.SupplyChain.Read);
+        
+        secureGroup.MapGet(ReceiptItemsToAssociatePath, HandleGetItemsToAssociate)
+            .RequirePermission(SystemPermissions.SupplyChain.Read);
+        
+        secureGroup.MapPost(AssociateReceiptItemPath, HandleAssociateReceiptItem)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapPost(CreateMaterialAndAssociatePath, HandleCreateMaterialAndAssociate)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapPost(ReviewAssociationItemLaterPath, HandleReviewAssociationItemLater)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapPost(IgnoreAssociationItemPath, HandleIgnoreAssociationItem)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapPost(OverrideSupplierSkuPath, HandleOverrideSupplierSku)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapPost(ReleaseToConferencePath, HandleReleaseToConference)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapPost(MappingsPath, HandleCreateMapping)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapGet(ReceiptXmlPath, HandleGetReceiptXml)
+            .RequirePermission(SystemPermissions.SupplyChain.Read);
+        
+        secureGroup.MapPost(StartConferencePath, HandleStartConference)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapPost(CloseConferencePath, HandleCloseConference)
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapGet(ConferenceItemsPath, HandleGetConferenceItems)
+            .RequirePermission(SystemPermissions.SupplyChain.Read);
+        
+        secureGroup.MapPost(ImportXmlPath, HandleImportXmlReceipt)
+            .DisableAntiforgery()
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapPost(ImportXmlPreviewPath, HandlePreviewXmlReceipt)
+            .DisableAntiforgery()
+            .RequirePermission(SystemPermissions.SupplyChain.Read);
+        
+        secureGroup.MapPost(ImportXmlBatchPath, HandleImportXmlReceiptBatch)
+            .DisableAntiforgery()
+            .RequirePermission(SystemPermissions.SupplyChain.Write);
+        
+        secureGroup.MapGet(OutboxDeadLettersPath, HandleListOutboxDeadLetters)
+            .RequirePermission(SystemPermissions.SupplyChain.Admin);
+        
+        secureGroup.MapPost(ReplayOutboxDeadLettersPath, HandleReplayOutboxDeadLetters)
+            .RequirePermission(SystemPermissions.SupplyChain.Admin);
+            
         return app;
     }
 
@@ -76,34 +133,49 @@ public static class SupplyChainEndpoints
         return Results.Ok(items);
     }
 
-    private static async Task<IResult> HandleListAssociationQueue(
-        HttpContext context,
-        ListAssociationQueue listAssociationQueue,
+    private static async Task<IResult> HandleCreateSupplier(
+        [FromBody] CreateSupplierRequest request,
+        CreateSupplier createSupplier,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
+        var validation = RequestValidator.Validate(request);
+        if (validation is not null) return validation;
 
-        var result = await listAssociationQueue.ExecuteAsync(cancellationToken);
+        var result = await createSupplier.ExecuteAsync(request.FiscalId, request.Name, cancellationToken);
+        return Results.Created($"{ApiGroup}{SuppliersPath}/{result.Id}", result);
+    }
+
+    private static async Task<IResult> HandleListReceipts(
+        ListReceipts listReceipts,
+        CancellationToken cancellationToken)
+    {
+        var result = await listReceipts.ExecuteAsync(cancellationToken);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleListAssociationQueue(
+        ListAssociationQueue listQueue,
+        CancellationToken cancellationToken)
+    {
+        var result = await listQueue.ExecuteAsync(cancellationToken);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetReceiptDetails(
+        Guid id,
+        GetMaterialReceiptDetails getDetails,
+        CancellationToken cancellationToken)
+    {
+        var result = await getDetails.ExecuteAsync(id, cancellationToken);
+        return result is not null ? Results.Ok(result) : Results.NotFound();
     }
 
     private static async Task<IResult> HandleGetAssociationWorkbench(
         Guid id,
-        HttpContext context,
-        GetAssociationWorkbench getAssociationWorkbench,
+        GetAssociationWorkbench getWorkbench,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
-        var result = await getAssociationWorkbench.ExecuteAsync(id, cancellationToken);
+        var result = await getWorkbench.ExecuteAsync(id, cancellationToken);
         return result is not null ? Results.Ok(result) : Results.NotFound();
     }
 
@@ -112,50 +184,26 @@ public static class SupplyChainEndpoints
         Guid itemId,
         [FromBody] AssociateReceiptItemRequest request,
         HttpContext context,
-        AssociateReceiptItem associateReceiptItem,
+        AssociateReceiptItem associateItem,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
+        var actor = context.User.Identity?.Name ?? "system";
         try
         {
-            var result = await associateReceiptItem.ExecuteAsync(
-                receiptId,
-                itemId,
-                request.ExpectedVersion,
-                request.InternalMaterialCode,
-                request.ConversionFactor,
-                context.User.Identity?.Name ?? "system@railfactory.local",
+            var result = await associateItem.ExecuteAsync(
+                receiptId, itemId, request.ExpectedVersion, request.InternalMaterialCode, request.ConversionFactor,
+                actor,
                 cancellationToken);
 
             return Results.Ok(result);
         }
-        catch (AssociationConflictException ex)
-        {
-            return Results.Problem(
-                title: "Association item was modified",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status409Conflict,
-                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["itemId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
-        }
         catch (AssociationValidationException ex)
         {
-            var statusCode = ex.Code switch
-            {
-                "association.material_not_found" or "receipt.not_found" or "supplier.not_found" or "association.item_not_found" => StatusCodes.Status404NotFound,
-                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
-                _ => StatusCodes.Status400BadRequest
-            };
-
-            return Results.Problem(
-                title: "Invalid association request",
-                detail: ex.Message,
-                statusCode: statusCode,
-                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+            return ToProblemResult(ex.Code, ex.Message);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return ToProblemResult("association.conflict", ex.Message);
         }
     }
 
@@ -164,145 +212,93 @@ public static class SupplyChainEndpoints
         Guid itemId,
         [FromBody] CreateMaterialAndAssociateRequest request,
         HttpContext context,
-        CreateMaterialAndAssociate createMaterialAndAssociate,
+        CreateMaterialAndAssociate createAndAssociate,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
+        var actor = context.User.Identity?.Name ?? "system";
         try
         {
-            var materialInput = new CreateMaterialInput(
-                request.MaterialCode,
-                request.OfficialName,
-                request.Description,
-                request.UnitOfMeasure,
-                request.ProcurementType,
-                request.Category,
-                request.Gtin,
-                request.Ncm);
-
-            var result = await createMaterialAndAssociate.ExecuteAsync(
-                receiptId,
-                itemId,
-                request.ExpectedVersion,
-                materialInput,
+            var result = await createAndAssociate.ExecuteAsync(
+                receiptId, itemId, request.ExpectedVersion, 
+                new CreateMaterialInput(
+                    request.MaterialCode, request.OfficialName, request.Description, 
+                    request.UnitOfMeasure, request.ProcurementType, request.Category, 
+                    request.Gtin, request.Ncm),
                 request.ConversionFactor,
-                context.User.Identity?.Name ?? "system@railfactory.local",
+                actor,
                 cancellationToken);
 
             return Results.Ok(result);
         }
-        catch (AssociationConflictException ex)
-        {
-            return Results.Problem(
-                title: "Association item was modified",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status409Conflict,
-                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["itemId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
-        }
         catch (AssociationValidationException ex)
         {
-            var statusCode = ex.Code switch
-            {
-                "receipt.not_found" or "supplier.not_found" or "association.item_not_found" => StatusCodes.Status404NotFound,
-                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
-                _ => StatusCodes.Status400BadRequest
-            };
-
-            return Results.Problem(
-                title: "Invalid association and creation request",
-                detail: ex.Message,
-                statusCode: statusCode,
-                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+            return ToProblemResult(ex.Code, ex.Message);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return ToProblemResult("association.conflict", ex.Message);
+        }
+        catch (RemoteServiceValidationException ex)
+        {
+            return ToProblemResult(ex.Code, ex.Message);
         }
     }
 
-    private static Task<IResult> HandleReviewAssociationItemLater(
+    private static async Task<IResult> HandleReviewAssociationItemLater(
         Guid receiptId,
         Guid itemId,
         [FromBody] ControlledAssociationDecisionRequest request,
         HttpContext context,
-        RecordControlledAssociationDecision recordDecision,
-        CancellationToken cancellationToken)
-        => HandleControlledAssociationDecision(
-            receiptId,
-            itemId,
-            request,
-            context,
-            recordDecision,
-            ControlledAssociationDecision.ReviewLater,
-            cancellationToken);
-
-    private static Task<IResult> HandleIgnoreAssociationItem(
-        Guid receiptId,
-        Guid itemId,
-        [FromBody] ControlledAssociationDecisionRequest request,
-        HttpContext context,
-        RecordControlledAssociationDecision recordDecision,
-        CancellationToken cancellationToken)
-        => HandleControlledAssociationDecision(
-            receiptId,
-            itemId,
-            request,
-            context,
-            recordDecision,
-            ControlledAssociationDecision.Ignored,
-            cancellationToken);
-
-    private static async Task<IResult> HandleControlledAssociationDecision(
-        Guid receiptId,
-        Guid itemId,
-        ControlledAssociationDecisionRequest request,
-        HttpContext context,
-        RecordControlledAssociationDecision recordDecision,
-        ControlledAssociationDecision decision,
+        RecordControlledAssociationDecision reviewLater,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
+        var actor = context.User.Identity?.Name ?? "system";
         try
         {
-            var result = await recordDecision.ExecuteAsync(
-                receiptId,
-                itemId,
-                request.ExpectedVersion,
-                decision,
-                request.Reason,
-                context.User.Identity?.Name ?? "system@railfactory.local",
+            var result = await reviewLater.ExecuteAsync(
+                receiptId, itemId, request.ExpectedVersion, 
+                ControlledAssociationDecision.ReviewLater, request.Reason, 
+                actor,
                 cancellationToken);
 
             return Results.Ok(result);
         }
+        catch (AssociationValidationException ex)
+        {
+            return ToProblemResult(ex.Code, ex.Message);
+        }
         catch (AssociationConflictException ex)
         {
-            return Results.Problem(
-                title: "Association item was modified",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status409Conflict,
-                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["itemId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
+            return ToProblemResult("association.conflict", ex.Message);
+        }
+    }
+
+    private static async Task<IResult> HandleIgnoreAssociationItem(
+        Guid receiptId,
+        Guid itemId,
+        [FromBody] ControlledAssociationDecisionRequest request,
+        HttpContext context,
+        RecordControlledAssociationDecision ignoreItem,
+        CancellationToken cancellationToken)
+    {
+        var actor = context.User.Identity?.Name ?? "system";
+        try
+        {
+            var result = await ignoreItem.ExecuteAsync(
+                receiptId, itemId, request.ExpectedVersion, 
+                ControlledAssociationDecision.Ignored, request.Reason, 
+                actor,
+                cancellationToken);
+
+            return Results.Ok(result);
         }
         catch (AssociationValidationException ex)
         {
-            var statusCode = ex.Code switch
-            {
-                "receipt.not_found" or "association.item_not_found" => StatusCodes.Status404NotFound,
-                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
-                _ => StatusCodes.Status400BadRequest
-            };
-
-            return Results.Problem(
-                title: "Invalid association decision",
-                detail: ex.Message,
-                statusCode: statusCode,
-                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+            return ToProblemResult(ex.Code, ex.Message);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return ToProblemResult("association.conflict", ex.Message);
         }
     }
 
@@ -314,50 +310,24 @@ public static class SupplyChainEndpoints
         OverrideSupplierProductCode overrideSku,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
+        var actor = context.User.Identity?.Name ?? "system";
         try
         {
-            var actor = context.User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(actor)) return Results.Unauthorized();
-
             var result = await overrideSku.ExecuteAsync(
-                receiptId,
-                itemId,
-                request.ExpectedVersion,
-                request.CorrectedCode,
-                request.Reason,
+                receiptId, itemId, request.ExpectedVersion, 
+                request.CorrectedCode, request.Reason, 
                 actor,
                 cancellationToken);
 
             return Results.Ok(result);
         }
-        catch (AssociationConflictException ex)
-        {
-            return Results.Problem(
-                title: "Association item was modified",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status409Conflict,
-                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["itemId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
-        }
         catch (AssociationValidationException ex)
         {
-            var statusCode = ex.Code switch
-            {
-                "receipt.not_found" or "association.item_not_found" => StatusCodes.Status404NotFound,
-                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
-                _ => StatusCodes.Status400BadRequest
-            };
-
-            return Results.Problem(
-                title: "Invalid SKU override request",
-                detail: ex.Message,
-                statusCode: statusCode,
-                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+            return ToProblemResult(ex.Code, ex.Message);
+        }
+        catch (AssociationConflictException ex)
+        {
+            return ToProblemResult("association.conflict", ex.Message);
         }
     }
 
@@ -365,169 +335,108 @@ public static class SupplyChainEndpoints
         Guid receiptId,
         [FromBody] ReleaseReceiptToConferenceRequest request,
         HttpContext context,
-        ReleaseReceiptToConference releaseReceiptToConference,
+        ReleaseReceiptToConference releaseToConference,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
+        var actor = context.User.Identity?.Name ?? "system";
         try
         {
-            var result = await releaseReceiptToConference.ExecuteAsync(
-                receiptId,
-                request.ExpectedReceiptVersion,
-                context.User.Identity?.Name ?? "system@railfactory.local",
+            var result = await releaseToConference.ExecuteAsync(
+                receiptId, request.ExpectedReceiptVersion, 
+                actor,
                 cancellationToken);
 
             return Results.Ok(result);
         }
+        catch (AssociationValidationException ex)
+        {
+            return ToProblemResult(ex.Code, ex.Message);
+        }
         catch (AssociationConflictException ex)
         {
-            return Results.Problem(
-                title: "Association receipt was modified",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status409Conflict,
-                extensions: new Dictionary<string, object?> { ["code"] = "association.item_conflict", ["receiptId"] = ex.ItemId, ["currentVersion"] = ex.CurrentVersion });
+            return ToProblemResult("association.conflict", ex.Message);
         }
         catch (AssociationReleaseBlockedException ex)
         {
             return Results.Problem(
-                title: "Receipt has unresolved association items",
+                title: "Release blocked",
                 detail: ex.Message,
                 statusCode: StatusCodes.Status409Conflict,
-                extensions: new Dictionary<string, object?> { ["code"] = "association.release_blocked", ["blockers"] = ex.Blockers });
-        }
-        catch (AssociationValidationException ex)
-        {
-            var statusCode = ex.Code switch
-            {
-                "receipt.not_found" => StatusCodes.Status404NotFound,
-                "association.invalid_receipt_status" => StatusCodes.Status409Conflict,
-                _ => StatusCodes.Status400BadRequest
-            };
-
-            return Results.Problem(
-                title: "Invalid association release request",
-                detail: ex.Message,
-                statusCode: statusCode,
-                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+                extensions: new Dictionary<string, object?> 
+                { 
+                    ["code"] = "association.release_blocked",
+                    ["blockers"] = ex.Blockers
+                });
         }
     }
 
     private static async Task<IResult> HandleCreateMapping(
         [FromBody] CreateSupplierMaterialMappingRequest request,
         HttpContext context,
-        CreateSupplierMaterialMapping createMapping,
+        CreateSupplierMaterialMapping registerMapping,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name;
-        if (string.IsNullOrWhiteSpace(actor))
-        {
-            return Results.Unauthorized();
-        }
-
-        await createMapping.ExecuteAsync(
-            request.SupplierFiscalId,
-            request.SupplierProductCode,
-            request.InternalMaterialCode,
+        var actor = context.User.Identity?.Name ?? "system";
+        await registerMapping.ExecuteAsync(
+            request.SupplierFiscalId, 
+            request.SupplierProductCode, 
+            request.InternalMaterialCode, 
             request.InternalUnitOfMeasure,
             request.SupplierUnit,
             request.ConversionFactor,
             actor,
             cancellationToken);
-
-
         return Results.NoContent();
     }
 
-    private static IResult HandleGetInfo(HttpContext context, IHostEnvironment environment, GetSupplyChainInfo getSupplyChainInfo)
-    {
-        var tenant = context.GetResolvedTenant();
-
-        var response = getSupplyChainInfo.Execute(
-            environment.EnvironmentName,
-            tenant?.Locale,
-            tenant?.TimeZone);
-
-        return Results.Ok(response);
-    }
-
-    private static async Task<IResult> HandleCreateSupplier(
-        [FromBody] CreateSupplierRequest request,
-        CreateSupplier createSupplier,
-        CancellationToken cancellationToken)
-    {
-        var validation = RequestValidator.Validate(request);
-        if (validation is not null)
-        {
-            return validation;
-        }
-
-        var supplier = await createSupplier.ExecuteAsync(request.FiscalId, request.Name, cancellationToken);
-        return Results.Created($"{SuppliersPath}/{supplier.Id}", new { supplier.Id, supplier.FiscalId, supplier.Name });
-    }
-
-    private static async Task<IResult> HandleListReceipts(
-        HttpContext context,
-        ListReceipts listReceipts,
-        CancellationToken cancellationToken)
-    {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
-        var receipts = await listReceipts.ExecuteAsync(cancellationToken);
-        return Results.Ok(receipts);
-    }
-
-    private static async Task<IResult> HandleGetReceiptDetails(
+    private static async Task<IResult> HandleGetReceiptXml(
         Guid id,
-        HttpContext context,
-        GetMaterialReceiptDetails getDetails,
+        ISupplyChainRepository repository,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
+        var receipt = await repository.GetReceiptByIdAsync(id, cancellationToken);
+        return receipt?.RawXml is not null ? Results.Text(receipt.RawXml, "application/xml") : Results.NotFound();
+    }
 
-        var result = await getDetails.ExecuteAsync(id, cancellationToken);
-        return result is not null ? Results.Ok(result) : Results.NotFound();
+    private static async Task<IResult> HandleImportXmlReceipt(
+        [FromForm] IFormFile file,
+        ImportXmlReceipt importXml,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
+        using var reader = new StreamReader(file.OpenReadStream());
+        var xmlContent = await reader.ReadToEndAsync(cancellationToken);
+        var result = await importXml.ExecuteAsync("system", xmlContent, Guid.NewGuid().ToString(), cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandlePreviewXmlReceipt(
-        HttpContext context,
-        IFormFile file,
+        [FromForm] IFormFile file,
         INfeProvider nfeProvider,
         CancellationToken cancellationToken)
     {
-        if (file is null || file.Length == 0)
-        {
-            return Results.BadRequest(new { code = "receipt.file_required", message = "An XML file is required." });
-        }
+        if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
+        using var reader = new StreamReader(file.OpenReadStream());
+        var xmlContent = await reader.ReadToEndAsync(cancellationToken);
+        var result = nfeProvider.Parse(xmlContent);
+        return Results.Ok(result);
+    }
 
-        try
+    private static async Task<IResult> HandleImportXmlReceiptBatch(
+        [FromForm] IFormFileCollection files,
+        ImportXmlReceiptBatch importBatch,
+        CancellationToken cancellationToken)
+    {
+        if (files == null || files.Count == 0) return Results.BadRequest("No files uploaded.");
+        var documents = new List<ImportXmlReceiptBatchDocument>();
+        foreach (var file in files)
         {
             using var reader = new StreamReader(file.OpenReadStream());
-            var xmlContent = await reader.ReadToEndAsync(cancellationToken);
-            var parsed = nfeProvider.Parse(xmlContent);
-
-            return Results.Ok(parsed);
+            documents.Add(new ImportXmlReceiptBatchDocument(file.FileName, await reader.ReadToEndAsync(cancellationToken)));
         }
-        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
-        {
-            return Results.Problem(
-                title: "Invalid fiscal document",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "receipt.invalid_xml" });
-        }
+        
+        var result = await importBatch.ExecuteAsync("system", documents, Guid.NewGuid().ToString(), cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleStartConference(
@@ -536,45 +445,16 @@ public static class SupplyChainEndpoints
         StartMaterialReceiptConference startConference,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
+        var actor = context.User.Identity?.Name ?? "system";
         try
         {
-            var receipt = await startConference.ExecuteAsync(
-                id,
-                context.User.Identity?.Name ?? "anonymous",
-                cancellationToken);
-
-            return Results.Ok(new { receiptId = receipt.Id, status = receipt.Status.ToString() });
+            var result = await startConference.ExecuteAsync(id, actor, cancellationToken);
+            return Results.Ok(result);
         }
         catch (InvalidOperationException ex)
         {
-            return Results.Problem(
-                title: "Invalid request",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "receipt.invalid_status" });
+            return ToProblemResult("association.invalid_receipt_status", ex.Message);
         }
-    }
-
-    private static async Task<IResult> HandleGetConferenceItems(
-        Guid id,
-        HttpContext context,
-        GetConferenceItems getConferenceItems,
-        CancellationToken cancellationToken)
-    {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
-        var result = await getConferenceItems.ExecuteAsync(id, cancellationToken);
-        return result is not null ? Results.Ok(result) : Results.NotFound();
     }
 
     private static async Task<IResult> HandleCloseConference(
@@ -584,215 +464,75 @@ public static class SupplyChainEndpoints
         CloseMaterialReceiptConference closeConference,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
+        var actor = context.User.Identity?.Name ?? "system";
         try
         {
-            var results = request.Results.Select(x => new CloseConferenceItemInput(
-                x.ItemId,
-                x.CountedQuantity,
-                x.ConfirmedLotNumber,
-                x.ConfirmedExpirationDate)).ToList();
-
-            var receipt = await closeConference.ExecuteAsync(
-                id,
-                context.User.Identity?.Name ?? "anonymous",
-                results,
-                context.TraceIdentifier,
+            var result = await closeConference.ExecuteAsync(
+                id, 
+                actor, 
+                request.Results.Select(i => new CloseConferenceItemInput(i.ItemId, i.CountedQuantity, i.ConfirmedLotNumber, i.ConfirmedExpirationDate)).ToList(),
+                Guid.NewGuid().ToString(),
                 cancellationToken);
 
-            return Results.Ok(new { receiptId = receipt.Id, status = receipt.Status.ToString() });
+            return Results.Ok(result);
         }
         catch (InvalidOperationException ex)
         {
-            return Results.Problem(
-                title: "Invalid request",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "receipt.invalid_status" });
+            return ToProblemResult("conference.invalid_operation", ex.Message);
         }
     }
 
-    private static async Task<IResult> HandleImportXmlReceipt(
-        HttpContext context,
-        IFormFile file,
-        ImportXmlReceipt importXmlReceipt,
+    private static async Task<IResult> HandleGetConferenceItems(
+        Guid id,
+        GetConferenceItems getItems,
         CancellationToken cancellationToken)
     {
-        if (file is null || file.Length == 0)
-        {
-            return Results.BadRequest(new { code = "receipt.file_required", message = "An XML file is required." });
-        }
-
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
-        Guid receiptId;
-        try
-        {
-            using var reader = new StreamReader(file.OpenReadStream());
-            var xmlContent = await reader.ReadToEndAsync(cancellationToken);
-
-            receiptId = await importXmlReceipt.ExecuteAsync(
-                context.User.Identity?.Name ?? "anonymous",
-                xmlContent,
-                context.TraceIdentifier,
-                cancellationToken);
-        }
-        catch (ReceiptAlreadyExistsException ex)
-        {
-            return Results.Problem(
-                title: "Invalid request",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "receipt.duplicate" });
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
-        {
-            return Results.Problem(
-                title: "Invalid request",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "receipt.invalid_xml" });
-        }
-
-        return Results.Created($"{ReceiptsPath}/{receiptId}", new { receiptId });
-    }
-
-    private static async Task<IResult> HandleImportXmlReceiptBatch(
-        HttpContext context,
-        IFormFileCollection files,
-        ImportXmlReceiptBatch importXmlReceiptBatch,
-        CancellationToken cancellationToken)
-    {
-        if (files is null || files.Count == 0)
-        {
-            return Results.BadRequest(new { code = "receipt.files_required", message = "At least one XML file is required." });
-        }
-
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
-        try
-        {
-            var documents = new List<ImportXmlReceiptBatchDocument>();
-            foreach (var file in files)
-            {
-                using var reader = new StreamReader(file.OpenReadStream());
-                var xmlContent = await reader.ReadToEndAsync(cancellationToken);
-                documents.Add(new ImportXmlReceiptBatchDocument(file.FileName, xmlContent));
-            }
-
-            var summary = await importXmlReceiptBatch.ExecuteAsync(
-                context.User.Identity?.Name ?? "anonymous",
-                documents,
-                context.TraceIdentifier,
-                cancellationToken);
-
-            return Results.Created(ImportXmlBatchPath, new
-            {
-                successful = summary.SuccessfulImports.Select(x => new
-                {
-                    x.FileName,
-                    x.ReceiptId,
-                    x.ReceiptNumber,
-                    x.DocumentNumber
-                }),
-                failed = summary.FailedImports.Select(x => new
-                {
-                    x.FileName,
-                    x.Message
-                })
-            });
-        }
-        catch (ImportXmlReceiptBatchValidationException ex)
-        {
-            return Results.BadRequest(new
-            {
-                code = "receipt.batch_invalid",
-                errors = ex.Errors.Select(x => new { x.FileName, x.Message })
-            });
-        }
+        var items = await getItems.ExecuteAsync(id, cancellationToken);
+        return Results.Ok(items);
     }
 
     private static async Task<IResult> HandleListOutboxDeadLetters(
-        HttpContext context,
-        [FromQuery] int take,
         ListSupplyOutboxDeadLetters listDeadLetters,
+        [FromQuery] int? take,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
-        var messages = await listDeadLetters.ExecuteAsync(take == 0 ? 50 : take, cancellationToken);
-        return Results.Ok(new
-        {
-            deadLetters = messages.Select(x => new
-            {
-                x.Id,
-                x.EventType,
-                x.CorrelationId,
-                x.CreatedAt,
-                x.AttemptCount,
-                x.LastAttemptAt,
-                x.DeadLetteredAt,
-                x.LastError
-            })
-        });
+        var result = await listDeadLetters.ExecuteAsync(take, cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleReplayOutboxDeadLetters(
-        HttpContext context,
         [FromBody] ReplayOutboxDeadLettersRequest request,
         ReplaySupplyOutboxDeadLetters replayDeadLetters,
         CancellationToken cancellationToken)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
-
-        var count = await replayDeadLetters.ExecuteAsync(request.MessageIds, cancellationToken);
-        return Results.Ok(new { replayedCount = count });
+        await replayDeadLetters.ExecuteAsync(request.MessageIds, cancellationToken);
+        return Results.Accepted();
     }
 
-    private static async Task<IResult> HandleGetReceiptXml(
-        Guid id,
-        HttpContext context,
-        ISupplyChainRepository repository,
-        CancellationToken cancellationToken)
+    private static IResult HandleGetInfo(HttpContext context, IHostEnvironment environment, GetSupplyChainInfo getInfo)
     {
-        var tenantCode = context.GetResolvedTenant()?.Code;
-        if (string.IsNullOrWhiteSpace(tenantCode))
-        {
-            return TenantHttpResults.CodeRequired();
-        }
+        var tenant = context.GetResolvedTenant();
+        var response = getInfo.Execute(environment.EnvironmentName, tenant?.Locale, tenant?.TimeZone);
+        return Results.Ok(response);
+    }
 
-        var receipt = await repository.GetReceiptByIdAsync(id, cancellationToken);
-        if (receipt is null)
-        {
-            return Results.NotFound();
-        }
+    private static IResult ToProblemResult(string code, string message)
+    {
+        return Results.Problem(
+            title: "Operation failed",
+            detail: message,
+            statusCode: code switch
+            {
+                "receipt.not_found" or "association.item_not_found" or "supplier.not_found" => StatusCodes.Status404NotFound,
+                "association.invalid_receipt_status" or "conference.already_started" => StatusCodes.Status409Conflict,
+                "concurrency_error" or "association.conflict" => StatusCodes.Status412PreconditionFailed,
+                _ => StatusCodes.Status400BadRequest
+            },
+            extensions: new Dictionary<string, object?> { ["code"] = code });
+    }
 
-        if (string.IsNullOrWhiteSpace(receipt.RawXml))
-        {
-            return Results.NotFound(new { code = "receipt.xml_not_found", message = "Raw XML not available for this receipt." });
-        }
-
-        return Results.Content(receipt.RawXml, "application/xml");
+    private static IResult ToProblemResult(RailFactory.BuildingBlocks.Results.Error error)
+    {
+        return ToProblemResult(error.Code, error.Message);
     }
 }

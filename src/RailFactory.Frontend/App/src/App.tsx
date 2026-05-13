@@ -5,6 +5,7 @@ import { ProtectedDashboardLayout } from './shared/layouts/ProtectedDashboardLay
 import { OverviewPanel, Status } from './features/dashboard';
 import { ReceiptsWorkspace, AssociationWorkbenchPage } from './features/supply-chain';
 import { InventoryStocksPage, MaterialDetailsPage } from './features/inventory';
+import { RolesManagementPage, UsersManagementPage } from './features/iam';
 import { TenantSelector } from './shared/components/TenantSelector';
 import { Box, Button, Card, CircularProgress, Container, Typography, Link } from '@mui/material';
 import { buildTenantHeaders, fetchJsonOrThrow } from './shared/lib/http';
@@ -161,6 +162,8 @@ export function App() {
             <Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />
             <Route path="inventory" element={<InventoryStocksPage tenantCode={tenantCode} />} />
             <Route path="inventory/materials/:materialCode" element={<MaterialDetailsPage tenantCode={tenantCode} />} />
+            <Route path="iam/users" element={<UsersManagementPage tenantCode={tenantCode} />} />
+            <Route path="iam/roles" element={<RolesManagementPage tenantCode={tenantCode} />} />
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>
         </ProtectedDashboardLayout>

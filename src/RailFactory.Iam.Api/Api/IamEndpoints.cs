@@ -8,30 +8,121 @@ using RailFactory.Iam.Api.Application;
 using RailFactory.Iam.Api.Application.Auth;
 using RailFactory.Iam.Api.Infrastructure;
 using RailFactory.Iam.Api.Api.Validation;
+using RailFactory.Iam.Api.Api.Requests;
 
 namespace RailFactory.Iam.Api.Api;
 
 public static class IamEndpoints
 {
-    private const string RootPath = "/";
+    private const string ApiGroup = "/api/iam";
     private const string InfoPath = "/info";
+    
+    // Auth Flow
     private const string GoogleStartPath = "/auth/google/start";
+    private const string GoogleFinalizePath = "/auth/google/finalize";
+    
+    // Session & User
     private const string SessionPath = "/auth/session";
     private const string LogoutPath = "/auth/logout";
     private const string CurrentUserPath = "/auth/current-user";
-    private const string GoogleFinalizePath = "/auth/google/finalize";
+    
+    // RBAC Management
+    private const string RolesPath = "/roles";
+    private const string PermissionsPath = "/permissions";
+    private const string UsersPath = "/users";
+    private const string UserRolesPath = "/users/{email}/roles";
+    private const string UserSpecificRolePath = "/users/{email}/roles/{roleId:guid}";
+    
     private static readonly AuthSessionDto UnauthenticatedSession = AuthSessionDto.Unauthenticated;
 
     public static WebApplication MapIamEndpoints(this WebApplication app)
     {
-        app.MapGet(RootPath, () => Results.Redirect(InfoPath));
-        app.MapGet(InfoPath, HandleGetInfo).AllowAnonymous();
-        app.MapGet(GoogleStartPath, HandleStartGoogleLogin).AllowAnonymous();
-        app.MapGet(SessionPath, HandleGetSession).AllowAnonymous();
-        app.MapPost(LogoutPath, (Func<HttpContext, Task<IResult>>)HandleLogout).RequireAuthorization();
-        app.MapGet(CurrentUserPath, HandleGetCurrentUser).RequireAuthorization();
-        app.MapGet(GoogleFinalizePath, HandleFinalizeGoogleLogin).AllowAnonymous();
+        // Root redirect for health checks/discovery
+        app.MapGet("/", () => Results.Redirect($"{ApiGroup}{InfoPath}"));
+
+        var group = app.MapGroup(ApiGroup);
+
+        group.MapGet(InfoPath, HandleGetInfo).AllowAnonymous();
+        
+        // OAuth
+        group.MapGet(GoogleStartPath, HandleStartGoogleLogin).AllowAnonymous();
+        group.MapGet(GoogleFinalizePath, HandleFinalizeGoogleLogin).AllowAnonymous();
+
+        // Session
+        group.MapGet(SessionPath, HandleGetSession).AllowAnonymous();
+        group.MapPost(LogoutPath, (Delegate)HandleLogout).RequireAuthorization();
+        group.MapGet(CurrentUserPath, HandleGetCurrentUser).RequireAuthorization();
+
+        // RBAC Management
+        var adminGroup = group.MapGroup("/").RequirePermission(SystemPermissions.Iam.RolesManage);
+        
+        adminGroup.MapGet(RolesPath, HandleListRoles);
+        adminGroup.MapPost(RolesPath, HandleCreateRole);
+        adminGroup.MapGet(PermissionsPath, () => Results.Ok(SystemPermissions.All()));
+        adminGroup.MapGet(UsersPath, HandleListUsers);
+        adminGroup.MapPost(UserRolesPath, HandleAssignRole);
+        adminGroup.MapDelete(UserSpecificRolePath, HandleRemoveRole);
+
         return app;
+    }
+
+    private static async Task<IResult> HandleListRoles(
+        ListTenantRoles listTenantRoles,
+        CancellationToken cancellationToken)
+    {
+        var roles = await listTenantRoles.ExecuteAsync(cancellationToken);
+        return Results.Ok(roles);
+    }
+
+    private static async Task<IResult> HandleCreateRole(
+        CreateRoleRequest request,
+        CreateTenantRole createTenantRole,
+        CancellationToken cancellationToken)
+    {
+        var id = await createTenantRole.ExecuteAsync(request, cancellationToken);
+        return Results.Created($"{ApiGroup}{RolesPath}/{id}", new { id });
+    }
+
+    private static async Task<IResult> HandleAssignRole(
+        string email,
+        AssignRoleRequest request,
+        AssignRoleToUser assignRoleToUser,
+        CancellationToken cancellationToken)
+    {
+        var success = await assignRoleToUser.ExecuteAsync(email, request.RoleId, cancellationToken);
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleListUsers(
+        ListTenantUsers listTenantUsers,
+        CancellationToken cancellationToken)
+    {
+        var users = await listTenantUsers.ExecuteAsync(cancellationToken);
+        return Results.Ok(users);
+    }
+
+    private static async Task<IResult> HandleRemoveRole(
+        string email,
+        Guid roleId,
+        RemoveRoleFromUser removeRoleFromUser,
+        CancellationToken cancellationToken)
+    {
+        var success = await removeRoleFromUser.ExecuteAsync(email, roleId, cancellationToken);
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+
+    private static IResult HandleDebugGoogle(
+        [FromServices] Microsoft.Extensions.Options.IOptionsMonitor<Microsoft.AspNetCore.Authentication.Google.GoogleOptions> googleOptions,
+        [FromServices] Microsoft.Extensions.Options.IOptions<RailFactory.Iam.Api.Infrastructure.GoogleOAuthOptions> customOptions)
+    {
+        var opt = googleOptions.Get(Microsoft.AspNetCore.Authentication.Google.GoogleDefaults.AuthenticationScheme);
+        return Results.Ok(new
+        {
+            CustomPublicOrigin = customOptions.Value.PublicOrigin,
+            CustomCallbackPath = customOptions.Value.CallbackPath,
+            AuthEndpoint = opt.AuthorizationEndpoint,
+            ClientId = opt.ClientId
+        });
     }
 
     private static IResult HandleGetInfo(HttpContext context, IHostEnvironment environment, GetIamInfo getIamInfo)
@@ -109,7 +200,7 @@ public static class IamEndpoints
         var upsertResult = await upsertLocalUserFromExternalLogin.ExecuteAsync(
             externalProvider: "google",
             externalSubject: context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
-            email: context.User.FindFirstValue("email"),
+            email: context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email"),
             displayName: context.User.Identity?.Name,
             cancellationToken);
 
@@ -121,16 +212,25 @@ public static class IamEndpoints
                 upsertResult.ErrorCode ?? AuthResultErrorCode.OAuthError));
     }
 
-    private static IResult HandleGetSession(HttpContext context)
+    private static async Task<IResult> HandleGetSession(
+        HttpContext context,
+        [FromServices] GetUserPermissions getUserPermissions,
+        CancellationToken cancellationToken)
     {
         if (context.User.Identity?.IsAuthenticated is not true)
         {
             return Results.Json(UnauthenticatedSession, statusCode: StatusCodes.Status401Unauthorized);
         }
 
+        var provider = "google";
+        var subject = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub");
+        
+        var permissions = await getUserPermissions.ExecuteAsync(provider, subject!, cancellationToken);
+
         return Results.Ok(AuthSessionDto.CreateAuthenticated(
             context.User.Identity?.Name,
-            context.User.FindFirst("email")?.Value));
+            context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email"),
+            permissions));
     }
 
     private static async Task<IResult> HandleLogout(HttpContext context)
@@ -139,8 +239,19 @@ public static class IamEndpoints
         return Results.NoContent();
     }
 
-    private static IResult HandleGetCurrentUser(HttpContext context)
-        => Results.Ok(AuthSessionDto.CreateAuthenticated(
+    private static async Task<IResult> HandleGetCurrentUser(
+        HttpContext context,
+        [FromServices] GetUserPermissions getUserPermissions,
+        CancellationToken cancellationToken)
+    {
+        var provider = "google";
+        var subject = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub");
+        
+        var permissions = await getUserPermissions.ExecuteAsync(provider, subject!, cancellationToken);
+
+        return Results.Ok(AuthSessionDto.CreateAuthenticated(
             context.User.Identity?.Name,
-            context.User.FindFirst("email")?.Value));
+            context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email"),
+            permissions));
+    }
 }

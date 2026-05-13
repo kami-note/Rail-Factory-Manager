@@ -1,0 +1,202 @@
+<?xml version='1.0' encoding='utf-8'?>
+<NFe xmlns="http://www.portalfiscal.inf.br/nfe" xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+  <infNFe Id="NFe35260512345678000190550010000000051912565733" versao="4.00">
+    <ide>
+      <cUF>35</cUF>
+      <cNF>91256573</cNF>
+      <natOp>Compra de bem para o ativo imobilizado</natOp>
+      <mod>55</mod>
+      <serie>1</serie>
+      <nNF>5</nNF>
+      <dhEmi>2026-05-09T10:15:00-03:00</dhEmi>
+      <dhSaiEnt>2026-05-09T14:30:00-03:00</dhSaiEnt>
+      <tpNF>1</tpNF>
+      <idDest>1</idDest>
+      <cMunFG>3509502</cMunFG>
+      <tpImp>1</tpImp>
+      <tpEmis>1</tpEmis>
+      <cDV>3</cDV>
+      <tpAmb>2</tpAmb>
+      <finNFe>1</finNFe>
+      <indFinal>1</indFinal>
+      <indPres>2</indPres>
+      <procEmi>0</procEmi>
+      <verProc>GERADOR-PRO-2.0</verProc>
+    </ide>
+    <emit>
+      <CNPJ>12345678000190</CNPJ>
+      <xNome>Industria Metalurgica Vale do Rio S.A.</xNome>
+      <xFant>Vale Metal</xFant>
+      <enderEmit>
+        <xLgr>Rodovia dos Bandeirantes</xLgr>
+        <nro>4500</nro>
+        <xCpl>KM 92</xCpl>
+        <xBairro>Distrito Industrial</xBairro>
+        <cMun>3525904</cMun>
+        <xMun>Jundiai</xMun>
+        <UF>SP</UF>
+        <CEP>13213000</CEP>
+        <cPais>1058</cPais>
+        <xPais>BRASIL</xPais>
+        <fone>1145831000</fone>
+      </enderEmit>
+      <IE>357123456789</IE>
+      <CRT>3</CRT>
+    </emit>
+    <dest>
+      <CNPJ>40391549144332</CNPJ>
+      <xNome>Fabrica Vetor de Sistemas Mecanicos S.A.</xNome>
+      <enderDest>
+        <xLgr>Rua Projetada</xLgr>
+        <nro>2409</nro>
+        <xCpl>Galpao 12</xCpl>
+        <xBairro>Jardim Europa</xBairro>
+        <cMun>3509502</cMun>
+        <xMun>Campinas</xMun>
+        <UF>SP</UF>
+        <CEP>39179896</CEP>
+        <cPais>1058</cPais>
+        <xPais>BRASIL</xPais>
+        <fone>1942178831</fone>
+      </enderDest>
+      <indIEDest>1</indIEDest>
+      <IE>093395797528</IE>
+      <email>fiscal@fabrica-vetor.com.br</email>
+    </dest>
+    <det nItem="1">
+      <prod>
+        <cProd>EQP-CNC-001</cProd>
+        <cEAN>SEM GTIN</cEAN>
+        <xProd>Centro de Usinagem CNC High Speed - Modelo V10</xProd>
+        <NCM>84571000</NCM>
+        <CEST>0105700</CEST>
+        <indEscala>S</indEscala>
+        <CFOP>1551</CFOP>
+        <uCom>UN</uCom>
+        <qCom>1.0000</qCom>
+        <vUnCom>450000.0000</vUnCom>
+        <vProd>450000.00</vProd>
+        <cEANTrib>SEM GTIN</cEANTrib>
+        <uTrib>UN</uTrib>
+        <qTrib>1.0000</qTrib>
+        <vUnTrib>450000.0000</vUnTrib>
+        <indTot>1</indTot>
+        <xPed>PC-2026-EQP-044</xPed>
+        <nItemPed>1</nItemPed>
+      </prod>
+      <imposto>
+        <vTotTrib>81000.00</vTotTrib>
+        <ICMS>
+          <ICMS00>
+            <orig>0</orig>
+            <CST>00</CST>
+            <modBC>3</modBC>
+            <vBC>450000.00</vBC>
+            <pICMS>18.00</pICMS>
+            <vICMS>81000.00</vICMS>
+          </ICMS00>
+        </ICMS>
+        <IPI>
+          <cEnq>999</cEnq>
+          <IPITrib>
+            <CST>50</CST>
+            <vBC>450000.00</vBC>
+            <pIPI>0.00</pIPI>
+            <vIPI>0.00</vIPI>
+          </IPITrib>
+        </IPI>
+        <PIS>
+          <PISAliq>
+            <CST>01</CST>
+            <vBC>450000.00</vBC>
+            <pPIS>1.65</pPIS>
+            <vPIS>7425.00</vPIS>
+          </PISAliq>
+        </PIS>
+        <COFINS>
+          <COFINSAliq>
+            <CST>01</CST>
+            <vBC>450000.00</vBC>
+            <pCOFINS>7.60</pCOFINS>
+            <vCOFINS>34200.00</vCOFINS>
+          </COFINSAliq>
+        </COFINS>
+      </imposto>
+    </det>
+    <total>
+      <ICMSTot>
+        <vBC>450000.00</vBC>
+        <vICMS>81000.00</vICMS>
+        <vICMSDeson>0.00</vICMSDeson>
+        <vFCP>0.00</vFCP>
+        <vBCST>0.00</vBCST>
+        <vST>0.00</vST>
+        <vFCPST>0.00</vFCPST>
+        <vFCPSTRet>0.00</vFCPSTRet>
+        <vProd>450000.00</vProd>
+        <vFrete>0.00</vFrete>
+        <vSeg>0.00</vSeg>
+        <vDesc>0.00</vDesc>
+        <vII>0.00</vII>
+        <vIPI>0.00</vIPI>
+        <vIPIDevol>0.00</vIPIDevol>
+        <vPIS>7425.00</vPIS>
+        <vCOFINS>34200.00</vCOFINS>
+        <vOutro>0.00</vOutro>
+        <vNF>450000.00</vNF>
+        <vTotTrib>81000.00</vTotTrib>
+      </ICMSTot>
+    </total>
+    <transp>
+      <modFrete>0</modFrete>
+      <vol>
+        <qVol>1</qVol>
+        <esp>MAQUINA</esp>
+        <pesoL>12500.000</pesoL>
+        <pesoB>13000.000</pesoB>
+      </vol>
+    </transp>
+    <cobr>
+      <fat>
+        <nFat>FAT-EQUIP-001</nFat>
+        <vOrig>450000.00</vOrig>
+        <vLiq>450000.00</vLiq>
+      </fat>
+      <dup>
+        <nDup>001/01</nDup>
+        <dVenc>2026-06-08</dVenc>
+        <vDup>450000.00</vDup>
+      </dup>
+    </cobr>
+    <pag>
+      <detPag>
+        <tPag>15</tPag>
+        <vPag>450000.00</vPag>
+      </detPag>
+    </pag>
+    <infAdic>
+      <infAdFisco>ICMS diferido conforme Art. X do regulamento.</infAdFisco>
+      <infCpl>Bem destinado ao Ativo Imobilizado. Nro de Serie: CNC-2026-XYZ-123. Pedido: PC-2026-EQP-044.</infCpl>
+    </infAdic>
+  </infNFe>
+  <ds:Signature Id="SIG-MOCK-2026">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" />
+      <ds:Reference URI="#NFe35260512345678000190550010000000051912565733">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
+          <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+        <ds:DigestValue>U0FNRVMtVEVTVC1DT01QUkEtQVRJVk8=</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>U0lHTkFUVVJFLVZBTFVFLVJFRUFMLU1PQ0stMjAyNg==</ds:SignatureValue>
+    <ds:KeyInfo>
+      <ds:X509Data>
+        <ds:X509Certificate>MIIBjjCCATWgAwIBAgICBCEwDQYJKoZIhvcNAQELBQAwSTELMAkGA1UEBhMCVlMxRzAVBgNVBAgMDk5yYkc9sZGUuZGEgU01QMRUwEwYDVQQKDAhTaW1wbGZ6MRUwEwYDVQQDDA5SdWxseWNlcm1pbmcucmVsMS0wEwYJKoZIhvcNAQkBFhchbGUkdHlwZXJlcm1pbmcucmVsQ0FMF4XDTExMDQyOEVWMTBWRDQ0MFoXDTExMDQyOEVWMTBWRDQ0MFowSTELMAkGA1UEBhMCVlMxRzAVBgNVBAgMDk5yYkc9sZGUuZGEgU01QMRUwEwYDVQQKDAhTaW1wbGZ6MRUwEwYDVQQDDA5SdWxseWNlcm1pbmcucmVsMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3wNT</ds:X509Certificate>
+      </ds:X509Data>
+    </ds:KeyInfo>
+  </ds:Signature>
+</NFe>

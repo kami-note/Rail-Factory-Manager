@@ -3,6 +3,7 @@ export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'erro
 export type SessionUser = {
   name?: string;
   email?: string;
+  permissions: string[];
 };
 
 export type AuthSession = {

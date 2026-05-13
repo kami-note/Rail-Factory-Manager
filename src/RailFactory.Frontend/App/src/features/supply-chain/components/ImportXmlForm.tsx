@@ -15,9 +15,10 @@ import {
   alpha,
   useTheme
 } from '@mui/material';
-import { FileText, UploadCloud, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, UploadCloud, X, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { FiscalDocumentPreview, ParsedReceiptDocument } from './FiscalDocumentPreview';
+import { Authorized } from '../../auth';
 
 type ImportXmlFormProps = {
   tenantCode: string;
@@ -162,39 +163,50 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
 
       <Stack spacing={3}>
         {!previewData && !result && (
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 4,
-              textAlign: 'center',
-              cursor: 'pointer',
-              borderStyle: 'dashed',
-              borderWidth: 2,
-              bgcolor: alpha(theme.palette.primary.main, 0.02),
-              '&:hover': {
-                borderColor: 'primary.main',
-                bgcolor: alpha(theme.palette.primary.main, 0.05)
-              },
-              position: 'relative',
-              borderRadius: 2
-            }}
-            component="label"
+          <Authorized 
+            permission="supplychain.write"
+            fallback={
+              <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', bgcolor: alpha(theme.palette.error.main, 0.02), borderRadius: 2 }}>
+                <Lock size={48} color={theme.palette.error.main} style={{ marginBottom: 16 }} />
+                <Typography variant="body1" sx={{ fontWeight: 800 }}>Acesso Restrito</Typography>
+                <Typography variant="body2" color="text.secondary">Você não tem permissão para importar novos documentos fiscais.</Typography>
+              </Paper>
+            }
           >
-            <input
-              type="file"
-              accept=".xml,text/xml,application/xml"
-              multiple
-              hidden
-              onChange={handleFileChange}
-            />
-            <UploadCloud size={48} color={theme.palette.primary.main} style={{ marginBottom: 16 }} />
-            <Typography variant="body1" sx={{ fontWeight: 700 }}>
-              Clique ou arraste arquivos XML aqui
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Suporta Nota Fiscal avulsa ou importação em lote
-            </Typography>
-          </Paper>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 4,
+                textAlign: 'center',
+                cursor: 'pointer',
+                borderStyle: 'dashed',
+                borderWidth: 2,
+                bgcolor: alpha(theme.palette.primary.main, 0.02),
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: alpha(theme.palette.primary.main, 0.05)
+                },
+                position: 'relative',
+                borderRadius: 2
+              }}
+              component="label"
+            >
+              <input
+                type="file"
+                accept=".xml,text/xml,application/xml"
+                multiple
+                hidden
+                onChange={handleFileChange}
+              />
+              <UploadCloud size={48} color={theme.palette.primary.main} style={{ marginBottom: 16 }} />
+              <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                Clique ou arraste arquivos XML aqui
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Suporta Nota Fiscal avulsa ou importação em lote
+              </Typography>
+            </Paper>
+          </Authorized>
         )}
 
         {loading && !previewData && (
@@ -217,18 +229,20 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
             
             <FiscalDocumentPreview data={previewData} />
 
-            <Button 
-              fullWidth 
-              variant="contained" 
-              size="large"
-              color="success"
-              onClick={confirmImport}
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle size={20} />}
-              sx={{ mt: 4, py: 2, fontWeight: 900, borderRadius: 2 }}
-            >
-              {loading ? 'CONFIRMANDO...' : 'CONFIRMAR E IMPORTAR PARA ESTOQUE'}
-            </Button>
+            <Authorized permission="supplychain.write">
+              <Button 
+                fullWidth 
+                variant="contained" 
+                size="large"
+                color="success"
+                onClick={confirmImport}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle size={20} />}
+                sx={{ mt: 4, py: 2, fontWeight: 900, borderRadius: 2 }}
+              >
+                {loading ? 'CONFIRMANDO...' : 'CONFIRMAR E IMPORTAR PARA ESTOQUE'}
+              </Button>
+            </Authorized>
           </Box>
         )}
 
@@ -258,16 +272,18 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
                 ))}
               </List>
             </Paper>
-            <Button 
-              fullWidth 
-              variant="contained" 
-              size="large"
-              onClick={confirmImport}
-              disabled={loading}
-              sx={{ mt: 3, py: 1.5, fontWeight: 800, borderRadius: 2 }}
-            >
-              {loading ? 'Importando Lote...' : `Importar ${files.length} arquivos`}
-            </Button>
+            <Authorized permission="supplychain.write">
+              <Button 
+                fullWidth 
+                variant="contained" 
+                size="large"
+                onClick={confirmImport}
+                disabled={loading}
+                sx={{ mt: 3, py: 1.5, fontWeight: 800, borderRadius: 2 }}
+              >
+                {loading ? 'Importando Lote...' : `Importar ${files.length} arquivos`}
+              </Button>
+            </Authorized>
           </Box>
         )}
         

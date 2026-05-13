@@ -10,7 +10,7 @@ let cachedCsrfToken: string | null = null;
  * Fetches a fresh CSRF token from the BFF.
  */
 export async function fetchCsrfToken(tenantCode: string): Promise<string> {
-  const response = await fetch('/api/auth/csrf', {
+  const response = await fetch('/api/iam/auth/csrf', {
     headers: {
       ...buildTenantHeaders(tenantCode),
       // To satisfy the 'csrf_https_required' check when behind a proxy like ngrok

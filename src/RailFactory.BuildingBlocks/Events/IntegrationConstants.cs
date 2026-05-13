@@ -14,8 +14,8 @@ public static class IntegrationConstants
 
     public static class ApiPaths
     {
-        public const string InternalPendingBalances = "/internal/pending-balances";
-        public const string InternalConfirmedBalances = "/internal/confirmed-balances";
-        public const string InternalSupplierMaterialMapping = "/internal/supplier-material-mapping";
+        public const string InternalPendingBalances = "/api/inventory/internal/pending-balances";
+        public const string InternalConfirmedBalances = "/api/inventory/internal/confirmed-balances";
+        public const string InternalSupplierMaterialMapping = "/api/inventory/internal/supplier-material-mapping";
     }
 }

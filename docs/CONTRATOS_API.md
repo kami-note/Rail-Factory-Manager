@@ -325,3 +325,538 @@ O endpoint `GET /api/production/info` usa o contrato:
   }
 }
 ```
+
+## P2.6 - Contratos de Humanização e UX
+
+### GET `/api/supply-chain/receipts/{id}`
+
+Retorna os detalhes completos de um recebimento para o modal da Visão do Conferente.
+
+Resposta `200`:
+
+```json
+{
+  "id": "uuid",
+  "receiptNumber": "NFE-12345678901234567890123456789012345678901234",
+  "status": "Registered",
+  "supplier": {
+    "id": "uuid",
+    "name": "Fornecedor Exemplo",
+    "taxId": "00.000.000/0001-00"
+  },
+  "issuedAt": "2026-05-01T10:00:00Z",
+  "audit": {
+    "createdAt": "2026-05-01T12:00:00Z",
+    "createdBy": "Sistema",
+    "conferenceStartedAt": null,
+    "conferenceStartedBy": null
+  },
+  "canStartConference": true,
+  "items": [
+    {
+      "id": "uuid",
+      "materialCode": "MAT-001",
+      "expectedQuantity": 100,
+      "countedQuantity": null,
+      "unitOfMeasure": "KG",
+      "lotNumber": "LOTE123",
+      "expirationDate": "2026-12-31"
+    }
+  ],
+  "timeline": [
+    {
+      "status": "Registered",
+      "occurredAt": "2026-05-01T12:00:00Z"
+    }
+  ]
+}
+```
+
+### GET `/api/inventory/balances/{id}`
+
+Retorna os detalhes completos de um saldo para o modal da Visão da Produção.
+
+Resposta `200`:
+
+```json
+{
+  "id": "uuid",
+  "materialCode": "MAT-001",
+  "unitOfMeasure": "KG",
+  "status": "Pending",
+  "quantities": {
+    "totalPhysical": 100,
+    "available": 0,
+    "blocked": 0,
+    "quarantine": 0
+  },
+  "traceability": {
+    "lotNumber": "LOTE123",
+    "expirationDate": "2026-12-31",
+    "sourceType": "MaterialReceipt",
+    "sourceReference": "NFE-1234...",
+    "sourceMetadata": {
+      "receiptId": "uuid",
+      "supplierName": "Fornecedor Exemplo"
+    }
+  },
+  "ledger": [
+    {
+      "occurredAt": "2026-05-01T12:05:00Z",
+      "quantityChange": 100,
+      "newStatus": "Pending",
+      "reason": "Recebimento de Material",
+      "user": "Sistema"
+    }
+  ],
+  "audit": {
+    "lastBlockedAt": null,
+    "lastBlockedBy": null,
+    "releasedAt": null,
+    "releasedBy": null
+  }
+}
+```
+
+## P2.10 - Association Workbench
+
+Status: planned contract for implementation. This section defines the target API and frontend workflow contract for replacing the modal-based supplier SKU association flow.
+
+Purpose: resolve invoice supplier items into Inventory materials before blind conference, while keeping the distinction between fiscal supplier data and internal stock master data explicit.
+
+### Vocabulary
+
+| Term | Meaning | Mutability |
+|---|---|---|
+| `supplierProductCode` | Supplier SKU from the invoice XML (`cProd`). | Source data. Override only through audited exception flow. |
+| `internalMaterialCode` | Internal Inventory material SKU. | Normal association target. |
+| `supplierUnit` | Unit from the fiscal document. | Source data. |
+| `stockUnit` | Inventory base unit for the selected material. | Comes from Inventory material. |
+| `conversionFactor` | Quantity multiplier from supplier unit to stock unit. | Required when units differ or mapping needs conversion. |
+
+### Association Item States
+
+| State | Meaning | Blocks release to conference |
+|---|---|---|
+| `Pending` | Item has no accepted association decision. | Yes |
+| `Mapped` | Item was mapped to an existing internal material. | No |
+| `CreatedAndMapped` | Internal material was created from the invoice item and associated. | No |
+| `ReviewLater` | Operator intentionally postponed the decision with a reason. | Yes |
+| `Ignored` | Item is intentionally excluded from stock intake with a reason. | Decided by business rule in implementation; default is Yes until explicitly allowed. |
+| `Conflict` | System detected an ambiguous or stale decision requiring human review. | Yes |
+
+### Frontend Route
+
+Canonical UI route:
+
+```text
+/app/supply-chain/association
+```
+
+Expected frontend workflow:
+
+1. Load a receipt queue containing receipts in `PendingAssociation` or with unresolved association items.
+2. Select a receipt from the queue.
+3. Display invoice items in an operational grid with supplier code, description, NCM, GTIN/EAN, supplier unit, quantity, internal material, conversion preview and association status.
+4. Select one item and use a decision panel for material suggestions, manual material search, conversion factor validation and action buttons.
+5. Save each decision immediately; do not keep a hidden batch of unsaved decisions.
+6. Move focus to the next blocking item after a successful decision.
+7. Show recoverable errors for conflict, authorization, CSRF and partial orchestration failures.
+8. Enable `Release to conference` only when the backend read model reports the receipt can be released.
+
+### Security And Browser Boundary
+
+All browser-facing Workbench routes are called through the Frontend/BFF public edge under `/api/*`.
+
+Read routes may continue through the BFF reverse proxy when they only read tenant-scoped data.
+
+Mutable Workbench actions must have an explicit security policy before implementation:
+
+- authenticated session required;
+- `X-Tenant-Code` required;
+- authorization deny-by-default when permissions are introduced;
+- CSRF validation required for browser-originated mutation unless a route is proven not to rely on ambient cookies;
+- stable `403` errors for CSRF/authorization failures.
+
+Target CSRF behavior:
+
+| Error code | HTTP | When |
+|---|---|---|
+| `csrf_error` | `403` | Missing or invalid `X-CSRF-TOKEN` on a protected browser mutation. |
+| `csrf_https_required` | `400` | CSRF token flow cannot validate because effective HTTPS is absent. |
+| `authorization.denied` | `403` | Authenticated user lacks permission for the action. |
+| `unauthorized` | `401` | User session is missing or expired. |
+
+### Concurrency
+
+Every mutable item-level request must include the item version observed by the UI.
+
+Suggested request field:
+
+```json
+{
+  "expectedVersion": "2026-05-09T13:45:12.345678Z"
+}
+```
+
+Alternative implementation may use a numeric version or rowversion token, but the read model and mutation requests must use the same token.
+
+Conflict response:
+
+```json
+{
+  "title": "Association item was modified",
+  "status": 409,
+  "detail": "The receipt item was changed by another operation. Reload the workbench before saving.",
+  "code": "association.item_conflict",
+  "currentItem": {}
+}
+```
+
+### GET `/api/supply-chain/receipts/association-queue`
+
+Returns receipts that need association work.
+
+Response `200`:
+
+```json
+[
+  {
+    "receiptId": "uuid",
+    "receiptNumber": "NFE-352605...",
+    "supplierName": "Fornecedor Exemplo",
+    "documentNumber": "12345",
+    "issuedAt": "2026-05-09T12:00:00Z",
+    "status": "PendingAssociation",
+    "totalItems": 5,
+    "resolvedItems": 2,
+    "blockingItems": 3
+  }
+]
+```
+
+### GET `/api/supply-chain/receipts/{id}/association-workbench`
+
+Returns the full Workbench read model for one receipt.
+
+Response `200`:
+
+```json
+{
+  "receipt": {
+    "id": "uuid",
+    "receiptNumber": "NFE-352605...",
+    "supplierFiscalId": "00000000000100",
+    "supplierName": "Fornecedor Exemplo",
+    "status": "PendingAssociation",
+    "canReleaseToConference": false,
+    "releaseBlockers": [
+      "3 items require association decisions."
+    ]
+  },
+  "items": [
+    {
+      "itemId": "uuid",
+      "version": "2026-05-09T13:45:12.345678Z",
+      "associationStatus": "Pending",
+      "supplierProductCode": "FORN-001",
+      "description": "Parafuso zincado 10mm",
+      "ncm": "73181500",
+      "gtin": "7890000000000",
+      "supplierUnit": "CX",
+      "quantity": 10,
+      "unitPrice": 120.5,
+      "internalMaterialCode": null,
+      "internalMaterialName": null,
+      "stockUnit": null,
+      "conversionFactor": null,
+      "reviewReason": null,
+      "suggestions": [
+        {
+          "materialCode": "MAT-001",
+          "officialName": "Parafuso zincado 10mm",
+          "stockUnit": "UN",
+          "confidence": "High",
+          "reason": "Exact GTIN match"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### POST `/api/supply-chain/receipts/{receiptId}/items/{itemId}/association`
+
+Maps one supplier invoice item to an existing internal material.
+
+Request:
+
+```json
+{
+  "expectedVersion": "2026-05-09T13:45:12.345678Z",
+  "internalMaterialCode": "MAT-001",
+  "conversionFactor": 12.0
+}
+```
+
+Response `200`:
+
+```json
+{
+  "itemId": "uuid",
+  "version": "2026-05-09T13:46:01.000000Z",
+  "associationStatus": "Mapped",
+  "internalMaterialCode": "MAT-001",
+  "conversionFactor": 12.0,
+  "canReleaseReceiptToConference": false
+}
+```
+
+Validation errors:
+
+| Error code | HTTP | When |
+|---|---|---|
+| `association.material_required` | `400` | Internal material code is missing. |
+| `association.material_not_found` | `404` | Internal material does not exist or is inactive. |
+| `association.invalid_conversion_factor` | `400` | Conversion factor is missing, non-finite or <= 0. |
+| `association.invalid_receipt_status` | `409` | Receipt cannot be changed in its current status. |
+| `association.item_conflict` | `409` | Expected version does not match current item version. |
+
+### POST `/api/supply-chain/receipts/{receiptId}/items/{itemId}/review-later`
+
+Marks one item for later review.
+
+Request:
+
+```json
+{
+  "expectedVersion": "2026-05-09T13:45:12.345678Z",
+  "reason": "Need purchasing confirmation before creating a new SKU."
+}
+```
+
+Response `200` returns the updated item summary with `associationStatus: "ReviewLater"`.
+
+### POST `/api/supply-chain/receipts/{receiptId}/items/{itemId}/ignored`
+
+Marks one item as intentionally ignored. This action remains blocked until business rules confirm that fiscal items may be excluded from stock intake.
+
+Request:
+
+```json
+{
+  "expectedVersion": "2026-05-09T13:45:12.345678Z",
+  "reason": "Service line, not a stocked material."
+}
+```
+
+Response `200` returns the updated item summary with `associationStatus: "Ignored"`.
+
+### POST `/api/supply-chain/receipts/{receiptId}/items/{itemId}/supplier-code-override`
+
+Audited exception for correcting the supplier code used for future mappings. It must not modify the original XML.
+
+Request:
+
+```json
+{
+  "expectedVersion": "2026-05-09T13:45:12.345678Z",
+  "correctedSupplierProductCode": "FORN-001-A",
+  "reason": "Supplier sent legacy cProd; purchasing confirmed corrected code."
+}
+```
+
+Response `200` returns the updated item summary and audit metadata.
+
+### POST `/api/supply-chain/receipts/{receiptId}/release-to-conference`
+
+Validates item states and releases a receipt to the blind conference flow.
+
+Request:
+
+```json
+{
+  "expectedReceiptVersion": "2026-05-09T13:45:12.345678Z"
+}
+```
+
+Response `200`:
+
+```json
+{
+  "receiptId": "uuid",
+  "status": "Registered",
+  "canStartConference": true
+}
+```
+
+If blockers remain:
+
+```json
+{
+  "title": "Receipt has unresolved association items",
+  "status": 409,
+  "detail": "Resolve blocking association items before releasing the receipt.",
+  "code": "association.release_blocked",
+  "blockers": [
+    {
+      "itemId": "uuid",
+      "associationStatus": "Pending",
+      "message": "Item requires an internal material."
+    }
+  ]
+}
+```
+
+### POST `/api/inventory/materials`
+
+Creates a minimal Inventory material.
+
+Request:
+
+```json
+{
+  "materialCode": "MAT-001",
+  "officialName": "Parafuso zincado 10mm",
+  "description": "Parafuso zincado 10mm",
+  "unitOfMeasure": "UN",
+  "procurementType": "Buy",
+  "category": "RawMaterial",
+  "gtin": "7890000000000",
+  "ncm": "73181500"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "materialCode": "MAT-001",
+  "officialName": "Parafuso zincado 10mm",
+  "description": "Parafuso zincado 10mm",
+  "unitOfMeasure": "UN",
+  "procurementType": "Buy",
+  "category": "RawMaterial",
+  "status": "Verified",
+  "gtin": "7890000000000",
+  "ncm": "73181500",
+  "imageUrl": null,
+  "supplierMappings": []
+}
+```
+
+Validation errors:
+
+| Error code | HTTP | When |
+|---|---|---|
+| `material.code_required` | `400` | Material code is missing. |
+| `material.duplicate_code` | `409` | Material code already exists. |
+| `material.duplicate_gtin` | `409` | GTIN already belongs to another material. |
+| `material.invalid_category` | `400` | Material category is not valid. |
+| `material.invalid_procurement_type` | `400` | Procurement type is not valid. |
+| `material.unit_required` | `400` | Base unit is missing. |
+
+### GET `/api/inventory/materials/{materialCode}`
+
+Returns real material details for Inventory screens. The frontend must not use mock fallback after this endpoint is implemented.
+
+Response `200`:
+
+```json
+{
+  "materialCode": "MAT-001",
+  "officialName": "Parafuso zincado 10mm",
+  "description": "Parafuso zincado 10mm",
+  "unitOfMeasure": "UN",
+  "procurementType": "Buy",
+  "category": "Hardware",
+  "gtin": "7890000000000",
+  "ncm": "73181500",
+  "status": "Active",
+  "supplierMappings": []
+}
+```
+
+### GET `/api/inventory/materials/suggestions`
+
+Returns material candidates for one invoice item.
+
+Query parameters:
+
+| Parameter | Required | Example |
+|---|---|---|
+| `description` | No | `Parafuso zincado 10mm` |
+| `gtin` | No | `7890000000000` |
+| `ncm` | No | `73181500` |
+| `supplierFiscalId` | No | `00000000000100` |
+| `supplierProductCode` | No | `FORN-001` |
+
+Response `200`:
+
+```json
+[
+  {
+    "materialCode": "MAT-001",
+    "officialName": "Parafuso zincado 10mm",
+    "unitOfMeasure": "UN",
+    "confidence": "High",
+    "reason": "Exact GTIN match"
+  }
+]
+```
+
+### POST `/api/supply-chain/receipts/{receiptId}/items/{itemId}/create-material-and-associate`
+
+Creates an Inventory material and associates the item in one operator action.
+
+Request (Flattened):
+
+```json
+{
+  "expectedVersion": "2026-05-09T13:45:12.345678Z",
+  "materialCode": "MAT-001",
+  "officialName": "Parafuso zincado 10mm",
+  "description": "Parafuso zincado 10mm",
+  "unitOfMeasure": "UN",
+  "procurementType": "Buy",
+  "category": "Hardware",
+  "gtin": "7890000000000",
+  "ncm": "73181500",
+  "conversionFactor": 12.0
+}
+```
+
+Response `200` returns the updated item summary with `associationStatus: "CreatedAndMapped"`.
+
+Partial failure rule: if material creation succeeds but association fails, the response must expose a recoverable state and stable error code. The implementation must not return success while leaving the receipt item unresolved.
+
+Target error:
+
+| Error code | HTTP | When |
+|---|---|---|
+| `association.partial_create_material_failed` | `409` | Material may have been created but association did not complete; operator must reload and retry association. |
+
+## Fronteiras de Utilitários UI (Utility Boundaries)
+
+Utilitários de formatação devem ser globais no Frontend, encapsulando regras para consistência visual.
+
+### HumanizedStatusMapping
+
+Padroniza labels amigáveis e cores semânticas baseadas no status técnico.
+
+- **Assinatura Base**: `(status: string, domain?: string) => { label: string, color: 'success' | 'warning' | 'error' | 'info' | 'default' }`
+- **Exemplo**: `('Registered', 'SupplyChain')` -> `{ label: 'Aguardando Conferência', color: 'warning' }`
+
+### RelativeDateFormatter
+
+Padroniza formatação de datas via `Intl.DateTimeFormat` forçando a localidade para `pt-BR`.
+
+- **Assinatura Base**: `(dateIso: string, format?: 'short' | 'long' | 'relative') => string`
+- **Exemplo**: `('2026-05-01T10:00:00Z', 'long')` -> `01 de maio de 2026 às 07:00`
+
+### TechnicalIdFormatter
+
+Oculta ou trunca UUIDs, preferindo chaves de negócio com suporte a "Copy to Clipboard".
+
+- **Assinatura Base**: `(id: string, businessKey?: string, truncateLength?: number) => { displayValue: string, copyValue: string }`
+- **Exemplo**: `('uuid-1234...', 'NFE-999')` -> `{ displayValue: 'NFE-999', copyValue: 'uuid-1234...' }`

@@ -20,7 +20,8 @@ import {
   alpha,
   useTheme,
   Divider,
-  AlertTitle
+  AlertTitle,
+  Grid
 } from '@mui/material'
 import { ArrowLeft as BackIcon, AlertTriangle, User, Calendar } from 'lucide-react'
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http'
@@ -203,7 +204,7 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary' }}>{material.officialName}</Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>{material.description}</Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
               <Chip label={`SKU: ${material.code}`} size="small" sx={{ fontWeight: 700 }} />
               <Chip label={`UN: ${material.unitOfMeasure}`} size="small" variant="outlined" />
               <Chip label={`Tipo: ${procurementMap[material.procurementType]}`} size="small" color="primary" variant="outlined" sx={{ fontWeight: 600 }} />
@@ -297,7 +298,7 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 800 }}>Trilha de Auditoria</Typography>
           <Paper variant="outlined" sx={{ p: 3, bgcolor: alpha(theme.palette.grey[500], 0.02) }}>
              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                         <User size={16} color={theme.palette.text.secondary} />
                         <Box>
@@ -306,7 +307,7 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
                         </Box>
                     </Stack>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                         <Calendar size={16} color={theme.palette.text.secondary} />
                         <Box>

@@ -3,9 +3,17 @@ using RailFactory.Frontend.Infrastructure;
 
 namespace RailFactory.Frontend.Api;
 
+/// <summary>
+/// Handles the initiation of the Google OAuth flow from the Frontend BFF.
+/// </summary>
+/// <remarks>
+/// ARCHITECTURAL WARNING: This endpoint receives requests at `/api/iam/auth/google/start`.
+/// It MUST redirect to the Gateway's public route `/auth/google/start` to avoid an infinite redirect loop.
+/// Redirecting to itself (`/api/iam/...`) causes the BFF to intercept its own redirect repeatedly.
+/// </remarks>
 internal static class GoogleLoginEndpoint
 {
-    private const string IamGoogleStartPath = "/api/iam/auth/google/start";
+    private const string IamGoogleStartPath = "/auth/google/start";
 
     public static IResult HandleStart(
         HttpContext context,

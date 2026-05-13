@@ -213,6 +213,11 @@ namespace RailFactory.SupplyChain.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("InternalUnitOfMeasure")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<string>("LastModifiedBy")
                         .IsRequired()
                         .HasMaxLength(256)

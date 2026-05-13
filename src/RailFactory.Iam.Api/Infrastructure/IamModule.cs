@@ -24,6 +24,12 @@ public static class IamModule
         services.AddScoped<StartExternalLogin>();
         services.AddScoped<FinalizeExternalLogin>();
         services.AddScoped<UpsertLocalUserFromExternalLogin>();
+        services.AddScoped<GetUserPermissions>();
+        services.AddScoped<ListTenantRoles>();
+        services.AddScoped<CreateTenantRole>();
+        services.AddScoped<ListTenantUsers>();
+        services.AddScoped<AssignRoleToUser>();
+        services.AddScoped<RemoveRoleFromUser>();
         services.AddScoped<IExternalIdentityProvider, GoogleExternalIdentityProvider>();
         return services;
     }

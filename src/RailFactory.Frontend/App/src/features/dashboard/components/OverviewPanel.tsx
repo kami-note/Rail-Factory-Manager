@@ -36,13 +36,13 @@ export function OverviewPanel({
       {/* 1. KPI STRIP: Responsive grid for stats */}
       <Box sx={{ borderBottom: '1px solid #edebe9' }}>
         <Grid container>
-          <Grid item xs={12} sm={6} md={4} sx={{ borderRight: { sm: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', md: 0 } }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} sx={{ borderRight: { sm: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', md: 0 } }}>
             <StatCard label="AÇÕES PENDENTES" value="--" icon={<AlertCircle size={16} />} color="error.main" />
           </Grid>
-          <Grid item xs={12} sm={6} md={4} sx={{ borderRight: { md: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', sm: 0 } }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} sx={{ borderRight: { md: '1px solid #f3f2f1' }, borderBottom: { xs: '1px solid #f3f2f1', sm: 0 } }}>
             <StatCard label="ALERTAS DE ESTOQUE" value="0" icon={<Package size={16} />} color="success.main" />
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <StatCard label="STATUS DO SISTEMA" value="ATIVO" icon={<ShieldCheck size={16} />} color="success.main" />
           </Grid>
         </Grid>

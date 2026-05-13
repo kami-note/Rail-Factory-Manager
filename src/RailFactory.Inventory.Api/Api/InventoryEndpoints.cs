@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using RailFactory.BuildingBlocks.Auth;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Inventory.Api.Api.Requests;
 using RailFactory.Inventory.Api.Api.Responses;
@@ -15,30 +16,58 @@ namespace RailFactory.Inventory.Api.Api;
 /// </summary>
 public static class InventoryEndpoints
 {
-    private const string InventoryInfoPath = "/api/inventory/info";
-    private const string BalanceDetailsPath = "/api/inventory/balances/{id:guid}";
-    private const string BalancesPath = "/api/inventory/balances";
-    private const string MaterialsPath = "/api/inventory/materials";
-    private const string MaterialDetailsPath = "/api/inventory/materials/{materialCode}";
-    private const string MaterialSuggestionsPath = "/api/inventory/materials/suggestions";
-    private const string InternalPendingBalancesPath = "/internal/pending-balances";
-    private const string InternalConfirmedBalancesPath = "/internal/confirmed-balances";
-    private const string InternalSupplierMaterialMappingPath = "/internal/supplier-material-mapping";
+    private const string ApiGroup = "/api/inventory";
+    private const string InfoPath = "/info";
+    private const string BalancesPath = "/balances";
+    private const string BalanceDetailsPath = "/balances/{id:guid}";
+    private const string MaterialsPath = "/materials";
+    private const string MaterialDetailsPath = "/materials/{materialCode}";
+    private const string MaterialSuggestionsPath = "/materials/suggestions";
+    private const string MaterialSearchPath = "/materials/search";
+    private const string MaterialImagePath = "/materials/{materialCode}/image";
+    
+    private const string InternalPath = "/internal";
 
     public static WebApplication MapInventoryEndpoints(this WebApplication app)
     {
-        app.MapGet(InventoryInfoPath, HandleGetInventoryInfo);
-        app.MapGet(BalanceDetailsPath, HandleGetBalanceDetails);
-        app.MapGet(BalancesPath, HandleListBalances);
-        app.MapPost(MaterialsPath, HandleCreateMaterial);
-        app.MapGet("/api/inventory/materials/search", HandleSearchMaterials);
-        app.MapGet(MaterialSuggestionsPath, HandleGetMaterialSuggestions);
-        app.MapPut("/api/inventory/materials/{materialCode}/image", HandleUpdateMaterialImage);
-        app.MapGet(MaterialDetailsPath, HandleGetMaterialDetails);
-        app.MapPost("/internal/materials", HandleGetInternalMaterials);
-        app.MapPost(InternalPendingBalancesPath, HandleCreatePendingBalance);
-        app.MapPost(InternalConfirmedBalancesPath, HandleConfirmInventoryBalance);
-        app.MapPost(InternalSupplierMaterialMappingPath, HandleSupplierMaterialMappingCreated);
+        // Root redirect
+        app.MapGet("/", () => Results.Redirect($"{ApiGroup}{InfoPath}"));
+
+        var group = app.MapGroup(ApiGroup);
+
+        group.MapGet(InfoPath, HandleGetInventoryInfo).AllowAnonymous();
+        
+        // SECURE PUBLIC API
+        var secureGroup = group.MapGroup("/").RequireAuthorization();
+
+        secureGroup.MapGet(BalancesPath, HandleListBalances)
+            .RequirePermission(SystemPermissions.Inventory.Read);
+
+        secureGroup.MapGet(BalanceDetailsPath, HandleGetBalanceDetails)
+            .RequirePermission(SystemPermissions.Inventory.Read);
+        
+        secureGroup.MapPost(MaterialsPath, HandleCreateMaterial)
+            .RequirePermission(SystemPermissions.Inventory.Write);
+        
+        secureGroup.MapGet(MaterialSearchPath, HandleSearchMaterials)
+            .RequirePermission(SystemPermissions.Inventory.Read);
+        
+        secureGroup.MapGet(MaterialSuggestionsPath, HandleGetMaterialSuggestions)
+            .RequirePermission(SystemPermissions.Inventory.Read);
+        
+        secureGroup.MapPut(MaterialImagePath, HandleUpdateMaterialImage)
+            .RequirePermission(SystemPermissions.Inventory.Write);
+        
+        secureGroup.MapGet(MaterialDetailsPath, HandleGetMaterialDetails)
+            .RequirePermission(SystemPermissions.Inventory.Read);
+
+        // INTERNAL API (Service-to-Service)
+        var internalGroup = group.MapGroup(InternalPath);
+        
+        internalGroup.MapPost("/materials", HandleGetInternalMaterials);
+        internalGroup.MapPost("/pending-balances", HandleCreatePendingBalance);
+        internalGroup.MapPost("/confirmed-balances", HandleConfirmInventoryBalance);
+        internalGroup.MapPost("/supplier-material-mapping", HandleSupplierMaterialMappingCreated);
 
         return app;
     }
@@ -70,7 +99,7 @@ public static class InventoryEndpoints
                 actor,
                 cancellationToken);
 
-            return Results.Created($"{MaterialsPath}/{Uri.EscapeDataString(created.MaterialCode)}", created);
+            return Results.Created($"{ApiGroup}{MaterialsPath}/{Uri.EscapeDataString(created.MaterialCode)}", created);
         }
         catch (MaterialValidationException ex)
         {
@@ -86,12 +115,22 @@ public static class InventoryEndpoints
         }
     }
 
-    private static async Task<IResult> HandleGetMaterialDetails(
-        [FromRoute] string materialCode,
-        GetMaterialDetails getMaterialDetails,
+    private static async Task<IResult> HandleListBalances(
+        [FromQuery] string? status,
+        ListInventoryBalances listBalances,
         CancellationToken cancellationToken)
     {
-        var details = await getMaterialDetails.ExecuteAsync(materialCode, cancellationToken);
+        InventoryBalanceStatus? filterStatus = Enum.TryParse<InventoryBalanceStatus>(status, true, out var s) ? s : null;
+        var result = await listBalances.ExecuteAsync(filterStatus, cancellationToken);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetBalanceDetails(
+        Guid id,
+        GetInventoryBalanceDetails getDetails,
+        CancellationToken cancellationToken)
+    {
+        var details = await getDetails.ExecuteAsync(id, cancellationToken);
         return details is not null ? Results.Ok(details) : Results.NotFound();
     }
 
@@ -100,124 +139,71 @@ public static class InventoryEndpoints
         SearchMaterials searchMaterials,
         CancellationToken cancellationToken)
     {
-        var results = await searchMaterials.ExecuteAsync(q, cancellationToken);
-        return Results.Ok(results);
+        var result = await searchMaterials.ExecuteAsync(q, cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetMaterialSuggestions(
         [FromQuery] string? gtin,
         [FromQuery] string? ncm,
-        [FromQuery] string? description,
-        [FromQuery] string? supplierFiscalId,
+        [FromQuery] string? q,
+        [FromQuery] string? supplierId,
         [FromQuery] string? supplierProductCode,
-        GetMaterialSuggestions getMaterialSuggestions,
+        GetMaterialSuggestions getSuggestions,
         CancellationToken cancellationToken)
     {
-        var input = new GetMaterialSuggestionsInput(gtin, ncm, description, supplierFiscalId, supplierProductCode);
-        var results = await getMaterialSuggestions.ExecuteAsync(input, cancellationToken);
-        return Results.Ok(results);
-    }
-
-    private static async Task<IResult> HandleSupplierMaterialMappingCreated(
-        [FromBody] CreateSupplierMaterialMappingRequest request,
-        RegisterSupplierMaterialMapping registerSupplierMaterialMapping,
-        CancellationToken cancellationToken)
-    {
-        var input = new RegisterSupplierMaterialMappingInput(
-            request.Payload.SupplierFiscalId,
-            request.Payload.SupplierProductCode,
-            request.Payload.MaterialCode);
-
-        await registerSupplierMaterialMapping.ExecuteAsync(input, cancellationToken);
-        return Results.Accepted();
+        var result = await getSuggestions.ExecuteAsync(
+            new GetMaterialSuggestionsInput(gtin, ncm, q, supplierId, supplierProductCode), 
+            cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleUpdateMaterialImage(
-        [FromRoute] string materialCode,
+        string materialCode,
         [FromBody] UpdateMaterialImageRequest request,
         HttpContext context,
-        UpdateMaterialImage updateMaterialImage,
+        UpdateMaterialImage updateImage,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name;
-        if (string.IsNullOrWhiteSpace(actor))
-        {
-            return Results.Unauthorized();
-        }
-
-        var updated = await updateMaterialImage.ExecuteAsync(
-            materialCode, 
-            request.ImageUrl, 
-            actor,
-            cancellationToken);
-        return updated ? Results.NoContent() : Results.NotFound();
+        var actor = context.User.Identity?.Name ?? "system";
+        await updateImage.ExecuteAsync(MaterialCode.From(materialCode), request.ImageUrl, actor, cancellationToken);
+        return Results.NoContent();
     }
 
-    private static async Task<IResult> HandleGetInternalMaterials(
-        [FromBody] GetInternalMaterialsRequest request,
-        [FromHeader(Name = "X-Internal-Key")] string? apiKey,
-        IConfiguration configuration,
-        IMaterialRepository repository,
+    private static async Task<IResult> HandleGetMaterialDetails(
+        string materialCode,
+        GetMaterialDetails getDetails,
         CancellationToken cancellationToken)
     {
-        var expectedKey = configuration["InternalApiKey"];
-        if (string.IsNullOrWhiteSpace(expectedKey) || apiKey != expectedKey)
-        {
-            return Results.Unauthorized();
-        }
+        var details = await getDetails.ExecuteAsync(MaterialCode.From(materialCode), cancellationToken);
+        return details is not null ? Results.Ok(details) : Results.NotFound();
+    }
 
-        if (request.MaterialCodes == null || !request.MaterialCodes.Any())
-        {
-            return Results.Ok(Enumerable.Empty<InternalMaterialResponse>());
-        }
+    private static IResult HandleGetInventoryInfo(HttpContext context, IHostEnvironment environment, GetInventoryInfo getInventoryInfo)
+    {
+        var tenant = context.GetResolvedTenant();
 
-        if (request.MaterialCodes.Count() > 100)
-        {
-            return Results.BadRequest(new { code = "batch_too_large", message = "Maximum 100 codes per request." });
-        }
-
-        var materials = await repository.GetByCodesAsync(request.MaterialCodes, cancellationToken);
-        var response = materials.Select(m => new InternalMaterialResponse(
-            m.Key,
-            m.Value.OfficialName,
-            m.Value.ImageUrl));
+        var response = getInventoryInfo.Execute(
+            environment.EnvironmentName,
+            tenant?.Locale,
+            tenant?.TimeZone);
 
         return Results.Ok(response);
     }
 
-    private static async Task<IResult> HandleGetInventoryInfo(
-        [FromServices] IWebHostEnvironment env,
-        [FromServices] ITenantContextAccessor tenantContext,
-        GetInventoryInfo getInventoryInfo)
-    {
-        var info = getInventoryInfo.Execute(
-            env.EnvironmentName,
-            tenantContext.Current?.Locale,
-            tenantContext.Current?.TimeZone);
-        return Results.Ok(info);
-    }
-
-    private static async Task<IResult> HandleGetBalanceDetails(
-        [FromRoute] Guid id,
-        GetInventoryBalanceDetails getInventoryBalanceDetails,
+    private static async Task<IResult> HandleGetInternalMaterials(
+        [FromBody] GetInternalMaterialsRequest request,
+        IMaterialRepository repository,
         CancellationToken cancellationToken)
     {
-        var details = await getInventoryBalanceDetails.ExecuteAsync(id, cancellationToken);
-        return details is not null ? Results.Ok(details) : Results.NotFound();
-    }
-
-    private static async Task<IResult> HandleListBalances(
-        [FromQuery] string? status,
-        ListInventoryBalances listInventoryBalances,
-        CancellationToken cancellationToken)
-    {
-        InventoryBalanceStatus? parsedStatus = null;
-        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<InventoryBalanceStatus>(status, true, out var result))
-        {
-            parsedStatus = result;
-        }
-
-        var response = await listInventoryBalances.ExecuteAsync(parsedStatus, cancellationToken);
+        var materials = await repository.GetByCodesAsync(request.MaterialCodes, cancellationToken);
+        
+        var response = materials.Values.Select(m => new InternalMaterialResponse(
+            m.MaterialCode.Value,
+            m.OfficialName,
+            m.UnitOfMeasure,
+            m.ImageUrl)).ToList();
+        
         return Results.Ok(response);
     }
 
@@ -226,70 +212,63 @@ public static class InventoryEndpoints
         CreatePendingBalance createPendingBalance,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var created = await createPendingBalance.ExecuteAsync(
-                new CreatePendingBalanceInput(
-                    request.EventId,
-                    request.EventType,
-                    request.CorrelationId,
-                    request.Payload.ReceiptId,
-                    request.Payload.ReceiptItemId,
-                    request.Payload.ReceiptNumber,
-                    request.Payload.MaterialCode,
-                    request.Payload.Quantity,
-                    request.Payload.UnitOfMeasure,
-                    request.Payload.UnitPrice,
-                    request.Payload.OriginalDescription,
-                    request.Payload.AccessKey,
-                    request.Payload.SupplierName,
-                    request.Payload.Source,
-                    request.Payload.Ncm,
-                    request.Payload.Gtin),
-                cancellationToken);
+        await createPendingBalance.ExecuteAsync(
+            new CreatePendingBalanceInput(
+                request.EventId,
+                request.EventType,
+                request.CorrelationId,
+                request.Payload.ReceiptId,
+                request.Payload.ReceiptItemId,
+                request.Payload.ReceiptNumber,
+                request.Payload.MaterialCode,
+                request.Payload.Quantity,
+                request.Payload.UnitOfMeasure,
+                request.Payload.UnitPrice,
+                request.Payload.OriginalDescription,
+                request.Payload.AccessKey,
+                request.Payload.SupplierName,
+                request.Payload.Source,
+                request.Payload.Ncm,
+                request.Payload.Gtin),
+            cancellationToken);
 
-            return created ? Results.Accepted() : Results.Ok(new { status = "duplicate_ignored" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(
-                title: "Failed to create pending balance",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "integration.invalid_payload" });
-        }
+        return Results.Accepted();
     }
 
     private static async Task<IResult> HandleConfirmInventoryBalance(
         [FromBody] ConfirmInventoryBalanceRequest request,
-        ConfirmInventoryBalance confirmInventoryBalance,
+        ConfirmInventoryBalance confirmBalance,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var confirmed = await confirmInventoryBalance.ExecuteAsync(
-                new ConfirmInventoryBalanceInput(
-                    request.EventId,
-                    request.EventType,
-                    request.CorrelationId,
-                    request.Payload.ReceiptId,
-                    request.Payload.ReceiptItemId,
-                    request.Payload.Status,
-                    request.Payload.IsApproved,
-                    request.Payload.CountedQuantity,
-                    request.Payload.LotNumber,
-                    request.Payload.ExpirationDate),
-                cancellationToken);
+        await confirmBalance.ExecuteAsync(
+            new ConfirmInventoryBalanceInput(
+                request.EventId,
+                request.EventType,
+                request.CorrelationId,
+                request.Payload.ReceiptId,
+                request.Payload.ReceiptItemId,
+                request.Payload.Status,
+                request.Payload.IsApproved,
+                request.Payload.CountedQuantity,
+                request.Payload.LotNumber,
+                request.Payload.ExpirationDate),
+            cancellationToken);
 
-            return confirmed ? Results.Accepted() : Results.Ok(new { status = "duplicate_ignored" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(
-                title: "Failed to confirm balance",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "integration.invalid_payload" });
-        }
+        return Results.Accepted();
+    }
+
+    private static async Task<IResult> HandleSupplierMaterialMappingCreated(
+        [FromBody] CreateSupplierMaterialMappingRequest request,
+        RegisterSupplierMaterialMapping registerMapping,
+        CancellationToken cancellationToken)
+    {
+        await registerMapping.ExecuteAsync(
+            new RegisterSupplierMaterialMappingInput(
+                request.Payload.SupplierFiscalId,
+                request.Payload.SupplierProductCode,
+                request.Payload.MaterialCode),
+            cancellationToken);
+
+        return Results.Accepted();
     }
 }

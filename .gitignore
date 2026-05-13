@@ -3,3 +3,10 @@
 **/node_modules
 **/dist
 **/.env.local
+
+**/storage
+src/.idea/.idea.RailFactory.Fork/.idea/.gitignore
+src/.idea/.idea.RailFactory.Fork/.idea/.name
+src/.idea/.idea.RailFactory.Fork/.idea/encodings.xml
+src/.idea/.idea.RailFactory.Fork/.idea/indexLayout.xml
+src/.idea/.idea.RailFactory.Fork/.idea/vcs.xml

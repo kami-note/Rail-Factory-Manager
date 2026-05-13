@@ -11,7 +11,7 @@ internal static class MaterialImageUploadEndpoint
 {
     private const string IamSessionPath = "/api/iam/auth/session";
 
-    public static async Task<IResult> HandlePost(
+    public static async Task<IResult> HandlePut(
         [AsParameters] UploadMaterialImageRoute route,
         HttpContext httpContext,
         IImageStorage storage,

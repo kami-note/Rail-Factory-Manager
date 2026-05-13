@@ -69,7 +69,7 @@ export function FiscalDocumentPreview({ data }: FiscalDocumentPreviewProps) {
 
       <Paper variant="outlined" sx={{ p: 3, bgcolor: alpha(theme.palette.primary.main, 0.01), mb: 3, borderRadius: 2 }}>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
               <Building2 size={20} style={{ marginTop: 2, opacity: 0.7, color: theme.palette.primary.main }} />
               <Box>
@@ -85,7 +85,7 @@ export function FiscalDocumentPreview({ data }: FiscalDocumentPreviewProps) {
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
               <Calendar size={20} style={{ marginTop: 2, opacity: 0.7, color: theme.palette.primary.main }} />
               <Box>
@@ -106,10 +106,10 @@ export function FiscalDocumentPreview({ data }: FiscalDocumentPreviewProps) {
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
           </Grid>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
               <Hash size={20} style={{ marginTop: 2, opacity: 0.7, color: theme.palette.primary.main }} />
               <Box>
@@ -122,7 +122,7 @@ export function FiscalDocumentPreview({ data }: FiscalDocumentPreviewProps) {
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12} md={4} sx={{ textAlign: { md: 'right' } }}>
+          <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: { md: 'right' } }}>
             <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>
               Valor Total da Nota
             </Typography>

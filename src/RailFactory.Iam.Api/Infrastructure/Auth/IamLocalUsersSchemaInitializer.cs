@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RailFactory.BuildingBlocks.Auth;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
 using System.Reflection;
@@ -72,6 +73,11 @@ public sealed class IamLocalUsersSchemaInitializer(
             await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
             await dbContext.Database.MigrateAsync(cancellationToken);
 
+            if (tenant.Code == "dev")
+            {
+                await SeedTenantRolesAsync(dbContext, tenant.Code, cancellationToken);
+            }
+
             logger.LogInformation("IAM database for tenant {TenantCode} initialized successfully.", tenant.Code);
         }
         catch (Exception ex)
@@ -137,5 +143,61 @@ public sealed class IamLocalUsersSchemaInitializer(
             VALUES ({firstPendingMigration}, {efProductVersion})
             ON CONFLICT ("MigrationId") DO NOTHING;
             """);
+    }
+
+    private async Task SeedTenantRolesAsync(IamAuthDbContext dbContext, string tenantCode, CancellationToken cancellationToken)
+    {
+        var hasRoles = await dbContext.Roles.AnyAsync(cancellationToken);
+        if (hasRoles) return;
+
+        logger.LogInformation("Seeding default roles for 'dev' tenant...");
+
+        var adminRole = new IamTenantRoleRecord
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+            TenantCode = tenantCode,
+            Name = "Administrador do Sistema",
+            Description = "Acesso total a todos os módulos e gestão de usuários.",
+            Permissions = SystemPermissions.All().ToList(),
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        var operatorRole = new IamTenantRoleRecord
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+            TenantCode = tenantCode,
+            Name = "Operador de Logística",
+            Description = "Acesso para leitura e escrita em estoque e recebimentos.",
+            Permissions = 
+            [
+                SystemPermissions.Inventory.Read, 
+                SystemPermissions.Inventory.Write,
+                SystemPermissions.SupplyChain.Read,
+                SystemPermissions.SupplyChain.Write
+            ],
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        var viewerRole = new IamTenantRoleRecord
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+            TenantCode = tenantCode,
+            Name = "Consulta (Apenas Leitura)",
+            Description = "Acesso de visualização para dashboards e relatórios.",
+            Permissions = 
+            [
+                SystemPermissions.Inventory.Read, 
+                SystemPermissions.SupplyChain.Read,
+                SystemPermissions.Production.Read,
+                SystemPermissions.Iam.Read
+            ],
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        dbContext.Roles.AddRange(adminRole, operatorRole, viewerRole);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

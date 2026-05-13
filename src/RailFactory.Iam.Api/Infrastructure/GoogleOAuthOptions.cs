@@ -3,7 +3,7 @@ namespace RailFactory.Iam.Api.Infrastructure;
 public sealed class GoogleOAuthOptions
 {
     public const string SectionName = "Authentication:Google";
-    public const string DefaultCallbackPath = "/auth/google/callback";
+    public const string DefaultCallbackPath = "/api/iam/auth/google/callback";
 
     public string ClientId { get; init; } = string.Empty;
 

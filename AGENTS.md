@@ -14,6 +14,9 @@ If sources conflict, do not invent behavior. Record the divergence and fix the m
 
 ## Before Implementing
 
+- Use `rg` (or `grep` if `rg` is unavailable) to locate relevant files/sections before opening files directly.
+- Avoid broad file reads. Read only the minimum files and excerpts required for the active task.
+- Do not scan multiple files "just in case". Expand the reading scope only when a concrete dependency is found.
 - Read `docs/CONTEXTO_ATUAL.md`.
 - Confirm the active task in `docs/PLANO_DE_TASKS.md`.
 - Do not skip passes.

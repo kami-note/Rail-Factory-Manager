@@ -55,6 +55,7 @@ import {
 } from '../types';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { StatusChip } from '../../../shared/components/common/StatusChip';
+import { Authorized } from '../../auth';
 
 // Use lucide icons consistently with the layout
 const RefreshIconLucide = () => <RefreshIcon size={16} />;
@@ -263,24 +264,26 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
                     <Typography variant="h6" sx={{ fontWeight: 800 }}>{workbench.receipt.receiptNumber}</Typography>
                     <Typography variant="caption" color="text.secondary">{workbench.receipt.supplierName} • {workbench.items.length} itens</Typography>
                   </Box>
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
-                    disabled={!workbench.receipt.canReleaseToConference}
-                    startIcon={<ReleaseIconLucide />}
-                    onClick={async () => {
-                      try {
-                        await releaseToConference(tenantCode, workbench.receipt.id, { expectedVersion: workbench.receipt.version }); 
-                        void loadQueue();
-                        setWorkbench(null);
-                        setSelectedReceiptId(null);
-                      } catch (err) {
-                        setError(err instanceof Error ? err.message : 'Falha na liberação');
-                      }
-                    }}
-                  >
-                    Liberar para Conferência
-                  </Button>
+                  <Authorized permission="supplychain.write">
+                    <Button 
+                      variant="contained" 
+                      color="primary" 
+                      disabled={!workbench.receipt.canReleaseToConference}
+                      startIcon={<ReleaseIconLucide />}
+                      onClick={async () => {
+                        try {
+                          await releaseToConference(tenantCode, workbench.receipt.id, { expectedVersion: workbench.receipt.version }); 
+                          void loadQueue();
+                          setWorkbench(null);
+                          setSelectedReceiptId(null);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'Falha na liberação');
+                        }
+                      }}
+                    >
+                      Liberar para Conferência
+                    </Button>
+                  </Authorized>
                 </Stack>
               </Box>
 
@@ -454,11 +457,13 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
       <Box sx={{ mt: 1, mb: 3 }}>
         <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>{item.description}</Typography>
-          <Tooltip title="Corrigir SKU do Fornecedor">
-            <IconButton size="small" onClick={handleOverrideSku} disabled={isSubmitting}>
-              <EditIcon size={14} />
-            </IconButton>
-          </Tooltip>
+          <Authorized permission="supplychain.write">
+            <Tooltip title="Corrigir SKU do Fornecedor">
+              <IconButton size="small" onClick={handleOverrideSku} disabled={isSubmitting}>
+                <EditIcon size={14} />
+              </IconButton>
+            </Tooltip>
+          </Authorized>
         </Stack>
         <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
           <Chip size="small" label={`Cod: ${item.supplierProductCode}`} variant="outlined" />
@@ -468,166 +473,175 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
 
       <Divider sx={{ mb: 3 }} />
 
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        <Button 
-          fullWidth 
-          variant={tab === 'match' ? 'contained' : 'outlined'} 
-          onClick={() => setTab('match')}
-          size="small"
-        >
-          Vincular Existente
-        </Button>
-        <Button 
-          fullWidth 
-          variant={tab === 'create' ? 'contained' : 'outlined'} 
-          onClick={() => setTab('create')}
-          size="small"
-        >
-          Criar Novo
-        </Button>
-      </Stack>
+      <Authorized 
+        permission="supplychain.write"
+        fallback={
+          <Alert severity="info" variant="outlined" sx={{ fontWeight: 600 }}>
+            Você possui acesso apenas para visualização deste item.
+          </Alert>
+        }
+      >
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+          <Button 
+            fullWidth 
+            variant={tab === 'match' ? 'contained' : 'outlined'} 
+            onClick={() => setTab('match')}
+            size="small"
+          >
+            Vincular Existente
+          </Button>
+          <Button 
+            fullWidth 
+            variant={tab === 'create' ? 'contained' : 'outlined'} 
+            onClick={() => setTab('create')}
+            size="small"
+          >
+            Criar Novo
+          </Button>
+        </Stack>
 
-      {tab === 'match' && (
-        <Stack spacing={3}>
-          {/* Sugestões da IA */}
-          {item.suggestions.length > 0 && (
+        {tab === 'match' && (
+          <Stack spacing={3}>
+            {/* Sugestões da IA */}
+            {item.suggestions.length > 0 && (
+              <Box>
+                <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800 }}>SUGESTÕES DA IA</Typography>
+                <List sx={{ mt: 1, p: 0 }}>
+                  {item.suggestions.map(s => (
+                    <ListItemButton 
+                      key={s.materialCode} 
+                      onClick={() => {
+                        setSelectedMaterial({ 
+                          materialCode: s.materialCode, 
+                          officialName: s.officialName, 
+                          description: '', 
+                          category: '',
+                          stockUnit: s.stockUnit
+                        });
+                      }}
+                      sx={{ 
+                        px: 1.5, 
+                        py: 1, 
+                        border: 1, 
+                        borderColor: 'divider', 
+                        borderRadius: 1, 
+                        mb: 1,
+                        bgcolor: selectedMaterial?.materialCode === s.materialCode ? alpha(theme.palette.primary.main, 0.05) : 'transparent'
+                      }}
+                    >
+                      <ListItemText 
+                        primary={<Typography variant="body2" sx={{ fontWeight: 700 }}>{s.officialName}</Typography>}
+                        secondary={
+                          <Box component="span" sx={{ display: 'block' }}>
+                             <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'block' }}>Cod: {s.materialCode} • {s.reason}</Typography>
+                          </Box>
+                        }
+                      />
+                      <Chip size="small" label={s.confidence} color={s.confidence === 'High' ? 'success' : 'default'} sx={{ height: 20, fontSize: '0.6rem' }} />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Box>
+            )}
+
+            {/* Busca Manual */}
             <Box>
-              <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800 }}>SUGESTÕES DA IA</Typography>
-              <List sx={{ mt: 1, p: 0 }}>
-                {item.suggestions.map(s => (
-                  <ListItemButton 
-                    key={s.materialCode} 
-                    onClick={() => {
-                      setSelectedMaterial({ 
-                        materialCode: s.materialCode, 
-                        officialName: s.officialName, 
-                        description: '', 
-                        category: '',
-                        stockUnit: s.stockUnit
-                      });
-                    }}
-                    sx={{ 
-                      px: 1.5, 
-                      py: 1, 
-                      border: 1, 
-                      borderColor: 'divider', 
-                      borderRadius: 1, 
-                      mb: 1,
-                      bgcolor: selectedMaterial?.materialCode === s.materialCode ? alpha(theme.palette.primary.main, 0.05) : 'transparent'
-                    }}
-                  >
-                    <ListItemText 
-                      primary={<Typography variant="body2" sx={{ fontWeight: 700 }}>{s.officialName}</Typography>}
-                      secondary={
-                        <Box component="span" sx={{ display: 'block' }}>
-                           <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'block' }}>Cod: {s.materialCode} • {s.reason}</Typography>
-                        </Box>
-                      }
-                    />
-                    <Chip size="small" label={s.confidence} color={s.confidence === 'High' ? 'success' : 'default'} sx={{ height: 20, fontSize: '0.6rem' }} />
-                  </ListItemButton>
-                ))}
-              </List>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>BUSCAR NO CATÁLOGO</Typography>
+              <Autocomplete
+                fullWidth
+                sx={{ mt: 1 }}
+                options={searchResults}
+                getOptionLabel={(o) => `[${o.materialCode}] ${o.officialName}`}
+                loading={searchLoading}
+                onInputChange={(_, val) => setSearchQuery(val)}
+                onChange={(_, val) => setSelectedMaterial(val)}
+                renderInput={(params) => <TextField {...params} size="small" placeholder="Nome, código ou GTIN..." />}
+              />
             </Box>
-          )}
 
-          {/* Busca Manual */}
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>BUSCAR NO CATÁLOGO</Typography>
-            <Autocomplete
-              fullWidth
-              sx={{ mt: 1 }}
-              options={searchResults}
-              getOptionLabel={(o) => `[${o.materialCode}] ${o.officialName}`}
-              loading={searchLoading}
-              onInputChange={(_, val) => setSearchQuery(val)}
-              onChange={(_, val) => setSelectedMaterial(val)}
-              renderInput={(params) => <TextField {...params} size="small" placeholder="Nome, código ou GTIN..." />}
-            />
-          </Box>
+            {selectedMaterial && (
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
+                <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800 }}>FATOR DE CONVERSÃO</Typography>
+                <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center' }}>
+                  <Typography variant="body2">1 {item.supplierUnit} =</Typography>
+                  <TextField 
+                    type="number" 
+                    size="small" 
+                    sx={{ width: 80 }} 
+                    value={conversionFactor} 
+                    onChange={e => setConversionFactor(Number(e.target.value))}
+                  />
+                  <Typography variant="body2">{selectedMaterial.stockUnit || 'UN'}</Typography>
+                </Stack>
+                <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
+                  Entrada no estoque: {(item.quantity * conversionFactor).toFixed(4)} {selectedMaterial.stockUnit || 'UN'}
+                </Typography>
+                
+                <Button 
+                  fullWidth 
+                  variant="contained" 
+                  sx={{ mt: 2, fontWeight: 800 }} 
+                  startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <SaveIcon size={16} />}
+                  disabled={isSubmitting || conversionFactor <= 0}
+                  onClick={() => handleMapExisting(selectedMaterial)}
+                >
+                  Salvar Associação
+                </Button>
+              </Paper>
+            )}
+          </Stack>
+        )}
 
-          {selectedMaterial && (
-            <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
-              <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800 }}>FATOR DE CONVERSÃO</Typography>
-              <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center' }}>
-                <Typography variant="body2">1 {item.supplierUnit} =</Typography>
-                <TextField 
-                  type="number" 
-                  size="small" 
-                  sx={{ width: 80 }} 
-                  value={conversionFactor} 
-                  onChange={e => setConversionFactor(Number(e.target.value))}
-                />
-                <Typography variant="body2">{selectedMaterial.stockUnit || 'UN'}</Typography>
-              </Stack>
-              <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
-                Entrada no estoque: {(item.quantity * conversionFactor).toFixed(4)} {selectedMaterial.stockUnit || 'UN'}
-              </Typography>
-              
-              <Button 
-                fullWidth 
-                variant="contained" 
-                sx={{ mt: 2, fontWeight: 800 }} 
-                startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <SaveIcon size={16} />}
-                disabled={isSubmitting || conversionFactor <= 0}
-                onClick={() => handleMapExisting(selectedMaterial)}
-              >
-                Salvar Associação
-              </Button>
-            </Paper>
-          )}
-        </Stack>
-      )}
+        {tab === 'create' && (
+          <CreateMaterialForm 
+            tenantCode={tenantCode}
+            receiptId={receiptId}
+            item={item}
+            onSuccess={onSuccess}
+          />
+        )}
 
-      {tab === 'create' && (
-        <CreateMaterialForm 
-          tenantCode={tenantCode}
-          receiptId={receiptId}
-          item={item}
-          onSuccess={onSuccess}
-        />
-      )}
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
-      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-
-      <Box sx={{ mt: 4 }}>
-        <Divider />
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-          <Button 
-            fullWidth 
-            size="small" 
-            startIcon={<ReviewLaterIcon size={14} />} 
-            onClick={async () => {
-              const reason = window.prompt("Motivo para revisar depois:");
-              if (reason) {
-                try {
-                  const res = await recordControlledDecision(tenantCode, receiptId, item.itemId, 'review-later', { expectedVersion: item.version, reason });
-                  onSuccess(res);
-                } catch (err) { alert(err); }
-              }
-            }}
-          >
-            Revisar Depois
-          </Button>
-          <Button 
-            fullWidth 
-            size="small" 
-            color="inherit" 
-            startIcon={<IgnoreIcon size={14} />}
-            onClick={async () => {
-              const reason = window.prompt("Motivo para ignorar o item:");
-              if (reason) {
-                try {
-                  const res = await recordControlledDecision(tenantCode, receiptId, item.itemId, 'ignored', { expectedVersion: item.version, reason });
-                  onSuccess(res);
-                } catch (err) { alert(err); }
-              }
-            }}
-          >
-            Ignorar Item
-          </Button>
-        </Stack>
-      </Box>
+        <Box sx={{ mt: 4 }}>
+          <Divider />
+          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+            <Button 
+              fullWidth 
+              size="small" 
+              startIcon={<ReviewLaterIcon size={14} />} 
+              onClick={async () => {
+                const reason = window.prompt("Motivo para revisar depois:");
+                if (reason) {
+                  try {
+                    const res = await recordControlledDecision(tenantCode, receiptId, item.itemId, 'review-later', { expectedVersion: item.version, reason });
+                    onSuccess(res);
+                  } catch (err) { alert(err); }
+                }
+              }}
+            >
+              Revisar Depois
+            </Button>
+            <Button 
+              fullWidth 
+              size="small" 
+              color="inherit" 
+              startIcon={<IgnoreIcon size={14} />}
+              onClick={async () => {
+                const reason = window.prompt("Motivo para ignorar o item:");
+                if (reason) {
+                  try {
+                    const res = await recordControlledDecision(tenantCode, receiptId, item.itemId, 'ignored', { expectedVersion: item.version, reason });
+                    onSuccess(res);
+                  } catch (err) { alert(err); }
+                }
+              }}
+            >
+              Ignorar Item
+            </Button>
+          </Stack>
+        </Box>
+      </Authorized>
     </Box>
   );
 }
