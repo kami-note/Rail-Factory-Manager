@@ -19,3 +19,26 @@ export const searchMaterials = async (
     'Catalog search failed'
   );
 };
+
+/**
+ * Unifies a duplicate material into an official material.
+ */
+export const mergeMaterials = async (
+  tenantCode: string,
+  obsoleteMaterialCode: string,
+  officialMaterialCode: string
+): Promise<void> => {
+  await fetchJsonOrThrow(
+    '/api/inventory/materials/merge',
+    {
+      method: 'POST',
+      headers: buildTenantHeaders(tenantCode),
+      body: JSON.stringify({
+        obsoleteMaterialCode,
+        officialMaterialCode
+      }),
+      credentials: 'include'
+    },
+    'Falha ao unificar materiais'
+  );
+};

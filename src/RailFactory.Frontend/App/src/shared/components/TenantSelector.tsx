@@ -25,7 +25,7 @@ export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected
     const loadTenants = async () => {
       try {
         const data = await fetchJsonOrThrow<Tenant[]>(
-          `/api/tenancy/tenants?t=${Date.now()}`,
+          '/api/tenancy/tenants',
           {},
           'Failed to load organizations'
         );

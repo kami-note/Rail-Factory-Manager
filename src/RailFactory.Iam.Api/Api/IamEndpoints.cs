@@ -111,20 +111,6 @@ public static class IamEndpoints
         return success ? Results.NoContent() : Results.NotFound();
     }
 
-    private static IResult HandleDebugGoogle(
-        [FromServices] Microsoft.Extensions.Options.IOptionsMonitor<Microsoft.AspNetCore.Authentication.Google.GoogleOptions> googleOptions,
-        [FromServices] Microsoft.Extensions.Options.IOptions<RailFactory.Iam.Api.Infrastructure.GoogleOAuthOptions> customOptions)
-    {
-        var opt = googleOptions.Get(Microsoft.AspNetCore.Authentication.Google.GoogleDefaults.AuthenticationScheme);
-        return Results.Ok(new
-        {
-            CustomPublicOrigin = customOptions.Value.PublicOrigin,
-            CustomCallbackPath = customOptions.Value.CallbackPath,
-            AuthEndpoint = opt.AuthorizationEndpoint,
-            ClientId = opt.ClientId
-        });
-    }
-
     private static IResult HandleGetInfo(HttpContext context, IHostEnvironment environment, GetIamInfo getIamInfo)
     {
         var tenant = context.GetResolvedTenant();

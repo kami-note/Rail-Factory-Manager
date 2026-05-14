@@ -624,3 +624,24 @@ Specialized agent profiles available:
 - Validation evidence:
   - `dotnet build src/RailFactory.Iam.Api/RailFactory.Iam.Api.csproj -v:minimal` passed.
   - `dotnet test src/RailFactory.Iam.Api.Tests/RailFactory.Iam.Api.Tests.csproj -v:minimal` passed (`10` tests).
+
+## 2026-05-13 - Frontend HTTP/Auth Hardening
+
+- Frontend auth session access was centralized with `AuthSessionProvider` so protected UI and permission checks consume a single shared session state instead of triggering duplicate `/api/iam/auth/session` requests from multiple components.
+- `useAuthSession` now reads from context, and empty tenant state no longer triggers session network calls.
+- CSRF handling in `shared/lib/http.ts` was hardened:
+  - mutation requests now require `X-Tenant-Code`;
+  - CSRF token cache is tenant-scoped;
+  - mutations fail explicitly when CSRF/tenant prerequisites are missing;
+  - tenant CSRF cache is invalidated on `403`.
+- Frontend stopped sending `X-Forwarded-Proto` and no longer carries proxy-specific scheme hints from browser code.
+- Request flow consistency improvements:
+  - XML batch import now uses `fetchJsonOrThrow` (same CSRF/error path as other mutations);
+  - tenant list fetch removed timestamp cache-busting query (`?t=Date.now()`).
+- Tests updated to match the new behavior and endpoints:
+  - auth context/session tests;
+  - HTTP helper CSRF + tenant requirements;
+  - XML import flow tests using `/api/iam/auth/csrf`.
+- Validation evidence:
+  - `npm test -- --run` in `src/RailFactory.Frontend/App` passed (`15` tests).
+  - `npm run build` in `src/RailFactory.Frontend/App` passed.

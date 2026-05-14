@@ -38,6 +38,7 @@ public static class InventoryModule
         services.AddScoped<SearchMaterials>();
         services.AddScoped<GetMaterialSuggestions>();
         services.AddScoped<RegisterSupplierMaterialMapping>();
+        services.AddScoped<IMergeMaterialUseCase, MergeMaterialUseCase>();
 
         // ELITE FIX: Infrastructure health checks (Manual connectivity check)
         services.AddHealthChecks()

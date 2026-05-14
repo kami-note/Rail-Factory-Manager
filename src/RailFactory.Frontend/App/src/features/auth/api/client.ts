@@ -1,4 +1,5 @@
 import type { AuthSession } from '../types';
+import { fetchCsrfToken } from '../../../shared/lib/http';
 
 export function clearOAuthQueryFlag() {
   const query = new URLSearchParams(window.location.search);
@@ -45,28 +46,14 @@ export function buildLoginHref(tenantCode: string, returnUrl = '/app') {
 }
 
 export async function logout(tenantCode: string): Promise<void> {
-  const csrfResponse = await fetch('/api/iam/auth/csrf', {
-    credentials: 'include',
-    headers: {
-      'X-Tenant-Code': tenantCode
-    }
-  });
-
-  if (!csrfResponse.ok) {
-    throw new Error(`CSRF request failed: ${csrfResponse.status}`);
-  }
-
-  const csrfPayload = (await csrfResponse.json()) as { token?: string };
-  if (!csrfPayload.token) {
-    throw new Error('Missing CSRF token.');
-  }
+  const csrfToken = await fetchCsrfToken(tenantCode);
 
   const logoutResponse = await fetch('/api/iam/auth/logout', {
     method: 'POST',
     credentials: 'include',
     headers: {
       'X-Tenant-Code': tenantCode,
-      'X-CSRF-TOKEN': csrfPayload.token
+      'X-CSRF-TOKEN': csrfToken
     }
   });
 

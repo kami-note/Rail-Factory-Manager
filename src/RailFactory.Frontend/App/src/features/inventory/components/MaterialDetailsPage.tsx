@@ -23,10 +23,11 @@ import {
   AlertTitle,
   Grid
 } from '@mui/material'
-import { ArrowLeft as BackIcon, AlertTriangle, User, Calendar } from 'lucide-react'
+import { ArrowLeft as BackIcon, AlertTriangle, User, Calendar, GitMerge as MergeIcon } from 'lucide-react'
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http'
 import { StatusChip } from '../../../shared/components/common/StatusChip'
 import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping'
+import { MergeMaterialModal } from './MergeMaterialModal'
 
 interface MaterialDetailsPageProps {
   tenantCode: string
@@ -126,6 +127,7 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('mappings')
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
 
   useEffect(() => {
     if (!materialCode) return
@@ -158,6 +160,11 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
     setActiveTab(newValue)
   }
 
+  const handleMergeSuccess = (officialCode: string) => {
+    setIsMergeModalOpen(false)
+    navigate(`/app/inventory/materials/${officialCode}`)
+  }
+
   if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}><CircularProgress /></Box>
   if (error) return <Box sx={{ p: 4 }}><Alert severity="error">{error}</Alert></Box>
   if (!material) return <Box sx={{ p: 4 }}><Typography>Material não encontrado.</Typography></Box>
@@ -176,13 +183,27 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, margin: '0 auto' }}>
-      <Button 
-        startIcon={<BackIcon size={16} />} 
-        onClick={() => navigate('/app/inventory')} 
-        sx={{ mb: 2, fontWeight: 700 }}
-      >
-        Voltar para o Inventário
-      </Button>
+      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Button 
+          startIcon={<BackIcon size={16} />} 
+          onClick={() => navigate('/app/inventory')} 
+          sx={{ fontWeight: 700 }}
+        >
+          Voltar para o Inventário
+        </Button>
+
+        {material.status.key !== 'Obsolete' && (
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<MergeIcon size={16} />}
+            onClick={() => setIsMergeModalOpen(true)}
+            sx={{ fontWeight: 700, borderRadius: 2 }}
+          >
+            Unificar Material
+          </Button>
+        )}
+      </Stack>
 
       {material.replacedBy && (
         <Alert severity="warning" sx={{ mb: 3, border: 1, borderColor: 'warning.main', borderRadius: 2 }}>
@@ -320,6 +341,15 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
           </Paper>
         </Box>
       )}
+
+      <MergeMaterialModal
+        open={isMergeModalOpen}
+        onClose={() => setIsMergeModalOpen(false)}
+        onSuccess={handleMergeSuccess}
+        tenantCode={tenantCode}
+        obsoleteMaterialCode={material.code}
+        obsoleteMaterialName={material.officialName}
+      />
     </Box>
   )
 }

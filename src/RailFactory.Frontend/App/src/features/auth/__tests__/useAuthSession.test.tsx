@@ -1,6 +1,14 @@
+import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useAuthSession } from '../hooks/useAuthSession';
+import { AuthSessionProvider } from '../context/AuthSessionContext';
+
+function createWrapper(tenantCode: string) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <AuthSessionProvider tenantCode={tenantCode}>{children}</AuthSessionProvider>;
+  };
+}
 
 describe('useAuthSession', () => {
   afterEach(() => {
@@ -17,7 +25,7 @@ describe('useAuthSession', () => {
       })
     );
 
-    const { result } = renderHook(() => useAuthSession('dev'));
+    const { result } = renderHook(() => useAuthSession('dev'), { wrapper: createWrapper('dev') });
 
     expect(result.current.status).toBe('loading');
 
@@ -38,12 +46,25 @@ describe('useAuthSession', () => {
       })
     );
 
-    const { result } = renderHook(() => useAuthSession('dev'));
+    const { result } = renderHook(() => useAuthSession('dev'), { wrapper: createWrapper('dev') });
 
     await waitFor(() => {
       expect(result.current.status).toBe('unauthenticated');
     });
 
     expect(result.current.oauthError).toContain('oauth_error');
+  });
+
+  it('keeps unauthenticated state and skips network call when tenant is empty', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { result } = renderHook(() => useAuthSession(''), { wrapper: createWrapper('') });
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('unauthenticated');
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

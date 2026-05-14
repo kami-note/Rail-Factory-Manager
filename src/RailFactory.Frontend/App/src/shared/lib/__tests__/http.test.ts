@@ -3,15 +3,25 @@ import { fetchJsonOrThrow } from '../http';
 
 describe('fetchJsonOrThrow', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true })
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url) => {
+        if (url === '/api/iam/auth/csrf') {
+          return { ok: true, json: async () => ({ token: 'csrf-token-dev' }) };
+        }
+
+        return {
+          ok: true,
+          json: async () => ({ success: true })
+        };
+      })
+    );
   });
 
   it('automatically adds application/json content-type for POST requests with a string body', async () => {
     await fetchJsonOrThrow('/api/test', {
       method: 'POST',
+      headers: { 'X-Tenant-Code': 'dev' },
       body: JSON.stringify({ foo: 'bar' })
     }, 'Error');
 
@@ -28,6 +38,7 @@ describe('fetchJsonOrThrow', () => {
 
     await fetchJsonOrThrow('/api/test', {
       method: 'POST',
+      headers: { 'X-Tenant-Code': 'dev' },
       body: formData
     }, 'Error');
 
@@ -47,6 +58,7 @@ describe('fetchJsonOrThrow', () => {
 
     await fetchJsonOrThrow('/api/test', {
       method: 'POST',
+      headers: { 'X-Tenant-Code': 'dev' },
       body: params
     }, 'Error');
 
@@ -62,14 +74,25 @@ describe('fetchJsonOrThrow', () => {
   it('respects existing Content-Type header', async () => {
     await fetchJsonOrThrow('/api/test', {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: {
+        'X-Tenant-Code': 'dev',
+        'Content-Type': 'text/plain'
+      },
       body: 'just text'
     }, 'Error');
 
-    expect(fetch).toHaveBeenCalledWith('/api/test', expect.objectContaining({
-      headers: expect.objectContaining({
-        'Content-Type': 'text/plain'
-      })
-    }));
+    const lastCall = vi.mocked(fetch).mock.calls[0];
+    const init = lastCall[1] as RequestInit;
+    const headers = new Headers(init.headers);
+    expect(headers.get('Content-Type')).toBe('text/plain');
+  });
+
+  it('fails mutation requests without tenant header', async () => {
+    await expect(
+      fetchJsonOrThrow('/api/test', {
+        method: 'POST',
+        body: JSON.stringify({ foo: 'bar' })
+      }, 'Error')
+    ).rejects.toThrow('Missing tenant header for mutation request.');
   });
 });

@@ -73,6 +73,7 @@ public sealed class GetInventoryBalanceDetails(
             Material: materialResponse,
             UnitOfMeasure: balance.UnitOfMeasure,
             Status: balance.Status.ToDisplayStatus(),
+            CreatedAt: balance.CreatedAt,
             Quantities: new InventoryBalanceQuantitiesResponse(
                 TotalPhysical: balance.Quantity,
                 Available: balance.Status == InventoryBalanceStatus.Available ? balance.Quantity : 0,
