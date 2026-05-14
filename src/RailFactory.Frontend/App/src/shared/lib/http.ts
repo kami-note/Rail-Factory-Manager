@@ -5,16 +5,24 @@ export function buildTenantHeaders(tenantCode: string): HeadersInit {
 }
 
 let cachedCsrfToken: string | null = null;
+const csrfTokenByTenant = new Map<string, string>();
 
 /**
  * Fetches a fresh CSRF token from the BFF.
  */
 export async function fetchCsrfToken(tenantCode: string): Promise<string> {
+  if (!tenantCode) {
+    throw new Error('Missing tenant code for CSRF token request.');
+  }
+
+  const cached = csrfTokenByTenant.get(tenantCode);
+  if (cached) {
+    return cached;
+  }
+
   const response = await fetch('/api/iam/auth/csrf', {
     headers: {
-      ...buildTenantHeaders(tenantCode),
-      // To satisfy the 'csrf_https_required' check when behind a proxy like ngrok
-      'X-Forwarded-Proto': window.location.protocol.replace(':', '')
+      ...buildTenantHeaders(tenantCode)
     },
     credentials: 'include'
   });
@@ -25,6 +33,7 @@ export async function fetchCsrfToken(tenantCode: string): Promise<string> {
 
   const { token } = await response.json();
   cachedCsrfToken = token;
+  csrfTokenByTenant.set(tenantCode, token);
   return token;
 }
 
@@ -65,28 +74,27 @@ export async function fetchJsonOrThrow<T>(
   // Automatically inject CSRF token for mutation methods
   const method = init.method?.toUpperCase() || 'GET';
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-    const tenantCode = (init.headers as any)?.['X-Tenant-Code'];
-    
-    if (!cachedCsrfToken && tenantCode) {
-      try {
-        await fetchCsrfToken(tenantCode);
-      } catch (err) {
-        console.warn('Failed to pre-fetch CSRF token', err);
-      }
+    const headers = new Headers(init.headers);
+    const tenantCode = headers.get('X-Tenant-Code');
+
+    if (!tenantCode) {
+      throw new Error('Missing tenant header for mutation request.');
     }
 
-    if (cachedCsrfToken) {
-      init.headers = {
-        ...init.headers,
-        'X-CSRF-TOKEN': cachedCsrfToken
-      };
+    let csrfToken = csrfTokenByTenant.get(tenantCode) ?? cachedCsrfToken;
+    if (!csrfToken) {
+      csrfToken = await fetchCsrfToken(tenantCode);
     }
+
+    headers.set('X-CSRF-TOKEN', csrfToken);
+    init.headers = headers;
   }
 
   // ELITE FIX: Add Content-Type header for JSON bodies to avoid HTTP 415 errors.
   // We ONLY set Content-Type: application/json if the body is a string.
   // For other types (FormData, Blob, etc.), we let the browser set the correct header natively.
-  if (typeof init.body === 'string' && !((init.headers as any)?.['Content-Type'])) {
+  const existingContentType = new Headers(init.headers).get('Content-Type');
+  if (typeof init.body === 'string' && !existingContentType) {
     init.headers = {
       ...init.headers,
       'Content-Type': 'application/json'
@@ -105,6 +113,10 @@ export async function fetchJsonOrThrow<T>(
     // If CSRF failed, clear cache and try to handle it (though usually it's a hard fail)
     if (response.status === 403) {
       cachedCsrfToken = null;
+      const tenantCode = new Headers(init.headers).get('X-Tenant-Code');
+      if (tenantCode) {
+        csrfTokenByTenant.delete(tenantCode);
+      }
     }
 
     const message = await readProblemMessage(response, `${fallbackMessage} (${response.status})`);

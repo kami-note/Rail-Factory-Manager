@@ -8,12 +8,6 @@ public static class FrontendEndpoints
 {
     private const string RootPath = "/";
     private const string StatusPath = "/api/frontend/status";
-    private const string AuthGoogleStartPath = "/api/iam/auth/google/start";
-    private const string AuthSessionPath = "/api/iam/auth/session";
-    private const string AuthCsrfPath = "/api/iam/auth/csrf";
-    private const string AuthLogoutPath = "/api/iam/auth/logout";
-    private const string MaterialImageUploadPath = "/api/inventory/materials/{materialCode}/image";
-    private const string MaterialImageServingPath = "/api/inventory/materials/images/{tenantCode}/{fileName}";
 
     public static WebApplication MapFrontendEndpoints(this WebApplication app, FrontendHostingExtensions.FrontendStaticUiState staticUi)
     {

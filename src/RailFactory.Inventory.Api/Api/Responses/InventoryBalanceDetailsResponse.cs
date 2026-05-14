@@ -11,6 +11,7 @@ public record InventoryBalanceDetailsResponse(
     MaterialDetailsResponse Material,
     string UnitOfMeasure,
     DisplayStatus Status,
+    DateTimeOffset CreatedAt,
     InventoryBalanceQuantitiesResponse Quantities,
     InventoryBalanceTraceabilityResponse Traceability,
     List<InventoryBalanceLedgerResponse> Ledger);

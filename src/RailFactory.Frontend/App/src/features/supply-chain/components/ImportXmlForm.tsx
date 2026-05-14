@@ -103,23 +103,21 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
           formData.append('files', f.file);
         }
 
-        const response = await fetch('/api/supply-chain/receipts/import/xml/batch', {
-          method: 'POST',
-          credentials: 'include',
-          headers: buildTenantHeaders(tenantCode),
-          body: formData
-        });
+        const data = await fetchJsonOrThrow<{ imported?: Array<{ receiptId: string }>; errors?: BatchError[] }>(
+          '/api/supply-chain/receipts/import/xml/batch',
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildTenantHeaders(tenantCode),
+            body: formData
+          },
+          'Importação em lote falhou'
+        );
 
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          if (data?.errors) {
-            setBatchErrors(data.errors);
-            throw new Error('Importação em lote falhou com erros de validação.');
-          }
-          throw new Error(data?.detail ?? 'Importação em lote falhou');
+        if (data.errors?.length) {
+          setBatchErrors(data.errors);
+          throw new Error('Importação em lote falhou com erros de validação.');
         }
-
         setResult(`${data.imported?.length ?? 0} arquivos importados com sucesso.`);
         setFiles([]);
       }

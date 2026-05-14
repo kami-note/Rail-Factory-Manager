@@ -33,18 +33,32 @@ type BalanceDetailsModalProps = {
 type InventoryBalanceDetails = {
   id: string;
   materialCode: string;
-  materialName: string;
-  quantity: number;
+  material: {
+    materialCode: string;
+    officialName: string;
+    description: string;
+    category: DisplayStatus;
+    status: DisplayStatus;
+    imageUrl?: string;
+    ncm?: string;
+    gtin?: string;
+  };
   unitOfMeasure: string;
   status: DisplayStatus;
-  locationName: string;
-  lotNumber?: string;
-  expirationDate?: string;
-  sourceReference: string;
-  sourceType: DisplayStatus;
-  supplierName?: string;
-  materialImageUrl?: string;
   createdAt: string;
+  quantities: {
+    totalPhysical: number;
+    available: number;
+    blocked: number;
+    quarantine: number;
+  };
+  traceability: {
+    lotNumber?: string;
+    expirationDate?: string;
+    sourceType: DisplayStatus;
+    sourceReference: string;
+    supplierName?: string;
+  };
   ledger: Array<{
     occurredAt: string;
     quantityChange: number;
@@ -114,12 +128,12 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <MaterialAvatar 
                   materialCode={details.materialCode} 
-                  description={details.materialName}
-                  imageUrl={details.materialImageUrl}
+                  description={details.material.officialName}
+                  imageUrl={details.material.imageUrl}
                   size={48} 
                 />
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>{details.materialName}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>{details.material.officialName}</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700, fontFamily: 'monospace' }}>
                     SKU: {details.materialCode}
                   </Typography>
@@ -140,22 +154,22 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 3 }}>
             <Box>
               <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>QUANTIDADE</Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800 }}>{details.quantity} {details.unitOfMeasure}</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800 }}>{details.quantities.totalPhysical} {details.unitOfMeasure}</Typography>
             </Box>
             <Box>
               <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>LOTE / VALIDADE</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 700 }}>{details.lotNumber || 'N/A'}</Typography>
-              {details.expirationDate && (
-                <Typography variant="caption" color="text.secondary">Vencimento: {formatRelativeDate(details.expirationDate, false)}</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 700 }}>{details.traceability.lotNumber || 'N/A'}</Typography>
+              {details.traceability.expirationDate && (
+                <Typography variant="caption" color="text.secondary">Vencimento: {formatRelativeDate(details.traceability.expirationDate, false)}</Typography>
               )}
             </Box>
             <Box>
               <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>ORIGEM</Typography>
               <Box sx={{ mt: 0.5 }}>
-                <StatusChip status={details.sourceType} label={details.supplierName || details.sourceType.label} />
+                <StatusChip status={details.traceability.sourceType} label={details.traceability.supplierName || details.traceability.sourceType.label} />
               </Box>
               <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5, fontFamily: 'monospace' }}>
-                Ref: {TechnicalIdFormatter.truncate(details.sourceReference)}
+                Ref: {TechnicalIdFormatter.truncate(details.traceability.sourceReference)}
               </Typography>
             </Box>
           </Box>

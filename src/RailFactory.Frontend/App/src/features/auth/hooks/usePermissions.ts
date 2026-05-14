@@ -5,8 +5,7 @@ import { useAuthSession } from './useAuthSession';
  * Provides functions to validate if the user has specific access rights.
  */
 export const usePermissions = (tenantCode?: string) => {
-  const code = tenantCode || localStorage.getItem('rail_factory_tenant_code') || '';
-  const { session } = useAuthSession(code);
+  const { session } = useAuthSession(tenantCode || '');
   const permissions = session.user?.permissions ?? [];
 
   /**

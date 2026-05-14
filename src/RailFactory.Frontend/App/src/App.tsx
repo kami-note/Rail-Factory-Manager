@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { buildLoginHref, logout, useAuthSession } from './features/auth';
+import { AuthSessionProvider, buildLoginHref, logout, useAuthSession } from './features/auth';
 import { ProtectedDashboardLayout } from './shared/layouts/ProtectedDashboardLayout';
 import { OverviewPanel, Status } from './features/dashboard';
 import { ReceiptsWorkspace, AssociationWorkbenchPage } from './features/supply-chain';
@@ -17,12 +17,6 @@ const TENANT_STORAGE_KEY = 'rail_factory_tenant_code';
  * Implementation follows the "Elite Prevention Protocol" for localized and secure UI.
  */
 export function App() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isProtectedRoute = location.pathname.startsWith('/app');
-  const [status, setStatus] = useState<Status | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
-  
   const [tenantCode, setTenantCode] = useState<string>(() => {
     return localStorage.getItem(TENANT_STORAGE_KEY) || '';
   });
@@ -31,7 +25,25 @@ export function App() {
     setTenantCode(code);
     localStorage.setItem(TENANT_STORAGE_KEY, code);
   };
-  
+
+  return (
+    <AuthSessionProvider tenantCode={tenantCode}>
+      <AppContent tenantCode={tenantCode} onTenantSelected={handleTenantSelected} />
+    </AuthSessionProvider>
+  );
+}
+
+type AppContentProps = {
+  tenantCode: string;
+  onTenantSelected: (code: string) => void;
+};
+
+function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isProtectedRoute = location.pathname.startsWith('/app');
+  const [status, setStatus] = useState<Status | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const auth = useAuthSession(tenantCode);
   const loginHref = tenantCode ? buildLoginHref(tenantCode, '/app') : '#';
   const navigateTo = (path: string) => navigate(path);
@@ -126,7 +138,7 @@ export function App() {
             </Typography>
 
             <TenantSelector 
-              onTenantSelected={handleTenantSelected} 
+              onTenantSelected={onTenantSelected}
               selectedTenantCode={tenantCode} 
             />
 

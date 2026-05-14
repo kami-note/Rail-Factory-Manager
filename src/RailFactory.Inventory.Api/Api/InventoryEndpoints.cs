@@ -25,6 +25,7 @@ public static class InventoryEndpoints
     private const string MaterialSuggestionsPath = "/materials/suggestions";
     private const string MaterialSearchPath = "/materials/search";
     private const string MaterialImagePath = "/materials/{materialCode}/image";
+    private const string MaterialMergePath = "/materials/merge";
     
     private const string InternalPath = "/internal";
 
@@ -60,6 +61,9 @@ public static class InventoryEndpoints
         
         secureGroup.MapGet(MaterialDetailsPath, HandleGetMaterialDetails)
             .RequirePermission(SystemPermissions.Inventory.Read);
+
+        secureGroup.MapPost(MaterialMergePath, HandleMergeMaterials)
+            .RequirePermission(SystemPermissions.Inventory.Write);
 
         // INTERNAL API (Service-to-Service)
         var internalGroup = group.MapGroup(InternalPath);
@@ -177,6 +181,38 @@ public static class InventoryEndpoints
     {
         var details = await getDetails.ExecuteAsync(MaterialCode.From(materialCode), cancellationToken);
         return details is not null ? Results.Ok(details) : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleMergeMaterials(
+        [FromBody] MergeMaterialsRequest request,
+        HttpContext context,
+        IMergeMaterialUseCase mergeUseCase,
+        CancellationToken cancellationToken)
+    {
+        var actor = context.User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(actor))
+        {
+            return Results.Unauthorized();
+        }
+
+        try
+        {
+            await mergeUseCase.ExecuteAsync(
+                new MergeMaterialCommand(
+                    MaterialCode.From(request.ObsoleteMaterialCode),
+                    MaterialCode.From(request.OfficialMaterialCode),
+                    EmailAddress.From(actor)),
+                cancellationToken);
+
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(
+                title: "Material merge failed",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
     }
 
     private static IResult HandleGetInventoryInfo(HttpContext context, IHostEnvironment environment, GetInventoryInfo getInventoryInfo)
