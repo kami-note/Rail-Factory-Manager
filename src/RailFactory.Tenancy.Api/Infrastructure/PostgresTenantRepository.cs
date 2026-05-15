@@ -7,11 +7,6 @@ namespace RailFactory.Tenancy.Api.Infrastructure;
 
 public sealed class PostgresTenantRepository(TenancyDbContext dbContext) : ITenantRepository
 {
-    public Task<Tenant?> FindByIdAsync(string id, CancellationToken cancellationToken = default)
-    {
-        return FindByCodeAsync(id, cancellationToken);
-    }
-
     public async Task<Tenant?> FindByCodeAsync(string code, CancellationToken cancellationToken = default)
     {
         var normalizedCode = code.Trim().ToLowerInvariant();
@@ -47,37 +42,4 @@ public sealed class PostgresTenantRepository(TenancyDbContext dbContext) : ITena
             record.ConnectionStrings)).ToList();
     }
 
-    public async Task AddAsync(Tenant aggregate, CancellationToken cancellationToken = default)
-    {
-        var existing = await dbContext.Tenants
-            .SingleOrDefaultAsync(x => x.Code == aggregate.Code, cancellationToken);
-
-        var now = DateTimeOffset.UtcNow;
-        if (existing is null)
-        {
-            dbContext.Tenants.Add(new TenantRecord
-            {
-                Code = aggregate.Code,
-                DisplayName = aggregate.DisplayName,
-                Locale = aggregate.Locale,
-                TimeZone = aggregate.TimeZone,
-                Status = aggregate.Status.ToString(),
-                ConnectionStrings = aggregate.ConnectionStrings.ToDictionary(x => x.Key, x => x.Value),
-                CreatedAt = now,
-                UpdatedAt = now
-            });
-        }
-        else
-        {
-            existing.DisplayName = aggregate.DisplayName;
-            existing.Locale = aggregate.Locale;
-            existing.TimeZone = aggregate.TimeZone;
-            existing.Status = aggregate.Status.ToString();
-            existing.ConnectionStrings = aggregate.ConnectionStrings.ToDictionary(x => x.Key, x => x.Value);
-            existing.UpdatedAt = now;
-        }
-    }
-
-    public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-        => dbContext.SaveChangesAsync(cancellationToken);
 }

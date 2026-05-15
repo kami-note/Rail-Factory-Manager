@@ -4,7 +4,6 @@ export function buildTenantHeaders(tenantCode: string): HeadersInit {
   };
 }
 
-let cachedCsrfToken: string | null = null;
 const csrfTokenByTenant = new Map<string, string>();
 
 /**
@@ -32,7 +31,6 @@ export async function fetchCsrfToken(tenantCode: string): Promise<string> {
   }
 
   const { token } = await response.json();
-  cachedCsrfToken = token;
   csrfTokenByTenant.set(tenantCode, token);
   return token;
 }
@@ -81,7 +79,7 @@ export async function fetchJsonOrThrow<T>(
       throw new Error('Missing tenant header for mutation request.');
     }
 
-    let csrfToken = csrfTokenByTenant.get(tenantCode) ?? cachedCsrfToken;
+    let csrfToken = csrfTokenByTenant.get(tenantCode);
     if (!csrfToken) {
       csrfToken = await fetchCsrfToken(tenantCode);
     }
@@ -112,7 +110,6 @@ export async function fetchJsonOrThrow<T>(
   if (!response.ok) {
     // If CSRF failed, clear cache and try to handle it (though usually it's a hard fail)
     if (response.status === 403) {
-      cachedCsrfToken = null;
       const tenantCode = new Headers(init.headers).get('X-Tenant-Code');
       if (tenantCode) {
         csrfTokenByTenant.delete(tenantCode);

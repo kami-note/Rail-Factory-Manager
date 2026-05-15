@@ -1,6 +1,6 @@
 # Contexto Atual De Implementacao
 
-Atualizado em: 2026-05-07.
+Atualizado em: 2026-05-14.
 
 Este arquivo e a fonte principal do estado real do fork. Os outros documentos descrevem arquitetura, requisitos e plano; este documento registra o que existe no codigo agora, o que foi validado e o que falta para a proxima etapa.
 
@@ -204,6 +204,7 @@ Estado funcional validado:
 - auditoria dos micros concluida em 2026-05-03: nao ha uso ativo de `NpgsqlDataSource/CreateCommand` em `src/`; persistencia relacional nesta passada esta padronizada em ORM nos servicos com banco (IAM e Tenancy).
 - validacao de entrada padronizada em duas camadas nos fluxos HTTP de IAM/Tenancy: DTO na borda (DataAnnotations + `ValidationProblem`) e validacao de regra mantida na Application/Domain.
 - organizacao de borda refinada para SRP em IAM/Tenancy: DTOs de request e validadores extraidos para arquivos dedicados (`Api/Requests` + `Api/Validation`), mantendo endpoints/program focados em orquestracao HTTP.
+- Tenancy com port de leitura explicitamente orientado a negocio (`ITenantRepository` com `FindByCodeAsync` e `ListTenantsAsync`), removendo alias redundante `FindByIdAsync` e metodos de escrita nao utilizados do adapter `PostgresTenantRepository`; build do projeto Tenancy validado sem erros.
 - AI agent rule documents consolidated in English: `docs/REGRAS_PARA_IAS.md` is the detailed engineering-quality source, `AGENTS.md` is the short entry guide, and the local skill reference is aligned with the established standards.
 - P2 implementado em SupplyChain/Inventory/UI:
   - SupplyChain com persistencia EF Core + migrations (`suppliers`, `material_receipts`, `material_receipt_items`, `supply_audit_entries`, `supply_outbox_messages`);
@@ -645,3 +646,43 @@ Specialized agent profiles available:
 - Validation evidence:
   - `npm test -- --run` in `src/RailFactory.Frontend/App` passed (`15` tests).
   - `npm run build` in `src/RailFactory.Frontend/App` passed.
+
+## 2026-05-14 - Inventory UI Unit Label Fix
+
+- Fixed inventory frontend labels that suggested a hardcoded unit (`UN`) even when the API returned other measurement units.
+- Updated `InventoryStocksPage` table header from `UN` to `UNIDADE` to reflect dynamic row values from `unitOfMeasure`.
+- Updated `MaterialDetailsPage` chip from `UN: ...` to `Unidade: ...`, preserving the actual unit returned by API.
+- Validation evidence:
+  - `npm run build` in `src/RailFactory.Frontend/App` passed.
+
+## 2026-05-15 - Frontend Unit Fallback Removal
+
+- Removed hardcoded fallback unit (`UN`) from Supply Chain association UI previews.
+- `AssociationWorkbenchPage` now renders only the real `stockUnit` value returned by backend/material selection, without synthetic default.
+- Validation evidence:
+  - `npm run build` in `src/RailFactory.Frontend/App` passed.
+
+## 2026-05-15 - UnitOfMeasure Drift Hardening (SupplyChain/Inventory)
+
+- Root-cause analysis confirmed the "all units as UN" symptom was not a frontend rendering fallback; persisted data already contained `UnitOfMeasure = UN` in `material_receipt_items` and `inventory_balances`.
+- SupplyChain mapping hardening was applied to prevent stale/corrupted unit metadata from being persisted in new associations:
+  - `IInventoryMaterialService` now exposes a fresh (cache-bypass) material lookup for critical association workflows.
+  - `AssociateReceiptItem` now resolves internal material metadata via fresh lookup and fails explicitly when internal unit is invalid.
+  - `CreateMaterialAndAssociate` now re-reads created/existing material via fresh lookup before mapping and fails explicitly on invalid unit.
+- Legacy mapping repair path added:
+  - Migration `20260515091500_BackfillSupplierMappingInternalUnit` fills empty `supplier_material_mappings.InternalUnitOfMeasure` using the latest resolved receipt-item unit for the same supplier product code.
+  - `MaterialReceiptWriter` now fails explicitly when an existing supplier mapping has blank internal unit, preventing silent propagation of invalid state.
+- Validation evidence:
+  - `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj -v:minimal` passed.
+  - `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`11` tests).
+
+## 2026-05-15 - Workbench CSRF 403 Mitigation
+
+- Investigated `403` on `POST /api/supply-chain/receipts/{receiptId}/items/{itemId}/create-material-and-associate` with Aspire traces.
+- Trace `c03c0cf` showed the request being rejected at `frontend` (`/api/{**catch-all}`) before reaching `gateway`/`supply-chain`.
+- Fixed frontend CSRF token cache isolation in `src/RailFactory.Frontend/App/src/shared/lib/http.ts`:
+  - removed cross-tenant global fallback (`cachedCsrfToken`);
+  - mutation requests now use only tenant-scoped CSRF tokens from `csrfTokenByTenant`;
+  - `403` invalidation clears only the token for the request tenant.
+- Validation evidence:
+  - `dotnet test src/RailFactory.Frontend.Tests/RailFactory.Frontend.Tests.csproj -v:minimal` passed (`13` tests).

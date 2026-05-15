@@ -27,6 +27,11 @@ public interface IInventoryMaterialService
     Task<IDictionary<string, MaterialMetadata>> GetMaterialsByCodesAsync(IEnumerable<string> materialCodes, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Fetches one material metadata directly from Inventory, bypassing local cache.
+    /// </summary>
+    Task<MaterialMetadata?> GetMaterialByCodeFreshAsync(string materialCode, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Creates a new material in the inventory catalog.
     /// </summary>
     Task<MaterialMetadata> CreateMaterialAsync(CreateMaterialInput input, CancellationToken cancellationToken);

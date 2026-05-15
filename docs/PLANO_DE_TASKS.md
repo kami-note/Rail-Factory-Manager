@@ -647,6 +647,7 @@ Riscos que esta passada deve enderecar:
   - Aceite: Todas as acoes mutaveis da Workbench (`associate`, `review-later`, `ignored`, `release-to-conference`, `create-material-and-associate`, override de SKU) possuem politica definida de autenticacao, autorizacao minima e CSRF quando expostas ao browser.
   - Depende: Task 2.10.1.
   - Entregue: Implementado pipeline customizado no YARP do BFF que valida CSRF para todas as operações de mutação (POST/PUT/DELETE) em `/api/*`. As rotas de SupplyChain exigem autenticação validada pelo IAM (encaminhamento de Cookie).
+  - Ajuste (2026-05-15): cache CSRF do frontend tornado estritamente tenant-scoped (`shared/lib/http.ts`), removendo fallback global entre tenants/sessões que causava `403` intermitente em mutações da Workbench (incluindo `create-material-and-associate`).
 
 - [x] Task 2.10.11: Definir observabilidade e auditoria da Workbench (@backend).
   - Aceite: Decisoes de associacao, criacao de material, review/ignore, override de supplier SKU e release para conferencia registram usuario, timestamp, receipt/item, valores anteriores/novos e correlation id.
@@ -699,53 +700,63 @@ Objetivo: transformar recebimento pendente em saldo disponivel ou bloqueado.
   - Depende: estados expandidos.
   - Entregue: comando `StartMaterialReceiptConference` e endpoint `POST /receipts/{id}/conference/start` implementados.
 
-- [ ] Criar tela de conferencia cega na UI.
+- [x] Criar tela de conferencia cega na UI.
   - Aceite: operador vê itens mas não vê as quantidades esperadas.
   - Depende: `StartConference`.
+  - Entregue: `ConferenceWorkspace.tsx` com labels em PT-BR e RN-05 (blind) respeitado.
 
-- [ ] Registrar contagem e dados operacionais (Lote/Validade).
+- [x] Registrar contagem e dados operacionais (Lote/Validade).
   - Aceite: operador informa quantidade contada, lote e validade (se nao vieram do XML).
   - Depende: tela de conferencia.
+  - Entregue: UI e Backend (`RecordConference`) suportam campos opcionais.
 
-- [ ] Implementar comando `CloseConference` com detecção de divergência.
+- [x] Implementar comando `CloseConference` com detecção de divergência.
   - Aceite: sistema compara contagem vs esperado; se bater, status -> `Approved`; se divergir, status -> `Divergent`.
   - Depende: registro de contagem.
+  - Entregue: `CloseMaterialReceiptConference` validado com testes unitários em 2026-05-15.
 
 ### P3.2 - Ativacao De Saldo No Inventory
 
-- [ ] Criar contrato `ConfirmInventoryBalance`.
+- [x] Criar contrato `ConfirmInventoryBalance`.
   - Aceite: Inventory recebe confirmação de contagem, lote e validade.
   - Depende: `CloseConference`.
+  - Entregue: `POST /api/inventory/internal/confirmed-balances` e `ConfirmInventoryBalance` use case.
 
-- [ ] Liberar saldo aprovado.
+- [x] Liberar saldo aprovado.
   - Aceite: saldo muda de `Pending` para `Available`, atualizando Lote/Validade reais.
   - Depende: `ConfirmInventoryBalance`.
+  - Entregue: `InventoryBalance.Confirm` validado com testes em 2026-05-15.
 
-- [ ] Bloquear saldo divergente.
+- [x] Bloquear saldo divergente.
   - Aceite: saldo muda de `Pending` para `Blocked`, com nota de divergencia.
   - Depende: `ConfirmInventoryBalance`.
+  - Entregue: `InventoryBalance.Confirm` validado com testes em 2026-05-15.
 
-- [ ] Sincronizar status via Outbox/Dispatcher (Supply -> Inventory).
+- [x] Sincronizar status via Outbox/Dispatcher (Supply -> Inventory).
   - Aceite: o fechamento no Supply dispara a ativacao no Inventory de forma assincrona.
   - Depende: comandos de confirmacao.
+  - Entregue: `InventoryPendingBalanceDispatcher` consome `ReceiptItemConferred` e chama Inventory API.
 
 ### P3.3 - Ledger E Eventos Criticos
 
-- [ ] Registrar ledger de liberacao.
+- [x] Registrar ledger de liberacao.
   - Aceite: mudanca para `Available` aparece no ledger.
   - Depende: liberacao de saldo.
+  - Entregue: `ConfirmInventoryBalance` gera `balance_confirmed` no ledger.
 
-- [ ] Registrar ledger de bloqueio.
+- [x] Registrar ledger de bloqueio.
   - Aceite: mudanca para `Blocked` aparece no ledger.
   - Depende: bloqueio de saldo.
+  - Entregue: `ConfirmInventoryBalance` gera `balance_confirmed` no ledger com delta corrigido.
 
 - [ ] Definir eventos `MaterialReceiptApproved` e `InventoryBalanceReleased`.
   - Aceite: contratos documentados com envelope padrao.
   - Depende: fluxo de conferencia.
 
-- [ ] Decidir se P3 usa chamada direta ou RabbitMQ.
+- [x] Decidir se P3 usa chamada direta ou RabbitMQ.
   - Aceite: decisao registrada antes de implementar mensageria real.
   - Depende: eventos definidos.
+  - Decisão: HttpClient (direto via Gateway) usado para sincronização P2/P3; RabbitMQ reservado para desacoplamento P4+.
 
 ## P4 - Producao Inicial
 

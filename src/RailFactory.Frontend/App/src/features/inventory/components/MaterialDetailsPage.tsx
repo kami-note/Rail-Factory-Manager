@@ -227,7 +227,7 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>{material.description}</Typography>
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
               <Chip label={`SKU: ${material.code}`} size="small" sx={{ fontWeight: 700 }} />
-              <Chip label={`UN: ${material.unitOfMeasure}`} size="small" variant="outlined" />
+              <Chip label={`Unidade: ${material.unitOfMeasure}`} size="small" variant="outlined" />
               <Chip label={`Tipo: ${procurementMap[material.procurementType]}`} size="small" color="primary" variant="outlined" sx={{ fontWeight: 600 }} />
               <StatusChip status={material.category} />
               <StatusChip status={material.status} />

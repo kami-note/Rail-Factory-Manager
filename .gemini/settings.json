@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "aspire": {
+      "command": "aspire",
+      "args": [
+        "mcp",
+        "tools"
+      ],
+      "trust": true
+    }
+  }
+}
