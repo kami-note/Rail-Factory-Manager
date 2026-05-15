@@ -656,6 +656,11 @@ Riscos que esta passada deve enderecar:
   - Ajuste (2026-05-15): integrações internas específicas do Inventory continuam com `X-Internal-Key` em `/api/inventory/internal/*`; smoke real confirmou `401` para spoofing direto nas portas de `Inventory` e `SupplyChain` e `200` para bearer JWT interno válido.
   - Ajuste (2026-05-15): validação do tenant do bearer interno foi centralizada em `ServiceDefaults`; replay cross-tenant por troca isolada de header agora falha com `403 tenant.mismatch`.
   - Ajuste (2026-05-15): contexto de auth do frontend invalida a sessao local imediatamente no logout e revalida sessao ao entrar/focar `/app*`, evitando renderizacao residual de areas protegidas apos perda de autenticacao.
+  - Ajuste (2026-05-15): cliente HTTP compartilhado do frontend passou a traduzir `401`, `403`, `tenant.*`, `csrf_*` e outros erros conhecidos para mensagens consistentes de UI, removendo mensagens por tela baseadas apenas em status HTTP.
+  - Ajuste (2026-05-15): `ReceiptsList` e `AssociationWorkbenchPage` deixaram de usar `alert(...)` para falhas operacionais; erros agora seguem `Alert` inline com o mesmo mapeamento centralizado do frontend.
+  - Ajuste (2026-05-15): frontend ganhou componentes compartilhados `InlineError` e `PageError`, já aplicados em páginas/modais de IAM, Inventory e SupplyChain para padronizar também a apresentação visual das falhas.
+  - Ajuste (2026-05-15): seleção de tenant, importação XML e detalhes/unificação de material também migraram para `InlineError`/`PageError`, removendo o restante mais visível de mensagens em inglês e `Alert` manual duplicado.
+  - Ajuste (2026-05-15): helper compartilhado `toUiErrorMessage(...)` passou a normalizar os fallbacks locais de erro nos componentes principais, eliminando a repetição de `err instanceof Error ? err.message : ...`.
 
 - [x] Task 2.10.11: Definir observabilidade e auditoria da Workbench (@backend).
   - Aceite: Decisoes de associacao, criacao de material, review/ignore, override de supplier SKU e release para conferencia registram usuario, timestamp, receipt/item, valores anteriores/novos e correlation id.

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchJsonOrThrow } from '../http';
+import { fetchJsonOrThrow, HttpRequestError } from '../http';
 
 describe('fetchJsonOrThrow', () => {
   beforeEach(() => {
@@ -94,5 +94,83 @@ describe('fetchJsonOrThrow', () => {
         body: JSON.stringify({ foo: 'bar' })
       }, 'Error')
     ).rejects.toThrow('Missing tenant header for mutation request.');
+  });
+
+  it('maps 401 errors to a stable session-expired message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        clone() {
+          return this;
+        },
+        json: async () => ({ code: 'unauthorized', message: 'Authentication is required.' })
+      })
+    );
+
+    await expect(
+      fetchJsonOrThrow('/api/test', {
+        headers: { 'X-Tenant-Code': 'dev' },
+        credentials: 'include'
+      }, 'Falha ao carregar saldos de estoque')
+    ).rejects.toEqual(expect.objectContaining<HttpRequestError>({
+      message: 'Sua sessão expirou. Entre novamente para continuar.',
+      status: 401,
+      code: 'unauthorized'
+    }));
+  });
+
+  it('maps 403 errors to a stable forbidden message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        clone() {
+          return this;
+        },
+        json: async () => ({ code: 'forbidden', message: 'You do not have permission to access this resource.' })
+      })
+    );
+
+    await expect(
+      fetchJsonOrThrow('/api/test', {
+        headers: { 'X-Tenant-Code': 'dev' },
+        credentials: 'include'
+      }, 'Erro ao carregar permissões')
+    ).rejects.toEqual(expect.objectContaining<HttpRequestError>({
+      message: 'Você não tem permissão para acessar este recurso.',
+      status: 403,
+      code: 'forbidden'
+    }));
+  });
+
+  it('maps tenant mismatch to a stable organization message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        clone() {
+          return this;
+        },
+        json: async () => ({ code: 'tenant.mismatch', message: 'The authenticated internal token does not match the resolved tenant.' })
+      })
+    );
+
+    await expect(
+      fetchJsonOrThrow('/api/test', {
+        headers: { 'X-Tenant-Code': 'acme' },
+        credentials: 'include'
+      }, 'Falha ao carregar dados')
+    ).rejects.toEqual(expect.objectContaining<HttpRequestError>({
+      message: 'Sua sessão não corresponde à organização selecionada. Entre novamente.',
+      status: 403,
+      code: 'tenant.mismatch'
+    }));
   });
 });

@@ -17,6 +17,8 @@ import {
 } from '@mui/material';
 import { GitMerge as MergeIcon, AlertTriangle, Search, Check } from 'lucide-react';
 import { searchMaterials, mergeMaterials } from '../api/materials';
+import { InlineError } from '../../../shared/components/common/InlineError';
+import { toUiErrorMessage } from '../../../shared/lib/http';
 import { MaterialSearchResult } from '../types';
 
 interface MergeMaterialModalProps {
@@ -80,7 +82,7 @@ export function MergeMaterialModal({
       await mergeMaterials(tenantCode, obsoleteMaterialCode, selectedMaterial.materialCode);
       onSuccess(selectedMaterial.materialCode);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao processar unificação');
+      setError(toUiErrorMessage(err, 'Não foi possível concluir a unificação dos materiais.'));
     } finally {
       setLoading(false);
     }
@@ -143,7 +145,7 @@ export function MergeMaterialModal({
             </Alert>
           )}
 
-          {error && <Alert severity="error">{error}</Alert>}
+          {error && <InlineError message={error} />}
         </Stack>
       </DialogContent>
 

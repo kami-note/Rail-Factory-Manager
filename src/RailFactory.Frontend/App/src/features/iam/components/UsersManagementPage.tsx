@@ -13,7 +13,6 @@ import {
   TableRow,
   Chip,
   CircularProgress,
-  Alert,
   IconButton,
   Tooltip,
   Dialog,
@@ -25,8 +24,9 @@ import {
   Avatar
 } from '@mui/material';
 import { Users, UserPlus, Shield, X, Trash2, Mail, Save } from 'lucide-react';
+import { InlineError } from '../../../shared/components/common/InlineError';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http';
 
 interface Role {
   id: string;
@@ -65,7 +65,7 @@ export function UsersManagementPage({ tenantCode }: UsersManagementPageProps) {
       setUsers(usersData);
       setAvailableRoles(rolesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao carregar usuários.');
+      setError(toUiErrorMessage(err, 'Não foi possível carregar os usuários.'));
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export function UsersManagementPage({ tenantCode }: UsersManagementPageProps) {
       setSelectedRoleId(null);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao atribuir papel.');
+      setError(toUiErrorMessage(err, 'Não foi possível atribuir o papel ao usuário.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -106,7 +106,7 @@ export function UsersManagementPage({ tenantCode }: UsersManagementPageProps) {
       }, 'Erro ao remover perfil');
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao remover papel.');
+      setError(toUiErrorMessage(err, 'Não foi possível remover o papel do usuário.'));
     }
   };
 
@@ -130,7 +130,7 @@ export function UsersManagementPage({ tenantCode }: UsersManagementPageProps) {
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
       ) : error ? (
-        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+        <InlineError message={error} marginBottom={3} />
       ) : (
         <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
           <Table>

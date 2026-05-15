@@ -12,14 +12,14 @@ import {
   CircularProgress,
   Divider,
   Stack,
-  Alert,
   Grid,
   alpha,
   useTheme
 } from '@mui/material';
 import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
+import { InlineError } from '../../../shared/components/common/InlineError';
 import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
 import { StatusChip } from '../../../shared/components/common/StatusChip';
 import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping';
@@ -90,11 +90,11 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
             headers: buildTenantHeaders(tenantCode),
             credentials: 'include'
           },
-          'Failed to load receipt details'
+          'Falha ao carregar detalhes do recebimento'
         );
         setDetails(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(toUiErrorMessage(err, 'Não foi possível carregar os detalhes do recebimento.'));
       } finally {
         setLoading(false);
       }
@@ -116,7 +116,7 @@ export function ReceiptDetailsModal({ receiptId, tenantCode, onClose }: ReceiptD
       )}
 
       {error && (
-        <Alert severity="error">{error}</Alert>
+        <InlineError message={error} />
       )}
 
       {details && !loading && (

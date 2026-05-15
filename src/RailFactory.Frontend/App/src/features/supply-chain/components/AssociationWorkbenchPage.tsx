@@ -55,6 +55,7 @@ import {
 } from '../types';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { StatusChip } from '../../../shared/components/common/StatusChip';
+import { toUiErrorMessage } from '../../../shared/lib/http';
 import { Authorized } from '../../auth';
 
 // Use lucide icons consistently with the layout
@@ -104,7 +105,7 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
         setSelectedReceiptId(data[0].receiptId);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao carregar fila de associação.');
+      setError(toUiErrorMessage(err, 'Não foi possível carregar a fila de associação.'));
     } finally {
       setLoadingQueue(false);
     }
@@ -120,7 +121,7 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
         setSelectedItemId(firstPending?.itemId ?? data.items[0].itemId);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao carregar detalhes da bancada.');
+      setError(toUiErrorMessage(err, 'Não foi possível carregar os detalhes da bancada.'));
     } finally {
       setLoadingWorkbench(false);
     }
@@ -277,7 +278,7 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
                           setWorkbench(null);
                           setSelectedReceiptId(null);
                         } catch (err) {
-                          setError(err instanceof Error ? err.message : 'Falha na liberação');
+                          setError(toUiErrorMessage(err, 'Não foi possível liberar o recebimento para conferência.'));
                         }
                       }}
                     >
@@ -423,7 +424,7 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
       });
       onSuccess(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha na associação');
+      setError(toUiErrorMessage(err, 'Não foi possível salvar a associação.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -445,7 +446,7 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
       });
       onSuccess(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha na correção de SKU');
+      setError(toUiErrorMessage(err, 'Não foi possível corrigir o SKU do fornecedor.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -616,7 +617,9 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                   try {
                     const res = await recordControlledDecision(tenantCode, receiptId, item.itemId, 'review-later', { expectedVersion: item.version, reason });
                     onSuccess(res);
-                  } catch (err) { alert(err); }
+                  } catch (err) {
+                    setError(toUiErrorMessage(err, 'Não foi possível registrar a revisão posterior.'));
+                  }
                 }
               }}
             >
@@ -633,7 +636,9 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                   try {
                     const res = await recordControlledDecision(tenantCode, receiptId, item.itemId, 'ignored', { expectedVersion: item.version, reason });
                     onSuccess(res);
-                  } catch (err) { alert(err); }
+                  } catch (err) {
+                    setError(toUiErrorMessage(err, 'Não foi possível ignorar este item.'));
+                  }
                 }
               }}
             >
@@ -676,7 +681,7 @@ function CreateMaterialForm({ tenantCode, receiptId, item, onSuccess }: {
       });
       onSuccess(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha na criação');
+      setError(toUiErrorMessage(err, 'Não foi possível criar o material e concluir a associação.'));
     } finally {
       setIsSubmitting(false);
     }

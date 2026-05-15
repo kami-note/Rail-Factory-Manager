@@ -12,14 +12,15 @@ import {
   Paper, 
   TextField, 
   CircularProgress,
-  Alert,
   Stack
 } from '@mui/material';
 import { ChevronLeft, Save, ClipboardCheck } from 'lucide-react';
 import type { ConferenceItem } from '../types';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
+import { InlineError } from '../../../shared/components/common/InlineError';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
+import { PageError } from '../../../shared/components/common/PageError';
 
 /**
  * Properties for the ConferenceWorkspace component.
@@ -95,7 +96,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
         });
         setCounts(initialCounts);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro desconhecido');
+        setError(toUiErrorMessage(err, 'Não foi possível carregar os itens da conferência.'));
       } finally {
         setLoading(false);
       }
@@ -154,14 +155,14 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
       }
     } catch (err) {
       console.error('Conference submission failed:', err);
-      setSaveError(err instanceof Error ? err.message : 'Erro ao salvar conferência física.');
+      setSaveError(toUiErrorMessage(err, 'Não foi possível salvar a conferência física.'));
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}><CircularProgress size={32} /></Box>;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) return <PageError message={error} />;
 
   return (
     <Box>
@@ -186,9 +187,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
       </Alert>
 
       {saveError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {saveError}
-        </Alert>
+        <InlineError message={saveError} marginBottom={3} />
       )}
 
       <TableContainer component={Paper} variant="outlined">

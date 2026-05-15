@@ -7,7 +7,6 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  Alert,
   Button,
   Table,
   TableBody,
@@ -24,7 +23,8 @@ import {
   Grid
 } from '@mui/material'
 import { ArrowLeft as BackIcon, AlertTriangle, User, Calendar, GitMerge as MergeIcon } from 'lucide-react'
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http'
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http'
+import { PageError } from '../../../shared/components/common/PageError'
 import { StatusChip } from '../../../shared/components/common/StatusChip'
 import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping'
 import { MergeMaterialModal } from './MergeMaterialModal'
@@ -146,7 +146,7 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
         )
         setMaterial(mapMaterialResponse(data))
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro desconhecido')
+        setError(toUiErrorMessage(err, 'Não foi possível carregar os detalhes do material.'))
         setMaterial(null)
       } finally {
         setLoading(false)
@@ -166,7 +166,7 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
   }
 
   if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}><CircularProgress /></Box>
-  if (error) return <Box sx={{ p: 4 }}><Alert severity="error">{error}</Alert></Box>
+  if (error) return <PageError message={error} />
   if (!material) return <Box sx={{ p: 4 }}><Typography>Material não encontrado.</Typography></Box>
 
   const showBuyTabs = material.procurementType === 'Buy' || material.procurementType === 'MakeAndBuy'

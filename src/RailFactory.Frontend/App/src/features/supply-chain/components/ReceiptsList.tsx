@@ -9,7 +9,6 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
-  Alert,
   Paper,
   IconButton,
   Tooltip,
@@ -29,7 +28,8 @@ import { useNavigate } from 'react-router-dom';
 import type { Receipt } from '../types';
 import { ReceiptDetailsModal } from './ReceiptDetailsModal';
 import { TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, readProblemMessage, toUiErrorMessage } from '../../../shared/lib/http';
+import { InlineError } from '../../../shared/components/common/InlineError';
 import { StatusChip } from '../../../shared/components/common/StatusChip';
 
 type ReceiptsListProps = {
@@ -48,11 +48,13 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
 
   const startConference = async (receiptId: string) => {
     try {
+      setActionError(null);
       await fetchJsonOrThrow(
         `/api/supply-chain/receipts/${receiptId}/conference/start`,
         {
@@ -70,23 +72,21 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
       }
     } catch (err) {
       console.error(err);
-      alert('Erro ao iniciar conferência. Verifique se a nota já foi liberada da associação.');
+      setActionError(toUiErrorMessage(err, 'Não foi possível iniciar a conferência deste recebimento.'));
     }
   };
 
   const viewXml = async (receiptId: string, receiptNumber: string) => {
     try {
+      setActionError(null);
       const response = await fetch(`/api/supply-chain/receipts/${receiptId}/xml`, {
         headers: buildTenantHeaders(tenantCode),
         credentials: 'include'
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          alert('Arquivo XML não encontrado para este recebimento.');
-          return;
-        }
-        throw new Error('Falha ao buscar XML');
+        const message = await readProblemMessage(response, 'Não foi possível baixar o XML deste recebimento.');
+        throw new Error(message);
       }
 
       const blob = await response.blob();
@@ -100,13 +100,13 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
       document.body.removeChild(a);
     } catch (err) {
       console.error(err);
-      alert('Erro ao baixar XML original.');
+      setActionError(toUiErrorMessage(err, 'Não foi possível baixar o XML deste recebimento.'));
     }
   };
 
   const fetchReceipts = async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
 
     try {
       const data = await fetchJsonOrThrow<Receipt[]>(
@@ -119,7 +119,7 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
       );
       setReceipts(data);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Erro desconhecido');
+      setLoadError(toUiErrorMessage(requestError, 'Não foi possível carregar os recebimentos.'));
     } finally {
       setLoading(false);
     }
@@ -137,8 +137,8 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
     );
   }
 
-  if (error) {
-    return <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>;
+  if (loadError) {
+    return <InlineError message={loadError} marginBottom={2} />;
   }
 
   if (receipts.length === 0) {
@@ -151,6 +151,9 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference }: 
 
   return (
     <>
+      {actionError && (
+        <InlineError message={actionError} onClose={() => setActionError(null)} marginBottom={2} />
+      )}
       {isCompact ? (
         <Stack spacing={2}>
           {receipts.map((receipt) => {

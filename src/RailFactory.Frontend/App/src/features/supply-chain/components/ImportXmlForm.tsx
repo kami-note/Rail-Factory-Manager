@@ -16,7 +16,8 @@ import {
   useTheme
 } from '@mui/material';
 import { FileText, UploadCloud, X, CheckCircle, AlertCircle, Lock } from 'lucide-react';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http';
+import { InlineError } from '../../../shared/components/common/InlineError';
 import { FiscalDocumentPreview, ParsedReceiptDocument } from './FiscalDocumentPreview';
 import { Authorized } from '../../auth';
 
@@ -67,7 +68,7 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
       );
       setPreviewData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao pré-visualizar XML.');
+      setError(toUiErrorMessage(err, 'Não foi possível pré-visualizar o XML.'));
     } finally {
       setLoading(false);
     }
@@ -122,7 +123,7 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
         setFiles([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao importar XML.');
+      setError(toUiErrorMessage(err, 'Não foi possível importar o XML.'));
     } finally {
       setLoading(false);
     }
@@ -294,7 +295,7 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
         
         {(error || batchErrors.length > 0) && (
           <Stack spacing={1}>
-            {error && <Alert severity="error" sx={{ whiteSpace: 'pre-line', fontWeight: 600 }}>{error}</Alert>}
+            {error && <Box sx={{ whiteSpace: 'pre-line', fontWeight: 600 }}><InlineError message={error} /></Box>}
             {batchErrors.map((err, i) => (
               <Alert key={i} severity="error" icon={<AlertCircle size={18} />} sx={{ '& .MuiAlert-message': { width: '100%' } }}>
                 <Typography variant="caption" sx={{ fontWeight: 800, display: 'block' }}>{err.fileName}</Typography>

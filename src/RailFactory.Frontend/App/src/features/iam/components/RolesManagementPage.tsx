@@ -13,7 +13,6 @@ import {
   TableRow,
   Chip,
   CircularProgress,
-  Alert,
   Divider,
   Dialog,
   DialogTitle,
@@ -28,8 +27,9 @@ import {
   useTheme
 } from '@mui/material';
 import { ShieldCheck, Plus, Save, X, Layers } from 'lucide-react';
+import { InlineError } from '../../../shared/components/common/InlineError';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http';
 
 interface Role {
   id: string;
@@ -74,7 +74,7 @@ export function RolesManagementPage({ tenantCode }: RolesManagementPageProps) {
       setRoles(rolesData);
       setAvailablePermissions(permsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao carregar dados de acesso.');
+      setError(toUiErrorMessage(err, 'Não foi possível carregar os dados de acesso.'));
     } finally {
       setLoading(false);
     }
@@ -97,7 +97,7 @@ export function RolesManagementPage({ tenantCode }: RolesManagementPageProps) {
       setNewRole({ name: '', description: '', permissions: [], childRoleIds: [] });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao criar papel.');
+      setError(toUiErrorMessage(err, 'Não foi possível criar o papel.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -132,7 +132,7 @@ export function RolesManagementPage({ tenantCode }: RolesManagementPageProps) {
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
       ) : error ? (
-        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+        <InlineError message={error} marginBottom={3} />
       ) : (
         <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
           <Table>

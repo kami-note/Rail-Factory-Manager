@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Box, CircularProgress, FormControl, InputLabel, MenuItem, Select, Typography, Alert } from '@mui/material';
-import { fetchJsonOrThrow } from '../lib/http';
+import { Box, CircularProgress, FormControl, InputLabel, MenuItem, Select, Typography } from '@mui/material';
+import { InlineError } from './common/InlineError';
+import { fetchJsonOrThrow, toUiErrorMessage } from '../lib/http';
 
 interface Tenant {
   code: string;
@@ -27,11 +28,11 @@ export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected
         const data = await fetchJsonOrThrow<Tenant[]>(
           '/api/tenancy/tenants',
           {},
-          'Failed to load organizations'
+          'Não foi possível carregar as organizações'
         );
         setTenants(data);
       } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : 'Failed to load organizations.');
+        setError(toUiErrorMessage(requestError, 'Não foi possível carregar as organizações.'));
       } finally {
         setLoading(false);
       }
@@ -49,11 +50,7 @@ export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected
   }
 
   if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    );
+    return <InlineError message={error} marginBottom={2} />;
   }
 
   return (
@@ -76,7 +73,7 @@ export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected
       </FormControl>
       {!selectedTenantCode && (
         <Typography variant="body2" color="text.secondary">
-          Please select an organization to continue.
+          Selecione uma organização para continuar.
         </Typography>
       )}
     </Box>
