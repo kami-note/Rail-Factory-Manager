@@ -9,6 +9,16 @@ namespace RailFactory.Inventory.Api.Application.Balances;
 /// </summary>
 public sealed class ConfirmInventoryBalance(IInventoryRepository repository)
 {
+    /// <summary>
+    /// Executes the confirmation of an inventory balance.
+    /// </summary>
+    /// <param name="input">The confirmation details from the integration event.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>True if the balance was confirmed; false if the event was already processed (idempotency).</returns>
+    /// <remarks>
+    /// Invariant: Only 'Pending' balances can be confirmed.
+    /// This method ensures idempotency and maintains a ledger audit trail of the quantity change.
+    /// </remarks>
     public async Task<bool> ExecuteAsync(ConfirmInventoryBalanceInput input, CancellationToken cancellationToken)
     {
         if (await repository.IntegrationMessageProcessedAsync(input.EventId, cancellationToken))
@@ -19,6 +29,8 @@ public sealed class ConfirmInventoryBalance(IInventoryRepository repository)
         var sourceReference = $"{input.ReceiptId}:{input.ReceiptItemId}";
         var balance = await repository.GetBalanceBySourceReferenceAsync(sourceReference, cancellationToken)
             ?? throw new InvalidOperationException($"Balance with source reference '{sourceReference}' not found.");
+
+        var previousQuantity = balance.Quantity;
 
         // ELITE FIX: Individual item approval status from integration event
         balance.Confirm(input.CountedQuantity, input.LotNumber, input.ExpirationDate, input.IsApproved);
@@ -41,7 +53,7 @@ public sealed class ConfirmInventoryBalance(IInventoryRepository repository)
         });
 
         await repository.AddLedgerEntryAsync(
-            InventoryLedgerEntry.Create(balance.Id, "balance_confirmed", input.CountedQuantity - balance.Quantity, detailsJson),
+            InventoryLedgerEntry.Create(balance.Id, "balance_confirmed", input.CountedQuantity - previousQuantity, detailsJson),
             cancellationToken);
 
         await repository.SaveChangesAsync(cancellationToken);

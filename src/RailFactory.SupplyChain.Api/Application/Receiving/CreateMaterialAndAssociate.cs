@@ -31,6 +31,15 @@ public sealed class CreateMaterialAndAssociate(
         // 1. Create the material in Inventory (or ensure it exists)
         // This is an external call, done outside the SupplyChain transaction.
         var material = await inventoryMaterialService.CreateMaterialAsync(materialInput, cancellationToken);
+        var freshMaterial = await inventoryMaterialService.GetMaterialByCodeFreshAsync(material.MaterialCode, cancellationToken)
+            ?? material;
+
+        if (string.IsNullOrWhiteSpace(freshMaterial.UnitOfMeasure))
+        {
+            throw new AssociationValidationException(
+                "association.material_unit_invalid",
+                $"Internal material '{freshMaterial.MaterialCode}' has no valid unit of measure.");
+        }
 
         AssociateReceiptItemResponse? result = null;
 
@@ -64,8 +73,8 @@ public sealed class CreateMaterialAndAssociate(
                     SupplierMaterialMapping.Create(
                         FiscalId.From(supplier.FiscalId),
                         item.SupplierProductCode,
-                        MaterialCode.From(material.MaterialCode),
-                        material.UnitOfMeasure,
+                        MaterialCode.From(freshMaterial.MaterialCode),
+                        freshMaterial.UnitOfMeasure,
                         item.SupplierUnitOfMeasure,
                         conversionFactor,
                         EmailAddress.From(actor)),
@@ -74,8 +83,8 @@ public sealed class CreateMaterialAndAssociate(
             else
             {
                 existingMapping.CorrectMapping(
-                    MaterialCode.From(material.MaterialCode), 
-                    material.UnitOfMeasure,
+                    MaterialCode.From(freshMaterial.MaterialCode), 
+                    freshMaterial.UnitOfMeasure,
                     conversionFactor, 
                     EmailAddress.From(actor));
             }
@@ -84,12 +93,12 @@ public sealed class CreateMaterialAndAssociate(
             var integrationEvent = new SupplierMaterialMappingCreatedEvent(
                 FiscalId.From(supplier.FiscalId),
                 item.SupplierProductCode,
-                MaterialCode.From(material.MaterialCode));
+                MaterialCode.From(freshMaterial.MaterialCode));
             
             await outbox.EnqueueAsync("supply.supplier_material_mapping_created", integrationEvent, Guid.NewGuid().ToString(), ct);
 
             // Update the current item state (Now with the real internal unit)
-            item.MapToNewMaterial(material.MaterialCode, material.UnitOfMeasure, conversionFactor, actor);
+            item.MapToNewMaterial(freshMaterial.MaterialCode, freshMaterial.UnitOfMeasure, conversionFactor, actor);
             await repository.SaveChangesAsync(ct);
 
             result = new AssociateReceiptItemResponse(

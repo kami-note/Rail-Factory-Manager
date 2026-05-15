@@ -33,10 +33,17 @@ public sealed class AssociateReceiptItem(
             throw new AssociationValidationException("association.material_required", "Internal material code is required.");
         }
 
-        var materials = await inventoryMaterialService.GetMaterialsByCodesAsync([internalMaterialCode], cancellationToken);
-        if (!materials.TryGetValue(internalMaterialCode, out var materialMetadata))
+        var materialMetadata = await inventoryMaterialService.GetMaterialByCodeFreshAsync(internalMaterialCode, cancellationToken);
+        if (materialMetadata is null)
         {
             throw new AssociationValidationException("association.material_not_found", "Internal material was not found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(materialMetadata.UnitOfMeasure))
+        {
+            throw new AssociationValidationException(
+                "association.material_unit_invalid",
+                $"Internal material '{internalMaterialCode}' has no valid unit of measure.");
         }
 
         AssociateReceiptItemResponse? result = null;

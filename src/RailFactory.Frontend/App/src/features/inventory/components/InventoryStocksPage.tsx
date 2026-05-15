@@ -188,7 +188,7 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
                 <TableCell sx={{ fontWeight: 800 }}>MATERIAL</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>LOTE / VALIDADE</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 800 }}>QUANTIDADE</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>UN</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>UNIDADE</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>STATUS</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>ORIGEM / FORNECEDOR</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>CRIADO EM</TableCell>

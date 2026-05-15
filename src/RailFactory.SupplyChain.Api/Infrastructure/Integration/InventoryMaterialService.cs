@@ -49,38 +49,81 @@ public sealed class InventoryMaterialService(
             return results;
         }
 
+        var fetchedData = await FetchMaterialsAsync(tenantCode, missingCodes, cancellationToken, failGracefully: true);
+        if (fetchedData is null)
+        {
+            return results;
+        }
+
+        foreach (var meta in fetchedData)
+        {
+            var cacheKey = $"material_meta:{tenantCode}:{meta.MaterialCode}";
+            cache.Set(cacheKey, meta, CacheDuration);
+            results[meta.MaterialCode] = meta;
+        }
+
+        return results;
+    }
+
+    public async Task<MaterialMetadata?> GetMaterialByCodeFreshAsync(string materialCode, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(materialCode))
+        {
+            return null;
+        }
+
+        var tenantCode = tenantContext.Current?.TenantCode;
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            throw new InvalidOperationException("Tenant context is missing.");
+        }
+
+        var fetchedData = await FetchMaterialsAsync(tenantCode, [materialCode], cancellationToken, failGracefully: false);
+        var fresh = fetchedData?.FirstOrDefault();
+        if (fresh is null)
+        {
+            return null;
+        }
+
+        // Keep cache coherent with fresh reads used in critical association workflows.
+        var cacheKey = $"material_meta:{tenantCode}:{fresh.MaterialCode}";
+        cache.Set(cacheKey, fresh, CacheDuration);
+        return fresh;
+    }
+
+    private async Task<List<MaterialMetadata>?> FetchMaterialsAsync(
+        string tenantCode,
+        IEnumerable<string> materialCodes,
+        CancellationToken cancellationToken,
+        bool failGracefully)
+    {
         var client = httpClientFactory.CreateClient(ClientName);
         var apiKey = configuration["InternalApiKey"];
-        
+
         using var request = new HttpRequestMessage(HttpMethod.Post, "/internal/materials");
         request.Headers.Add(TenantConstants.TenantCodeHeaderName, tenantCode);
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
             request.Headers.Add("X-Internal-Key", apiKey);
         }
-        request.Content = JsonContent.Create(new { MaterialCodes = missingCodes });
+        request.Content = JsonContent.Create(new { MaterialCodes = materialCodes });
 
         using var response = await client.SendAsync(request, cancellationToken);
         
         if (!response.IsSuccessStatusCode)
         {
-            // Fail gracefully to avoid breaking the UI
-            return results;
+            if (failGracefully)
+            {
+                // Keep non-critical reads resilient for UI-oriented flows.
+                return null;
+            }
+
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(
+                $"Inventory metadata lookup failed. Status: {(int)response.StatusCode} {response.StatusCode}. Body: {errorBody}");
         }
 
-        var fetchedData = await response.Content.ReadFromJsonAsync<List<MaterialMetadata>>(cancellationToken: cancellationToken);
-        
-        if (fetchedData != null)
-        {
-            foreach (var meta in fetchedData)
-            {
-                var cacheKey = $"material_meta:{tenantCode}:{meta.MaterialCode}";
-                cache.Set(cacheKey, meta, CacheDuration);
-                results[meta.MaterialCode] = meta;
-            }
-        }
-        
-        return results;
+        return await response.Content.ReadFromJsonAsync<List<MaterialMetadata>>(cancellationToken: cancellationToken);
     }
 
     public async Task<MaterialMetadata> CreateMaterialAsync(CreateMaterialInput input, CancellationToken cancellationToken)

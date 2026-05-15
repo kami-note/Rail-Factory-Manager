@@ -571,10 +571,10 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                     value={conversionFactor} 
                     onChange={e => setConversionFactor(Number(e.target.value))}
                   />
-                  <Typography variant="body2">{selectedMaterial.stockUnit || 'UN'}</Typography>
+                  <Typography variant="body2">{selectedMaterial.stockUnit}</Typography>
                 </Stack>
                 <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
-                  Entrada no estoque: {(item.quantity * conversionFactor).toFixed(4)} {selectedMaterial.stockUnit || 'UN'}
+                  Entrada no estoque: {(item.quantity * conversionFactor).toFixed(4)} {selectedMaterial.stockUnit}
                 </Typography>
                 
                 <Button 

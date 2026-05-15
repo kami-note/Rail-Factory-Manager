@@ -67,6 +67,12 @@ public sealed class MaterialReceiptWriter(
             
             if (mapping is not null)
             {
+                if (string.IsNullOrWhiteSpace(mapping.InternalUnitOfMeasure))
+                {
+                    throw new InvalidOperationException(
+                        $"Supplier mapping for supplier '{supplier.FiscalId}' and product '{item.MaterialCode}' has no internal unit of measure configured.");
+                }
+
                 // Apply the Conversion Factor mathematics (Standardizing on 4 decimal places for unit prices)
                 var convertedQuantity = item.ExpectedQuantity * mapping.ConversionFactor;
                 var convertedPrice = item.UnitPrice.HasValue

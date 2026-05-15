@@ -21,6 +21,9 @@ import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 
+/**
+ * Properties for the ConferenceWorkspace component.
+ */
 type ConferenceWorkspaceProps = {
   /** The identifier for the material receipt to be conferred. */
   receiptId: string;
@@ -32,10 +35,17 @@ type ConferenceWorkspaceProps = {
   onSuccess?: () => void;
 };
 
+/**
+ * Result of a single item count.
+ */
 type CountedResult = {
+  /** Internal receipt item identifier. */
   itemId: string;
+  /** Physical quantity counted. */
   countedQuantity: number;
+  /** Lot number provided by the operator. */
   confirmedLotNumber: string;
+  /** Expiration date provided by the operator. */
   confirmedExpirationDate: string;
 };
 
@@ -46,15 +56,20 @@ type CountedResult = {
  * Architectural Invariant: This component implements the "Blind Conference" rule (RN-05).
  * It receives material codes but DOES NOT display expected quantities from the fiscal document,
  * forcing the operator to perform an unbiased physical count.
+ * Localization: All operator-facing strings are in Portuguese (Brazil).
  */
 export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess }: ConferenceWorkspaceProps) {
   const [items, setItems] = useState<ConferenceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, CountedResult>>({});
 
   useEffect(() => {
+    /**
+     * Fetches the items required for the conference process.
+     */
     const fetchItems = async () => {
       setLoading(true);
       setError(null);
@@ -65,7 +80,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
             headers: buildTenantHeaders(tenantCode),
             credentials: 'include'
           },
-          'Failed to load conference items'
+          'Falha ao carregar itens da conferência'
         );
 
         setItems(data);
@@ -80,7 +95,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
         });
         setCounts(initialCounts);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : 'Erro desconhecido');
       } finally {
         setLoading(false);
       }
@@ -89,6 +104,9 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
     void fetchItems();
   }, [receiptId, tenantCode]);
 
+  /**
+   * Updates a specific field in the counted results for an item.
+   */
   const handleInputChange = (itemId: string, field: keyof CountedResult, value: string | number) => {
     setCounts(prev => ({
       ...prev,
@@ -99,8 +117,12 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
     }));
   };
 
+  /**
+   * Submits the conference results to the backend.
+   */
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       const payload = {
         results: Object.values(counts).map(c => ({
@@ -122,7 +144,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
           body: JSON.stringify(payload),
           credentials: 'include'
         },
-        'Failed to close conference'
+        'Falha ao finalizar conferência'
       );
 
       if (onSuccess) {
@@ -131,8 +153,8 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
         onClose();
       }
     } catch (err) {
-      console.error(err);
-      alert('Error saving conference.');
+      console.error('Conference submission failed:', err);
+      setSaveError(err instanceof Error ? err.message : 'Erro ao salvar conferência física.');
     } finally {
       setSaving(false);
     }
@@ -144,7 +166,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
   return (
     <Box>
       <ModuleHeader 
-        label="BLIND CONFERENCE" 
+        label="CONFERÊNCIA CEGA" 
         icon={<ClipboardCheck size={20} />}
         action={
           <Button 
@@ -153,24 +175,31 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
             startIcon={<ChevronLeft size={16} />} 
             onClick={onClose}
           >
-            Back to List
+            Voltar para Lista
           </Button>
         }
       />
 
       <Alert severity="info" sx={{ mt: 3, mb: 3 }}>
-        Enter the actual quantities, lot numbers, and expiration dates as counted in the physical material.
+        Informe as quantidades reais, números de lote e datas de validade conforme contado fisicamente. 
+        <strong> As quantidades esperadas estão ocultas para garantir a integridade do processo.</strong>
       </Alert>
+
+      {saveError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {saveError}
+        </Alert>
+      )}
 
       <TableContainer component={Paper} variant="outlined">
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: 'background.default' }}>
               <TableCell sx={{ fontWeight: 800 }}>MATERIAL</TableCell>
-              <TableCell sx={{ fontWeight: 800 }}>COUNTED QTY</TableCell>
-              <TableCell sx={{ fontWeight: 800 }}>UOM</TableCell>
-              <TableCell sx={{ fontWeight: 800 }}>LOT NUMBER</TableCell>
-              <TableCell sx={{ fontWeight: 800 }}>EXPIRATION DATE</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>QTD CONTADA</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>UNIDADE</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>NÚMERO DO LOTE</TableCell>
+              <TableCell sx={{ fontWeight: 800 }}>DATA DE VALIDADE</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -186,7 +215,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
                     />
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                        {item.originalDescription || 'No description'}
+                        {item.originalDescription || 'Sem descrição'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600, fontFamily: 'monospace' }}>
                         {item.materialCode}
@@ -209,7 +238,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
                     size="small"
                     value={counts[item.id]?.confirmedLotNumber ?? ''}
                     onChange={(e) => handleInputChange(item.id, 'confirmedLotNumber', e.target.value)}
-                    placeholder="Lot #"
+                    placeholder="Lote #"
                     fullWidth
                   />
                 </TableCell>
@@ -231,7 +260,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
 
       <Stack direction="row" spacing={2} sx={{ mt: 4, justifyContent: 'flex-end' }}>
         <Button variant="outlined" onClick={onClose} disabled={saving}>
-          CANCEL
+          CANCELAR
         </Button>
         <Button 
           variant="contained" 
@@ -240,7 +269,7 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
           disabled={saving}
           sx={{ px: 4, fontWeight: 800 }}
         >
-          {saving ? 'SAVING...' : 'FINISH CONFERENCE'}
+          {saving ? 'SALVANDO...' : 'FINALIZAR CONFERÊNCIA'}
         </Button>
       </Stack>
     </Box>
