@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using RailFactory.BuildingBlocks.Auth;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -20,7 +21,7 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
         PermissionRequirement requirement)
     {
         var hasPermission = context.User.Claims
-            .Any(c => c.Type == "permission" && c.Value == requirement.Permission);
+            .Any(c => c.Type == InternalServiceTokenClaimTypes.Permission && c.Value == requirement.Permission);
 
         if (hasPermission)
         {

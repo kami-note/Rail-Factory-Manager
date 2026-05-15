@@ -5,6 +5,7 @@ public static class ProductionHostingExtensions
     public static WebApplicationBuilder AddProductionHosting(this WebApplicationBuilder builder)
     {
         builder.AddServiceDefaults();
+        builder.Services.AddInternalTokenAuthentication(builder.Configuration);
         builder.AddTenantResolution();
         return builder;
     }
@@ -14,6 +15,7 @@ public static class ProductionHostingExtensions
         app.UseServiceDefaults();
         app.UseAuthentication();
         app.UseTenantResolution();
+        app.UseInternalTokenTenantBinding();
         app.UseAuthorization();
         app.MapDefaultEndpoints();
         return app;

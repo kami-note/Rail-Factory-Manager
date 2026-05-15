@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.BuildingBlocks.Tenancy;
@@ -28,6 +30,8 @@ public static class InventoryEndpoints
     private const string MaterialMergePath = "/materials/merge";
     
     private const string InternalPath = "/internal";
+    private const string InternalCreateMaterialPath = "/materials/create";
+    private const string IntegrationActor = "inventory-integration@railfactory.local";
 
     public static WebApplication MapInventoryEndpoints(this WebApplication app)
     {
@@ -67,8 +71,10 @@ public static class InventoryEndpoints
 
         // INTERNAL API (Service-to-Service)
         var internalGroup = group.MapGroup(InternalPath);
+        internalGroup.AddEndpointFilter(ValidateInternalApiKeyAsync);
         
         internalGroup.MapPost("/materials", HandleGetInternalMaterials);
+        internalGroup.MapPost(InternalCreateMaterialPath, HandleCreateMaterialInternal);
         internalGroup.MapPost("/pending-balances", HandleCreatePendingBalance);
         internalGroup.MapPost("/confirmed-balances", HandleConfirmInventoryBalance);
         internalGroup.MapPost("/supplier-material-mapping", HandleSupplierMaterialMappingCreated);
@@ -243,6 +249,42 @@ public static class InventoryEndpoints
         return Results.Ok(response);
     }
 
+    private static async Task<IResult> HandleCreateMaterialInternal(
+        [FromBody] CreateMaterialRequest request,
+        CreateMaterial createMaterial,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var created = await createMaterial.ExecuteAsync(
+                new CreateMaterialInput(
+                    request.MaterialCode,
+                    request.OfficialName,
+                    request.Description,
+                    request.UnitOfMeasure,
+                    request.ProcurementType,
+                    request.Category,
+                    request.Gtin,
+                    request.Ncm),
+                IntegrationActor,
+                cancellationToken);
+
+            return Results.Created($"{ApiGroup}{InternalPath}{InternalCreateMaterialPath}/{Uri.EscapeDataString(created.MaterialCode)}", created);
+        }
+        catch (MaterialValidationException ex)
+        {
+            var statusCode = ex.Code is "material.duplicate_code" or "material.duplicate_gtin"
+                ? StatusCodes.Status409Conflict
+                : StatusCodes.Status400BadRequest;
+
+            return Results.Problem(
+                title: "Invalid material request",
+                detail: ex.Message,
+                statusCode: statusCode,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+    }
+
     private static async Task<IResult> HandleCreatePendingBalance(
         [FromBody] CreatePendingBalanceRequest request,
         CreatePendingBalance createPendingBalance,
@@ -306,5 +348,33 @@ public static class InventoryEndpoints
             cancellationToken);
 
         return Results.Accepted();
+    }
+
+    private static ValueTask<object?> ValidateInternalApiKeyAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var configuration = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+        var expectedApiKey = configuration["InternalApiKey"];
+
+        if (string.IsNullOrWhiteSpace(expectedApiKey))
+        {
+            return ValueTask.FromResult<object?>(Results.Problem(
+                title: "Internal API key is not configured.",
+                statusCode: StatusCodes.Status500InternalServerError));
+        }
+
+        if (!context.HttpContext.Request.Headers.TryGetValue("X-Internal-Key", out var providedApiKey)
+            || !FixedTimeEquals(providedApiKey.ToString(), expectedApiKey))
+        {
+            return ValueTask.FromResult<object?>(Results.Unauthorized());
+        }
+
+        return next(context);
+    }
+
+    private static bool FixedTimeEquals(string providedApiKey, string expectedApiKey)
+    {
+        var providedBytes = Encoding.UTF8.GetBytes(providedApiKey);
+        var expectedBytes = Encoding.UTF8.GetBytes(expectedApiKey);
+        return CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes);
     }
 }

@@ -9,7 +9,7 @@ builder.AddDockerComposeEnvironment("env");
 var parameters = AddParameters(builder);
 var infra = AddInfrastructure(builder, parameters);
 var services = AddDomainServices(builder, infra, parameters);
-var frontend = AddEdgeServices(builder, services, parameters.Edge);
+var frontend = AddEdgeServices(builder, services, parameters);
 
 if (builder.ExecutionContext.IsRunMode)
 {
@@ -22,6 +22,8 @@ static AppHostParameters AddParameters(IDistributedApplicationBuilder builder)
 {
     return new AppHostParameters(
         PostgresPassword: builder.AddParameter("postgres-password", "rail-factory-dev-postgres", secret: true),
+        InternalApiKey: builder.AddParameter("internal-api-key", secret: true),
+        InternalTokenSigningKey: builder.AddParameter("internal-token-signing-key", secret: true),
         OAuth: new AppHostOAuthParameters(
             GoogleClientId: builder.AddParameter("google-client-id", secret: true),
             GoogleClientSecret: builder.AddParameter("google-client-secret", secret: true)),
@@ -85,6 +87,7 @@ static AppHostDomainServices AddDomainServices(
         .WithEnvironment("Authentication__Google__ClientSecret", parameters.OAuth.GoogleClientSecret)
         .WithEnvironment("Authentication__Google__PublicOrigin", parameters.Edge.FrontendPublicOrigin)
         .WithEnvironment("Authentication__Google__CallbackPath", "/api/iam/auth/google/callback")
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevIamDb)
         .WaitFor(infra.Redis)
@@ -97,6 +100,8 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(infra.TenantAcmeInventoryDb)
         .WithEnvironment("TenantRouting__ServiceKey", "inventorydb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
+        .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevInventoryDb)
         .WaitFor(tenantManagement);
@@ -109,6 +114,8 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(infra.TenantAcmeSupplyChainDb)
         .WithEnvironment("TenantRouting__ServiceKey", "supplychaindb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
+        .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevSupplyChainDb)
         .WaitFor(tenantManagement)
@@ -122,6 +129,7 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "productiondb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevProductionDb)
         .WaitFor(infra.RabbitMq)
@@ -133,7 +141,7 @@ static AppHostDomainServices AddDomainServices(
 static IResourceBuilder<ProjectResource> AddEdgeServices(
     IDistributedApplicationBuilder builder,
     AppHostDomainServices services,
-    AppHostEdgeParameters edge)
+    AppHostParameters parameters)
 {
     var gateway = builder.AddProject<Projects.RailFactory_Gateway>("gateway")
         .WithReference(services.TenantManagement)
@@ -149,7 +157,8 @@ static IResourceBuilder<ProjectResource> AddEdgeServices(
 
     return builder.AddProject<Projects.RailFactory_Frontend>("frontend")
         .WithReference(gateway)
-        .WithEnvironment("Frontend__PublicOrigin", edge.FrontendPublicOrigin)
+        .WithEnvironment("Frontend__PublicOrigin", parameters.Edge.FrontendPublicOrigin)
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WithExternalHttpEndpoints()
         .WaitFor(gateway);
 }
@@ -172,6 +181,8 @@ static void AddLocalFrontendUi(
 
 file sealed record AppHostParameters(
     IResourceBuilder<ParameterResource> PostgresPassword,
+    IResourceBuilder<ParameterResource> InternalApiKey,
+    IResourceBuilder<ParameterResource> InternalTokenSigningKey,
     AppHostOAuthParameters OAuth,
     AppHostEdgeParameters Edge);
 

@@ -13,6 +13,7 @@ public sealed class InventoryMaterialService(
     IMemoryCache cache) : IInventoryMaterialService
 {
     private const string ClientName = "inventory-integration";
+    private const string InternalCreateMaterialPath = "/internal/materials/create";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
 
     public async Task<IDictionary<string, MaterialMetadata>> GetMaterialsByCodesAsync(IEnumerable<string> materialCodes, CancellationToken cancellationToken)
@@ -137,7 +138,7 @@ public sealed class InventoryMaterialService(
         var client = httpClientFactory.CreateClient(ClientName);
         var apiKey = configuration["InternalApiKey"];
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/inventory/materials");
+        using var request = new HttpRequestMessage(HttpMethod.Post, InternalCreateMaterialPath);
         request.Headers.Add(TenantConstants.TenantCodeHeaderName, tenantCode);
         if (!string.IsNullOrWhiteSpace(apiKey))
         {

@@ -230,6 +230,20 @@ public static class IamEndpoints
         [FromServices] GetUserPermissions getUserPermissions,
         CancellationToken cancellationToken)
     {
+        var tokenPermissions = context.User.Claims
+            .Where(claim => claim.Type == InternalServiceTokenClaimTypes.Permission)
+            .Select(claim => claim.Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (tokenPermissions.Length > 0)
+        {
+            return Results.Ok(AuthSessionDto.CreateAuthenticated(
+                context.User.Identity?.Name,
+                context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email"),
+                tokenPermissions));
+        }
+
         var provider = "google";
         var subject = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub");
         

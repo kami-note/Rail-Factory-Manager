@@ -70,4 +70,10 @@ public static class Extensions
         app.UseMiddleware<TenantResolutionMiddleware>();
         return app;
     }
+
+    public static WebApplication UseInternalTokenTenantBinding(this WebApplication app)
+    {
+        app.UseMiddleware<InternalTokenTenantBindingMiddleware>();
+        return app;
+    }
 }

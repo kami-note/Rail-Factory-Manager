@@ -1,8 +1,6 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { clearOAuthQueryFlag, fetchSession } from '../api/client';
-import type { AuthViewState } from '../types';
-
-type AuthSessionContextValue = AuthViewState;
+import type { AuthSessionContextValue, AuthViewState } from '../types';
 
 const AuthSessionContext = createContext<AuthSessionContextValue | null>(null);
 
@@ -16,6 +14,25 @@ export function AuthSessionProvider({ tenantCode, children }: AuthSessionProvide
     status: 'loading',
     session: { authenticated: false }
   });
+  const [refreshNonce, setRefreshNonce] = useState(0);
+
+  const clearSession = useCallback(() => {
+    setState(previous => ({
+      ...previous,
+      status: 'unauthenticated',
+      error: undefined,
+      session: { authenticated: false }
+    }));
+  }, []);
+
+  const refreshSession = useCallback(async () => {
+    if (!tenantCode) {
+      clearSession();
+      return;
+    }
+
+    setRefreshNonce(previous => previous + 1);
+  }, [clearSession, tenantCode]);
 
   useEffect(() => {
     let active = true;
@@ -29,11 +46,7 @@ export function AuthSessionProvider({ tenantCode, children }: AuthSessionProvide
     }
 
     if (!tenantCode) {
-      setState(previous => ({
-        ...previous,
-        status: 'unauthenticated',
-        session: { authenticated: false }
-      }));
+      clearSession();
       return () => {
         active = false;
       };
@@ -73,9 +86,13 @@ export function AuthSessionProvider({ tenantCode, children }: AuthSessionProvide
     return () => {
       active = false;
     };
-  }, [tenantCode]);
+  }, [tenantCode, refreshNonce]);
 
-  const value = useMemo(() => state, [state]);
+  const value = useMemo<AuthSessionContextValue>(() => ({
+    ...state,
+    refreshSession,
+    clearSession
+  }), [clearSession, refreshSession, state]);
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;
 }
 

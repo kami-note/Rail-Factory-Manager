@@ -17,3 +17,10 @@ export type AuthViewState = {
   error?: string;
   oauthError?: string;
 };
+
+export type AuthSessionController = {
+  refreshSession: () => Promise<void>;
+  clearSession: () => void;
+};
+
+export type AuthSessionContextValue = AuthViewState & AuthSessionController;
