@@ -12,14 +12,14 @@ import {
   CircularProgress,
   Divider,
   Stack,
-  Alert,
   alpha,
   useTheme,
   Grid
 } from '@mui/material';
 import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCenteredModal';
+import { InlineError } from '../../../shared/components/common/InlineError';
 import { formatRelativeDate, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
 import { StatusChip } from '../../../shared/components/common/StatusChip';
 import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping';
@@ -91,11 +91,11 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
             headers: buildTenantHeaders(tenantCode),
             credentials: 'include'
           },
-          'Failed to load balance details'
+          'Falha ao carregar detalhes do saldo'
         );
         setDetails(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(toUiErrorMessage(err, 'Não foi possível carregar os detalhes do saldo.'));
       } finally {
         setLoading(false);
       }
@@ -117,7 +117,7 @@ export function BalanceDetailsModal({ balanceId, tenantCode, onClose }: BalanceD
       )}
 
       {error && (
-        <Alert severity="error">{error}</Alert>
+        <InlineError message={error} />
       )}
 
       {details && !loading && (

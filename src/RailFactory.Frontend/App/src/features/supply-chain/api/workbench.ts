@@ -13,7 +13,7 @@ export const getAssociationQueue = async (tenantCode: string): Promise<Associati
       headers: buildTenantHeaders(tenantCode),
       credentials: 'include'
     },
-    'Failed to load association queue'
+    'Não foi possível carregar a fila de associação'
   );
 };
 
@@ -24,7 +24,7 @@ export const getAssociationWorkbench = async (tenantCode: string, receiptId: str
       headers: buildTenantHeaders(tenantCode),
       credentials: 'include'
     },
-    'Failed to load workbench details'
+    'Não foi possível carregar os detalhes da bancada'
   );
 };
 
@@ -42,7 +42,7 @@ export const associateReceiptItem = async (
       credentials: 'include',
       body: JSON.stringify(payload)
     },
-    'Failed to associate receipt item'
+    'Não foi possível associar o item do recebimento'
   );
 };
 
@@ -60,7 +60,7 @@ export const createMaterialAndAssociate = async (
       credentials: 'include',
       body: JSON.stringify(payload)
     },
-    'Failed to create material and associate item'
+    'Não foi possível criar o material e associar o item'
   );
 };
 
@@ -79,7 +79,9 @@ export const recordControlledDecision = async (
       credentials: 'include',
       body: JSON.stringify(payload)
     },
-    `Failed to record ${decision} decision`
+    decision === 'review-later'
+      ? 'Não foi possível registrar a revisão posterior'
+      : 'Não foi possível ignorar este item'
   );
 };
 
@@ -97,7 +99,7 @@ export const overrideSupplierProductCode = async (
       credentials: 'include',
       body: JSON.stringify(payload)
     },
-    'Failed to override supplier SKU'
+    'Não foi possível corrigir o SKU do fornecedor'
   );
 };
 
@@ -114,6 +116,6 @@ export const releaseToConference = async (
       credentials: 'include',
       body: JSON.stringify(payload)
     },
-    'Failed to release receipt to conference'
+    'Não foi possível liberar o recebimento para conferência'
   );
 };

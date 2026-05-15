@@ -8,7 +8,7 @@ import { InventoryStocksPage, MaterialDetailsPage } from './features/inventory';
 import { RolesManagementPage, UsersManagementPage } from './features/iam';
 import { TenantSelector } from './shared/components/TenantSelector';
 import { Box, Button, Card, CircularProgress, Container, Typography, Link } from '@mui/material';
-import { buildTenantHeaders, fetchJsonOrThrow } from './shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from './shared/lib/http';
 
 const TENANT_STORAGE_KEY = 'rail_factory_tenant_code';
 
@@ -69,7 +69,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
         setStatus(response);
       } catch (requestError) {
         setStatus(null);
-        setStatusError(requestError instanceof Error ? requestError.message : 'Falha na requisição de status.');
+        setStatusError(toUiErrorMessage(requestError, 'Não foi possível carregar o status do sistema.'));
       }
     };
 
@@ -101,7 +101,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
       setStatusError(null);
       navigateTo('/');
     } catch (requestError) {
-      console.error(requestError instanceof Error ? requestError.message : 'Logout falhou.');
+      console.error(toUiErrorMessage(requestError, 'Logout falhou.'));
     }
   };
 

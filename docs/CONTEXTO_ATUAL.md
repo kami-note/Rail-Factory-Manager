@@ -181,6 +181,11 @@ Estado funcional validado:
 - binding de tenant aplicado em 2026-05-15: requests autenticadas com bearer JWT interno agora falham com `403 tenant.mismatch` quando o claim `tenant` do token nao coincide com o tenant resolvido da request, impedindo replay cross-tenant via troca isolada de `X-Tenant-Code`;
 - configuracao critica endurecida em 2026-05-15: `InternalToken:SigningKey` e `InternalApiKey` deixaram de ter valores usaveis commitados em `appsettings`/AppHost; Frontend, Inventory e SupplyChain agora falham explicitamente no startup quando essas chaves obrigatorias nao sao fornecidas;
 - frontend auth state endurecido em 2026-05-15: logout agora invalida a sessao local imediatamente, `status` do sistema so e carregado em rota protegida autenticada, e a SPA revalida `GET /api/iam/auth/session` ao entrar/focar `/app*`, evitando que a UI continue renderizando shell/dados apos perda de autenticacao no servidor;
+- padronizacao de erros da SPA aplicada em 2026-05-15: `fetchJsonOrThrow` agora interpreta `code/message/detail/title` do backend e converte `401`, `403`, `tenant.*`, `csrf_*` e conflitos em mensagens estaveis de UI, eliminando textos inconsistentes por tela como `Erro ao carregar permissões (403)` e `Falha ao carregar saldos de estoque (401)`;
+- UX de erro da SPA endurecida em 2026-05-15: fluxos operacionais de Recebimentos e Association Workbench deixaram de usar `alert(...)`; falhas de download XML, início de conferência, `review-later` e `ignored` agora aparecem como `Alert` inline com as mesmas mensagens normalizadas do cliente HTTP compartilhado;
+- componentes visuais compartilhados de erro adicionados em 2026-05-15: `InlineError` e `PageError` passaram a concentrar a apresentação de erros em IAM, Inventory e SupplyChain (listas, modais e workspaces principais), reduzindo duplicação de `Alert severity=\"error\"` e removendo fallbacks em inglês como `Unknown error` / `Failed to load ...`;
+- cobertura do padrão de erro ampliada em 2026-05-15: `TenantSelector`, `ImportXmlForm`, `MaterialDetailsPage` e `MergeMaterialModal` migraram para `InlineError`/`PageError` e mensagens PT-BR consistentes, eliminando o restante mais visível de mensagens hardcoded em inglês e `Alert` duplicado;
+- fallback local de erro consolidado em 2026-05-15: helper `toUiErrorMessage(...)` em `shared/lib/http.ts` passou a centralizar a conversão `unknown -> mensagem de UI`, removendo o padrão manual `err instanceof Error ? err.message : ...` dos componentes principais do frontend;
 - logout ponta a ponta implementado (`POST /api/auth/logout` no BFF -> `POST /auth/logout` no IAM), com encerramento de cookie/sessao no servidor;
 - endpoint de usuario atual protegido no IAM (`GET /auth/current-user`) com contrato compartilhado `AuthSessionDto`;
 - autorizacao minima aplicada no IAM com rotas protegidas explicitas (`GET /auth/current-user` e `POST /auth/logout` com `RequireAuthorization`) e rotas publicas de OAuth/sessao em `AllowAnonymous`;
@@ -650,6 +655,9 @@ Specialized agent profiles available:
   - `dotnet build src/RailFactory.AppHost/RailFactory.AppHost.csproj` passed.
   - `dotnet test src/RailFactory.Frontend.Tests/RailFactory.Frontend.Tests.csproj -v:minimal` passed (`13` tests).
   - `npm test -- src/features/auth/__tests__/useAuthSession.test.tsx` passed (`4` tests).
+  - `npm test -- src/shared/lib/__tests__/http.test.ts` passed (`8` tests).
+  - `npm test -- src/shared/lib/__tests__/http.test.ts src/features/auth/__tests__/useAuthSession.test.tsx` passed (`12` tests).
+  - `npm run build` em `src/RailFactory.Frontend/App` passou apos introduzir `InlineError` / `PageError` e reaplicar componentes de erro compartilhados.
   - `dotnet test src/RailFactory.Iam.Api.Tests/RailFactory.Iam.Api.Tests.csproj -v:minimal` passed (`10` tests).
   - `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`17` tests).
   - Live smoke:

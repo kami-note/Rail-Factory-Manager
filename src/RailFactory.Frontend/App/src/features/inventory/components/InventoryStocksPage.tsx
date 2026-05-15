@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   CircularProgress,
-  Alert,
   Paper,
   Stack,
   Button,
@@ -27,8 +26,9 @@ import {
   ExternalLink as LaunchIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
+import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http';
 import { InventoryBalance } from '../types';
+import { InlineError } from '../../../shared/components/common/InlineError';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
 import { StatusChip } from '../../../shared/components/common/StatusChip';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
@@ -88,7 +88,7 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
       );
       setBalances(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ocorreu um erro ao carregar o estoque.');
+      setError(toUiErrorMessage(err, 'Não foi possível carregar os saldos de estoque.'));
     } finally {
       setLoading(false);
     }
@@ -143,7 +143,7 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
       ) : error ? (
-        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+        <InlineError message={error} marginBottom={3} />
       ) : filteredBalances.length === 0 ? (
         <Paper variant="outlined" sx={{ p: 8, textAlign: 'center', bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
           <SearchIcon size={48} style={{ color: theme.palette.text.disabled, marginBottom: 16 }} />

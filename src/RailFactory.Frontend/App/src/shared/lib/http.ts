@@ -36,9 +36,67 @@ export async function fetchCsrfToken(tenantCode: string): Promise<string> {
 }
 
 type ProblemPayload = {
+  code?: string;
+  message?: string;
   detail?: string;
   title?: string;
 };
+
+export class HttpRequestError extends Error {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'HttpRequestError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export function toUiErrorMessage(error: unknown, fallbackMessage: string): string {
+  return error instanceof Error && error.message
+    ? error.message
+    : fallbackMessage;
+}
+
+function mapErrorMessage(status: number, fallbackMessage: string, problem?: ProblemPayload | null): string {
+  const code = problem?.code;
+
+  switch (code) {
+    case 'unauthorized':
+      return 'Sua sessão expirou. Entre novamente para continuar.';
+    case 'forbidden':
+      return 'Você não tem permissão para acessar este recurso.';
+    case 'csrf_error':
+      return 'Sua sessão precisa ser renovada antes de concluir esta ação.';
+    case 'csrf_https_required':
+      return 'A operação exige conexão HTTPS válida.';
+    case 'tenant.code_required':
+      return 'Selecione uma organização antes de continuar.';
+    case 'tenant.not_found':
+      return 'A organização selecionada não foi encontrada.';
+    case 'tenant.inactive':
+      return 'A organização selecionada está inativa.';
+    case 'tenant.mismatch':
+      return 'Sua sessão não corresponde à organização selecionada. Entre novamente.';
+  }
+
+  switch (status) {
+    case 401:
+      return 'Sua sessão expirou. Entre novamente para continuar.';
+    case 403:
+      return 'Você não tem permissão para executar esta ação.';
+    case 404:
+      return 'O recurso solicitado não foi encontrado.';
+    case 409:
+      return problem?.message ?? problem?.detail ?? 'A operação entrou em conflito com o estado atual dos dados.';
+    case 422:
+      return problem?.message ?? problem?.detail ?? 'Os dados informados não puderam ser processados.';
+    default:
+      return problem?.message ?? problem?.detail ?? problem?.title ?? fallbackMessage;
+  }
+}
 
 /**
  * Safely attempts to extract a human-readable error message from a failed response.
@@ -49,14 +107,18 @@ export async function readProblemMessage(response: Response, fallbackMessage: st
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('json')) {
       const problem = await response.json() as ProblemPayload | null;
-      return problem?.detail ?? problem?.title ?? fallbackMessage;
+      return mapErrorMessage(response.status, fallbackMessage, problem);
     }
     
     // Fallback for non-JSON responses (HTML error pages from Nginx/IIS/Gateway)
     const text = await response.text();
-    return text.length > 0 && text.length < 150 ? text : fallbackMessage;
+    if (text.length > 0 && text.length < 150) {
+      return mapErrorMessage(response.status, text, { message: text });
+    }
+
+    return mapErrorMessage(response.status, fallbackMessage);
   } catch {
-    return fallbackMessage;
+    return mapErrorMessage(response.status, fallbackMessage);
   }
 }
 
@@ -116,8 +178,20 @@ export async function fetchJsonOrThrow<T>(
       }
     }
 
-    const message = await readProblemMessage(response, `${fallbackMessage} (${response.status})`);
-    throw new Error(message);
+    const contentType = response.headers.get('content-type');
+    let problemCode: string | undefined;
+
+    if (contentType && contentType.includes('json')) {
+      try {
+        const clonedProblem = await response.clone().json() as ProblemPayload | null;
+        problemCode = clonedProblem?.code;
+      } catch {
+        problemCode = undefined;
+      }
+    }
+
+    const message = await readProblemMessage(response, fallbackMessage);
+    throw new HttpRequestError(message, response.status, problemCode);
   }
 
   try {
