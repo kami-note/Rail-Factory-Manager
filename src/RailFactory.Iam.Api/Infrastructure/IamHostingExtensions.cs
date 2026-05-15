@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -40,13 +41,18 @@ public static class IamHostingExtensions
                 options.DefaultAuthenticateScheme = SmartAuthScheme;
                 options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
             })
-            .AddPolicyScheme(SmartAuthScheme, "Smart auth for IAM API", options =>
+            .AddPolicyScheme(SmartAuthScheme, "Selects cookie or internal bearer auth.", options =>
             {
                 options.ForwardDefaultSelector = context =>
-                    context.Request.Headers.ContainsKey(TenantConstants.UserEmailHeaderName)
-                        ? "TrustedHeaders"
+                {
+                    var authorization = context.Request.Headers.Authorization.FirstOrDefault();
+                    return !string.IsNullOrWhiteSpace(authorization)
+                        && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                        ? InternalServiceTokenAuthenticationExtensions.Scheme
                         : CookieAuthenticationDefaults.AuthenticationScheme;
+                };
             })
+            .AddInternalTokenAuthentication(builder.Configuration)
             .AddCookie(options =>
             {
                 options.Cookie.HttpOnly = true;
@@ -131,6 +137,7 @@ public static class IamHostingExtensions
         app.UseServiceDefaults();
         app.UseAuthentication();
         app.UseTenantResolution();
+        app.UseInternalTokenTenantBinding();
         app.UseAuthorization();
         app.MapDefaultEndpoints();
         return app;

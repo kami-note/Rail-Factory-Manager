@@ -67,4 +67,28 @@ describe('useAuthSession', () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it('can clear a previously authenticated session locally', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: async () => ({ authenticated: true, user: { email: 'user@example.com', permissions: [] } })
+      })
+    );
+
+    const { result } = renderHook(() => useAuthSession('dev'), { wrapper: createWrapper('dev') });
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('authenticated');
+    });
+
+    result.current.clearSession();
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('unauthenticated');
+      expect(result.current.session.authenticated).toBe(false);
+    });
+  });
 });

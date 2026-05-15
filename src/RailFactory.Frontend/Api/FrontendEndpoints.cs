@@ -36,6 +36,8 @@ public static class FrontendEndpoints
             // ELITE FIX: Add Edge Security and Identity Forwarding for proxied calls
             proxyPipeline.Use(async (context, next) =>
             {
+                StripSensitiveProxyHeaders(context);
+
                 // 1. HTTPS Normalization (critical for CSRF and Secure Cookies)
                 if (!context.Request.IsHttps && string.Equals(context.Request.Headers["X-Forwarded-Proto"].FirstOrDefault(), "https", StringComparison.OrdinalIgnoreCase))
                 {
@@ -60,7 +62,7 @@ public static class FrontendEndpoints
                     }
                 }
 
-                // 3. Identity Propagation (Token Exchange: Cookie -> Trusted Headers)
+                // 3. Identity Propagation (Validated Session -> Internal Trusted Headers)
                 // We validate the session against IAM and forward the user info to downstream services.
                 var tenantCode = context.ReadTenantCodeHeader();
                 if (!string.IsNullOrWhiteSpace(tenantCode))
@@ -100,24 +102,9 @@ public static class FrontendEndpoints
                             var session = await response.Content.ReadFromJsonAsync<AuthSessionDto>(context.RequestAborted);
                             if (session?.Authenticated == true && session.User != null)
                             {
-                                var resolvedUserEmail = FirstNonEmpty(session.User.Email, session.User.Name);
-                                var resolvedUserName = FirstNonEmpty(session.User.Name, session.User.Email);
-
-                                // Inject trusted headers for internal microservices
-                                if (!string.IsNullOrWhiteSpace(resolvedUserEmail))
-                                {
-                                    context.Request.Headers[TenantConstants.UserEmailHeaderName] = resolvedUserEmail;
-                                }
-
-                                if (!string.IsNullOrWhiteSpace(resolvedUserName))
-                                {
-                                    context.Request.Headers[TenantConstants.UserNameHeaderName] = resolvedUserName;
-                                }
-
-                                if (session.User.Permissions.Any())
-                                {
-                                    context.Request.Headers[TenantConstants.UserPermissionsHeaderName] = string.Join(",", session.User.Permissions);
-                                }
+                                var tokenIssuer = context.RequestServices.GetRequiredService<InternalAccessTokenIssuer>();
+                                var internalToken = tokenIssuer.Issue(session, tenantCode);
+                                context.Request.Headers.Authorization = $"Bearer {internalToken}";
                             }
                         }
                     }
@@ -149,5 +136,14 @@ public static class FrontendEndpoints
         }
 
         return string.IsNullOrWhiteSpace(second) ? null : second;
+    }
+
+    private static void StripSensitiveProxyHeaders(HttpContext context)
+    {
+        context.Request.Headers.Remove("Authorization");
+        context.Request.Headers.Remove(TenantConstants.UserEmailHeaderName);
+        context.Request.Headers.Remove(TenantConstants.UserNameHeaderName);
+        context.Request.Headers.Remove(TenantConstants.UserPermissionsHeaderName);
+        context.Request.Headers.Remove("X-Internal-Key");
     }
 }

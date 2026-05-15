@@ -15,13 +15,6 @@ public static class PermissionAuthorizationExtensions
     {
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddAuthorization();
-        
-        // Elite Fix: Register the TrustedHeader authentication scheme.
-        // This allows internal microservices to trust identity headers injected by the Gateway/BFF.
-        services.AddAuthentication("TrustedHeaders")
-            .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TrustedHeaderAuthHandler>(
-                "TrustedHeaders", 
-                _ => { });
 
         return services;
     }

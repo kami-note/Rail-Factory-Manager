@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.FileProviders;
+using RailFactory.BuildingBlocks.Auth;
 
 namespace RailFactory.Frontend.Infrastructure;
 
@@ -12,8 +13,11 @@ public static class FrontendHostingExtensions
 
     public static WebApplicationBuilder AddFrontendHosting(this WebApplicationBuilder builder)
     {
+        ValidateInternalTokenOptions(builder.Configuration);
         builder.Services.Configure<FrontendOptions>(builder.Configuration.GetSection(FrontendOptions.SectionName));
+        builder.Services.Configure<InternalServiceTokenOptions>(builder.Configuration.GetSection(InternalServiceTokenOptions.SectionName));
         builder.Services.AddSingleton<PublicFrontendUrl>();
+        builder.Services.AddSingleton<InternalAccessTokenIssuer>();
 
         builder.Services.AddHttpClient(GatewayClientName, client =>
         {
@@ -45,6 +49,32 @@ public static class FrontendHostingExtensions
         builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
 
         return builder;
+    }
+
+    private static void ValidateInternalTokenOptions(IConfiguration configuration)
+    {
+        var section = configuration.GetSection(InternalServiceTokenOptions.SectionName);
+        var options = section.Get<InternalServiceTokenOptions>() ?? new InternalServiceTokenOptions();
+
+        if (string.IsNullOrWhiteSpace(options.Issuer))
+        {
+            throw new InvalidOperationException("InternalToken:Issuer must be configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Audience))
+        {
+            throw new InvalidOperationException("InternalToken:Audience must be configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.SigningKey))
+        {
+            throw new InvalidOperationException("InternalToken:SigningKey must be configured.");
+        }
+
+        if (options.LifetimeMinutes <= 0)
+        {
+            throw new InvalidOperationException("InternalToken:LifetimeMinutes must be greater than zero.");
+        }
     }
 
     public static WebApplication UseFrontendHosting(this WebApplication app)

@@ -254,6 +254,10 @@ Objetivo: padronizar estrutura interna dos servicos em paralelo as tasks funcion
   - Aceite: endpoint protegido falha sem usuario/permissao minima.
   - Depende: usuario atual.
   - Entregue: IAM com rotas protegidas explicitas (`GET /auth/current-user` e `POST /auth/logout` com `RequireAuthorization`), mantendo rotas publicas de OAuth/sessao com `AllowAnonymous`.
+  - Ajuste (2026-05-15): `SmartAuth` no IAM foi reduzido a seletor de `cookie` vs bearer JWT interno; fluxo browser-facing continua em cookie-only e o BFF descarta headers sensiveis do cliente antes do proxy.
+  - Ajuste (2026-05-15): rotas protegidas dos microservices migradas para bearer JWT interno assinado pelo BFF; spoofing direto por `X-RF-User-*` fora do BFF deixou de autenticar `Inventory` e `SupplyChain`.
+  - Ajuste (2026-05-15): bearer JWT interno ficou tenant-bound; requests autenticadas agora falham com `403 tenant.mismatch` quando `X-Tenant-Code` nao coincide com o claim `tenant` do token.
+  - Ajuste (2026-05-15): `InternalToken:SigningKey` e `InternalApiKey` deixaram de ter defaults usaveis no repositório/AppHost; os serviços falham explicitamente sem a configuracao obrigatoria.
 
 ### P1.4 - UI Inicial
 
@@ -648,11 +652,15 @@ Riscos que esta passada deve enderecar:
   - Depende: Task 2.10.1.
   - Entregue: Implementado pipeline customizado no YARP do BFF que valida CSRF para todas as operações de mutação (POST/PUT/DELETE) em `/api/*`. As rotas de SupplyChain exigem autenticação validada pelo IAM (encaminhamento de Cookie).
   - Ajuste (2026-05-15): cache CSRF do frontend tornado estritamente tenant-scoped (`shared/lib/http.ts`), removendo fallback global entre tenants/sessões que causava `403` intermitente em mutações da Workbench (incluindo `create-material-and-associate`).
+  - Ajuste (2026-05-15): BFF passou a remover `Authorization`, `X-RF-User-*` e `X-Internal-Key` recebidos do cliente; depois da sessao validada, emite bearer JWT interno curto para `IAM`, `SupplyChain`, `Inventory` e `Production`.
+  - Ajuste (2026-05-15): integrações internas específicas do Inventory continuam com `X-Internal-Key` em `/api/inventory/internal/*`; smoke real confirmou `401` para spoofing direto nas portas de `Inventory` e `SupplyChain` e `200` para bearer JWT interno válido.
+  - Ajuste (2026-05-15): validação do tenant do bearer interno foi centralizada em `ServiceDefaults`; replay cross-tenant por troca isolada de header agora falha com `403 tenant.mismatch`.
+  - Ajuste (2026-05-15): contexto de auth do frontend invalida a sessao local imediatamente no logout e revalida sessao ao entrar/focar `/app*`, evitando renderizacao residual de areas protegidas apos perda de autenticacao.
 
 - [x] Task 2.10.11: Definir observabilidade e auditoria da Workbench (@backend).
   - Aceite: Decisoes de associacao, criacao de material, review/ignore, override de supplier SKU e release para conferencia registram usuario, timestamp, receipt/item, valores anteriores/novos e correlation id.
   - Depende: Task 2.10.2, Task 2.10.4 e Task 2.10.9.
-  - Entregue: Criado `HeaderIdentityMiddleware` e habilitado no SupplyChain para popular `ClaimsPrincipal` a partir de headers confiáveis; use cases de associação já utilizam o `actor` (Name/Email) para persistência em banco; Correlation ID propagado via `ServiceDefaults`.
+  - Entregue: identidade do operador nas chamadas protegidas da Workbench passou a vir do bearer JWT interno emitido pelo BFF; use cases de associação já utilizam o `actor` (Name/Email) para persistência em banco; Correlation ID propagado via `ServiceDefaults`.
 
 - [x] Task 2.10.12: Atualizar contratos HTTP e documentacao de API (@backend / @docs).
   - Aceite: `docs/CONTRATOS_API.md` registra endpoints, DTOs, codigos de erro, estados, regras de concorrencia e politica de seguranca da Association Workbench.

@@ -15,8 +15,6 @@ public sealed class InventoryPendingBalanceDispatcher(
     ILogger<InventoryPendingBalanceDispatcher> logger) : BackgroundService
 {
     private const int MaxTransientAttempts = 10;
-    private const string DispatcherEmail = "system-dispatcher@railfactory.local";
-    private const string DispatcherName = "Inventory Integration Dispatcher";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -211,10 +209,14 @@ public sealed class InventoryPendingBalanceDispatcher(
 
     private async Task SendIntegrationRequestAsync(SupplyOutboxMessage message, HttpRequestMessage request, string tenantCode, HttpClient client, CancellationToken cancellationToken)
     {
-        // ELITE FIX: Propagate tenant and dispatcher identity via trusted headers.
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        var apiKey = configuration["InternalApiKey"];
+
         request.Headers.Add(TenantConstants.TenantCodeHeaderName, tenantCode);
-        request.Headers.Add(TenantConstants.UserEmailHeaderName, DispatcherEmail);
-        request.Headers.Add(TenantConstants.UserNameHeaderName, DispatcherName);
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            request.Headers.Add("X-Internal-Key", apiKey);
+        }
 
         HttpResponseMessage response;
         try

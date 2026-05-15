@@ -15,6 +15,7 @@ internal static class MaterialImageUploadEndpoint
         [AsParameters] UploadMaterialImageRoute route,
         HttpContext httpContext,
         IImageStorage storage,
+        InternalAccessTokenIssuer tokenIssuer,
         IHttpClientFactory httpClientFactory,
         CancellationToken cancellationToken)
     {
@@ -48,7 +49,8 @@ internal static class MaterialImageUploadEndpoint
             return TenantHttpResults.CodeRequired();
         }
 
-        if (!await IsAuthenticatedAsync(httpContext, tenantCode, httpClientFactory, cancellationToken))
+        var session = await GetAuthenticatedSessionAsync(httpContext, tenantCode, httpClientFactory, cancellationToken);
+        if (session is null)
         {
             return Results.Json(AuthSessionDto.Unauthenticated, statusCode: StatusCodes.Status401Unauthorized);
         }
@@ -83,6 +85,7 @@ internal static class MaterialImageUploadEndpoint
 
         using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/inventory/materials/{Uri.EscapeDataString(route.MaterialCode)}/image");
         request.Headers.TryAddWithoutValidation(TenantConstants.TenantCodeHeaderName, tenantCode);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenIssuer.Issue(session, tenantCode));
         request.Content = JsonContent.Create(new { imageUrl });
 
         var gateway = httpClientFactory.CreateClient(FrontendHostingExtensions.GatewayClientName);
@@ -111,7 +114,7 @@ internal static class MaterialImageUploadEndpoint
         return Regex.Replace(trimmed, "[^A-Za-z0-9_-]", "_");
     }
 
-    private static async Task<bool> IsAuthenticatedAsync(
+    private static async Task<AuthSessionDto?> GetAuthenticatedSessionAsync(
         HttpContext httpContext,
         string tenantCode,
         IHttpClientFactory httpClientFactory,
@@ -128,16 +131,16 @@ internal static class MaterialImageUploadEndpoint
         using var response = await gateway.SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            return false;
+            return null;
         }
 
         if (!response.IsSuccessStatusCode)
         {
-            return false;
+            return null;
         }
 
         var payload = await response.Content.ReadFromJsonAsync<AuthSessionDto>(cancellationToken: cancellationToken);
-        return payload?.Authenticated == true;
+        return payload?.Authenticated == true ? payload : null;
     }
 }
 

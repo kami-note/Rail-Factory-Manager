@@ -176,9 +176,15 @@ Estado funcional validado:
 - BFF com mapeamento consistente de erro para UI (`unauthorized`, `oauth_error`, `tenant_error`) nos endpoints de auth/session;
 - BFF com CSRF ativo para rotas mutaveis de auth (`GET /api/auth/csrf` + validacao em `POST /api/auth/logout`) e erro padronizado `csrf_error` em falha de token;
 - BFF com validacao CSRF de logout robusta para edge com proxy HTTPS (`X-Forwarded-Proto`): normaliza scheme antes do `ValidateRequestAsync` e retorna erro controlado `csrf_https_required` quando a request chega sem HTTPS efetivo;
+- simplificacao do modelo de autenticacao aplicada em 2026-05-15: IAM opera com `cookie` para sessao browser-facing e bearer JWT interno para chamadas protegidas vindas do BFF; o BFF descarta `Authorization`, `X-RF-User-*` e `X-Internal-Key` vindos do cliente antes do proxy;
+- hardening adicional do perimetro aplicado em 2026-05-15: `Inventory`, `SupplyChain` e `Production` deixaram de autenticar por headers de identidade e passaram a aceitar bearer JWT interno assinado; spoofing direto com `X-RF-User-*` nas portas dos microservices agora retorna `401`;
+- binding de tenant aplicado em 2026-05-15: requests autenticadas com bearer JWT interno agora falham com `403 tenant.mismatch` quando o claim `tenant` do token nao coincide com o tenant resolvido da request, impedindo replay cross-tenant via troca isolada de `X-Tenant-Code`;
+- configuracao critica endurecida em 2026-05-15: `InternalToken:SigningKey` e `InternalApiKey` deixaram de ter valores usaveis commitados em `appsettings`/AppHost; Frontend, Inventory e SupplyChain agora falham explicitamente no startup quando essas chaves obrigatorias nao sao fornecidas;
+- frontend auth state endurecido em 2026-05-15: logout agora invalida a sessao local imediatamente, `status` do sistema so e carregado em rota protegida autenticada, e a SPA revalida `GET /api/iam/auth/session` ao entrar/focar `/app*`, evitando que a UI continue renderizando shell/dados apos perda de autenticacao no servidor;
 - logout ponta a ponta implementado (`POST /api/auth/logout` no BFF -> `POST /auth/logout` no IAM), com encerramento de cookie/sessao no servidor;
 - endpoint de usuario atual protegido no IAM (`GET /auth/current-user`) com contrato compartilhado `AuthSessionDto`;
 - autorizacao minima aplicada no IAM com rotas protegidas explicitas (`GET /auth/current-user` e `POST /auth/logout` com `RequireAuthorization`) e rotas publicas de OAuth/sessao em `AllowAnonymous`;
+- Inventory internal APIs (`/api/inventory/internal/*`) agora exigem `X-Internal-Key` e SupplyChain passou a usar esse canal explicito para leitura/criacao interna de materiais e publicacao de eventos de saldo, reduzindo dependencias de autenticacao por identidade propagada;
 - UI com modulo de auth reutilizavel (`src/RailFactory.Frontend/App/src/auth`) e estados padronizados (`loading`, `authenticated`, `unauthenticated`, `error`) para rotas protegidas;
 - Vite local recebe `VITE_ALLOWED_HOST` definido no proprio Vite via leitura de `.env.local`, mantendo o host ngrok permitido sem depender do AppHost;
 - hardening de OAuth aplicado no IAM (`UseForwardedHeaders`, cookie `Secure`/`HttpOnly`/`SameSite=Lax`, normalizacao de `returnUrl`, validacao de configuracao Google quando OAuth esta ativo e origem publica explicita para o `redirect_uri` do Google na autorizacao);
@@ -594,7 +600,7 @@ Specialized agent profiles available:
 
 - Completed `P2.10 - Association Workbench (SKU Resolution)` milestone.
 - **Backend/Security:**
-  - Implemented `HeaderIdentityMiddleware` in `ServiceDefaults` for trusted operator identity propagation via `X-RF-User-Email` and `X-RF-User-Name`.
+  - Naquele marco, a Workbench passou a exigir autenticacao/identidade propagada no edge; em 2026-05-15 esse mecanismo foi substituido pelo bearer JWT interno curto emitido pelo BFF, removendo a dependencia de `X-RF-User-*`.
   - Secured BFF edge with mandatory CSRF validation for all mutation proxies (`POST/PUT/DELETE`) via custom YARP pipeline.
   - Implemented `CreateMaterialAndAssociate` orchestration between SupplyChain and Inventory domains.
   - Ensured concurrency control with timestamp-based versioning (`AssociationUpdatedAt`) across association endpoints.
@@ -614,17 +620,43 @@ Specialized agent profiles available:
   - Unit tests passed for SupplyChain (`11` tests) and Inventory (`2` tests).
   - Frontend production build succeeded (`npm run build` in `RailFactory.Frontend/App`).
 
-## 2026-05-13 - IAM RBAC TrustedHeaders vs Cookie Scheme Fix
+## 2026-05-15 - Auth Simplification And Internal Inventory Hardening
 
-- Fixed `403` on IAM admin routes (`/api/iam/users`, `/api/iam/roles`, `/api/iam/permissions`) when the same session already had access to SupplyChain/Inventory routes.
-- Root cause: IAM configured cookie as default authenticate scheme, so `RequirePermission(...)` evaluated a cookie principal without `permission` claims and ignored trusted edge headers.
-- Implemented a policy auth scheme (`SmartAuth`) in IAM:
-  - if `X-RF-User-Email` header exists, authenticate with `TrustedHeaders`;
-  - otherwise authenticate with `Cookies` (keeps browser session/auth endpoints behavior).
-- File changed: `src/RailFactory.Iam.Api/Infrastructure/IamHostingExtensions.cs`.
+- Replaced the temporary header-based trust model with short-lived internal bearer JWTs signed by the Frontend BFF for downstream protected service calls.
+- IAM now uses a policy auth scheme only to select between browser cookie auth and the internal bearer token, keeping session endpoints on cookies and protected proxied routes on standard bearer authentication.
+- Hardened the BFF proxy boundary so client-supplied `Authorization`, `X-RF-User-*` and `X-Internal-Key` headers are always stripped before session validation and downstream proxying.
+- Converted Inventory internal endpoints (`/api/inventory/internal/*`) to explicit API-key protection with `X-Internal-Key`, including a dedicated internal material-creation route.
+- Updated SupplyChain integrations to use the explicit internal Inventory channel for:
+  - material metadata lookup;
+  - internal material creation;
+  - pending/confirmed balance event dispatch;
+  - supplier-material-mapping propagation.
+- Tightened service-side identity propagation:
+  - Frontend BFF now issues a short-lived internal JWT (`InternalToken`) after a validated session and forwards it as `Authorization: Bearer ...`;
+  - `Inventory`, `SupplyChain`, `Production` and protected IAM routes validate that internal JWT with shared issuer/audience/signing key settings;
+  - `X-Internal-Key` remains only for explicit internal endpoints such as `/api/inventory/internal/*`;
+  - internal JWT requests are now tenant-bound: the `tenant` claim must match the resolved request tenant or the service returns `403` with `code=tenant.mismatch`.
+- Critical configuration now fails explicitly:
+  - `InternalToken:SigningKey` no longer has a committed usable fallback in service `appsettings.json`;
+  - `InternalApiKey` no longer has a committed usable fallback in `Inventory`/`SupplyChain`;
+  - AppHost no longer provisions default values for `internal-api-key` or `internal-token-signing-key`; these parameters must be supplied by the operator.
 - Validation evidence:
-  - `dotnet build src/RailFactory.Iam.Api/RailFactory.Iam.Api.csproj -v:minimal` passed.
+  - `dotnet build src/RailFactory.Iam.Api/RailFactory.Iam.Api.csproj` passed.
+  - `dotnet build src/RailFactory.Frontend/RailFactory.Frontend.csproj` passed.
+  - `dotnet build src/RailFactory.Inventory.Api/RailFactory.Inventory.Api.csproj` passed.
+  - `dotnet build src/RailFactory.SupplyChain.Api/RailFactory.SupplyChain.Api.csproj` passed.
+  - `dotnet build src/RailFactory.Production.Api/RailFactory.Production.Api.csproj` passed.
+  - `dotnet build src/RailFactory.ServiceDefaults/RailFactory.ServiceDefaults.csproj` passed.
+  - `dotnet build src/RailFactory.AppHost/RailFactory.AppHost.csproj` passed.
+  - `dotnet test src/RailFactory.Frontend.Tests/RailFactory.Frontend.Tests.csproj -v:minimal` passed (`13` tests).
+  - `npm test -- src/features/auth/__tests__/useAuthSession.test.tsx` passed (`4` tests).
   - `dotnet test src/RailFactory.Iam.Api.Tests/RailFactory.Iam.Api.Tests.csproj -v:minimal` passed (`10` tests).
+  - `dotnet test src/RailFactory.SupplyChain.Api.Tests/RailFactory.SupplyChain.Api.Tests.csproj -v:minimal` passed (`17` tests).
+  - Live smoke:
+    - direct forged `X-RF-User-*` on `Inventory` and `SupplyChain` returns `401`;
+    - signed internal bearer JWT returns `200` on `IAM /auth/current-user`, `Inventory /balances` and `SupplyChain /receipts`;
+    - `Inventory` internal endpoint returns `401` without `X-Internal-Key` and `200` with the valid key;
+    - BFF session/CSRF/logout smoke remains stable (`401` unauthenticated session, `200` CSRF token, `403 csrf_error` on invalid logout token).
 
 ## 2026-05-13 - Frontend HTTP/Auth Hardening
 

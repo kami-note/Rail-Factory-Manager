@@ -49,10 +49,15 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
   const navigateTo = (path: string) => navigate(path);
 
   useEffect(() => {
-    if (!tenantCode) return;
+    if (!tenantCode || !isProtectedRoute || auth.status !== 'authenticated') {
+      setStatus(null);
+      setStatusError(null);
+      return;
+    }
 
     const loadStatus = async () => {
       try {
+        setStatusError(null);
         const response = await fetchJsonOrThrow<Status>(
           '/api/status',
           {
@@ -63,16 +68,37 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
         );
         setStatus(response);
       } catch (requestError) {
+        setStatus(null);
         setStatusError(requestError instanceof Error ? requestError.message : 'Falha na requisição de status.');
       }
     };
 
     void loadStatus();
-  }, [tenantCode]);
+  }, [tenantCode, isProtectedRoute, auth.status]);
+
+  useEffect(() => {
+    if (!isProtectedRoute || !tenantCode) {
+      return;
+    }
+
+    void auth.refreshSession();
+
+    const handleFocus = () => {
+      void auth.refreshSession();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [auth.refreshSession, isProtectedRoute, tenantCode]);
 
   const handleLogout = async () => {
     try {
       await logout(tenantCode);
+      auth.clearSession();
+      setStatus(null);
+      setStatusError(null);
       navigateTo('/');
     } catch (requestError) {
       console.error(requestError instanceof Error ? requestError.message : 'Logout falhou.');
