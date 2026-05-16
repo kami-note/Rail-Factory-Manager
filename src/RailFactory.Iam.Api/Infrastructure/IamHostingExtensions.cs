@@ -3,9 +3,13 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using RailFactory.BuildingBlocks.Auth;
 
 namespace RailFactory.Iam.Api.Infrastructure;
@@ -28,10 +32,26 @@ public static class IamHostingExtensions
                 | ForwardedHeaders.XForwardedHost;
             options.KnownIPNetworks.Clear();
             options.KnownProxies.Clear();
+            // ForwardLimit=4 handles the full proxy chain:
+            // Browser → Ngrok → Vite → BFF → Gateway → IAM
+            // Without this, only the rightmost hop (gateway) is processed,
+            // causing IAM to see an internal host instead of the ngrok public URL.
+            options.ForwardLimit = 4;
         });
 
         builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(GoogleOAuthOptions.SectionName));
         builder.AddRedisDistributedCache("redis");
+
+        // Persist Data Protection keys to Redis so IAM restarts do not invalidate
+        // existing session cookies. Redis is volume-backed in the Aspire setup.
+        builder.Services.AddDataProtection()
+            .SetApplicationName("railfactory-iam");
+        builder.Services.AddSingleton<IConfigureOptions<KeyManagementOptions>>(sp =>
+            new ConfigureOptions<KeyManagementOptions>(options =>
+            {
+                options.XmlRepository = new DistributedCacheXmlRepository(
+                    sp.GetRequiredService<IDistributedCache>());
+            }));
         builder.Services.AddSingleton<GoogleOAuthRedirects>();
         builder.Services.AddAuthorization();
         builder.Services
@@ -56,8 +76,12 @@ public static class IamHostingExtensions
             .AddCookie(options =>
             {
                 options.Cookie.HttpOnly = true;
-                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                options.Cookie.SameSite = SameSiteMode.Lax;
+                options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+                    ? CookieSecurePolicy.None 
+                    : CookieSecurePolicy.Always;
+                options.Cookie.SameSite = builder.Environment.IsDevelopment()
+                    ? SameSiteMode.Unspecified
+                    : SameSiteMode.Lax;
                 options.Events = new CookieAuthenticationEvents
                 {
                     OnRedirectToLogin = context =>

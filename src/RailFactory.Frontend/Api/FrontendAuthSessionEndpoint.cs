@@ -29,6 +29,12 @@ internal static class FrontendAuthSessionEndpoint
             request.Headers.TryAddWithoutValidation("Cookie", cookieHeader.ToString());
         }
 
+        // ELITE FIX FOR NGROK: Forward all proxy headers to ensure IAM recognizes the public host/proto
+        foreach (var header in httpContext.Request.Headers.Where(h => h.Key.StartsWith("X-Forwarded-", StringComparison.OrdinalIgnoreCase)))
+        {
+            request.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
+        }
+
         var gateway = httpClientFactory.CreateClient(FrontendHostingExtensions.GatewayClientName);
         using var response = await gateway.SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.Unauthorized)

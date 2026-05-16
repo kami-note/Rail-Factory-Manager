@@ -18,6 +18,12 @@ const TENANT_STORAGE_KEY = 'rail_factory_tenant_code';
  */
 export function App() {
   const [tenantCode, setTenantCode] = useState<string>(() => {
+    const queryTenantCode = new URLSearchParams(window.location.search).get('tenantCode');
+    if (queryTenantCode) {
+      localStorage.setItem(TENANT_STORAGE_KEY, queryTenantCode);
+      return queryTenantCode;
+    }
+
     return localStorage.getItem(TENANT_STORAGE_KEY) || '';
   });
 
@@ -47,6 +53,15 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
   const auth = useAuthSession(tenantCode);
   const loginHref = tenantCode ? buildLoginHref(tenantCode, '/app') : '#';
   const navigateTo = (path: string) => navigate(path);
+
+  useEffect(() => {
+    const queryTenantCode = new URLSearchParams(location.search).get('tenantCode');
+    if (!queryTenantCode || queryTenantCode === tenantCode) {
+      return;
+    }
+
+    onTenantSelected(queryTenantCode);
+  }, [location.search, onTenantSelected, tenantCode]);
 
   useEffect(() => {
     if (!tenantCode || !isProtectedRoute || auth.status !== 'authenticated') {

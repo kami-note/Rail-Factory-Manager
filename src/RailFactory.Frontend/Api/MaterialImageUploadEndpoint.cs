@@ -55,6 +55,12 @@ internal static class MaterialImageUploadEndpoint
             return Results.Json(AuthSessionDto.Unauthenticated, statusCode: StatusCodes.Status401Unauthorized);
         }
 
+        // ELITE SECURITY: Explicitly verify inventory.write permission before processing file
+        if (!session.User!.Permissions.Contains(SystemPermissions.Inventory.Write, StringComparer.Ordinal))
+        {
+            return Results.Forbid();
+        }
+
         var form = await httpContext.Request.ReadFormAsync(cancellationToken);
         var file = form.Files["file"];
         if (file is null || file.Length == 0)

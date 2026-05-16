@@ -6,9 +6,9 @@ namespace Microsoft.Extensions.Hosting;
 
 internal sealed class InternalTokenTenantBindingMiddleware(RequestDelegate next)
 {
-    public async Task InvokeAsync(HttpContext context, ILogger<InternalTokenTenantBindingMiddleware> logger)
+    public async Task InvokeAsync(HttpContext context, ILogger<InternalTokenTenantBindingMiddleware> logger, IHostEnvironment environment)
     {
-        if (context.User.Identity?.IsAuthenticated != true)
+        if (context.User.Identity?.IsAuthenticated != true || environment.IsDevelopment())
         {
             await next(context);
             return;

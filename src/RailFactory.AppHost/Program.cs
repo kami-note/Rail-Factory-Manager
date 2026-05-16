@@ -1,10 +1,13 @@
 using Aspire.Hosting;
+using Microsoft.Extensions.Configuration;
 
 const string DefaultTenantCode = "dev";
 const string TenantCatalogCacheTtlSeconds = "60";
 
 var builder = DistributedApplication.CreateBuilder(args);
 builder.AddDockerComposeEnvironment("env");
+
+ValidateSecrets(builder.Configuration);
 
 var parameters = AddParameters(builder);
 var infra = AddInfrastructure(builder, parameters);
@@ -177,6 +180,20 @@ static void AddLocalFrontendUi(
         .WithEnvironment("VITE_DEV_BFF_TARGET", frontend.GetEndpoint("http"))
         .WithHttpEndpoint(port: 5082, targetPort: 5082, env: "PORT", isProxied: false)
         .WaitFor(frontend);
+}
+
+static void ValidateSecrets(IConfiguration configuration)
+{
+    var signingKey = configuration["Parameters:internal-token-signing-key"] ?? string.Empty;
+    if (System.Text.Encoding.UTF8.GetByteCount(signingKey) < 32)
+    {
+        throw new InvalidOperationException(
+            $"Parameters:internal-token-signing-key is too short ({System.Text.Encoding.UTF8.GetByteCount(signingKey)} bytes). " +
+            "HS256 requires at least 32 bytes (256 bits). Fix with:\n" +
+            "  dotnet user-secrets set \"Parameters:internal-token-signing-key\" " +
+            $"\"$(python3 -c 'import secrets; print(secrets.token_hex(32))')\"" +
+            "\nRun this command from the RailFactory.AppHost directory.");
+    }
 }
 
 file sealed record AppHostParameters(

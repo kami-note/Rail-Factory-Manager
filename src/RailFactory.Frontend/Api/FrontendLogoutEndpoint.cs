@@ -70,6 +70,16 @@ internal static class FrontendLogoutEndpoint
                 statusCode: (int)response.StatusCode);
         }
 
+        // Forward the Set-Cookie header from IAM so the browser actually clears
+        // the session cookie. Without this, logout has no effect on the browser.
+        if (response.Headers.TryGetValues("Set-Cookie", out var setCookies))
+        {
+            foreach (var cookie in setCookies)
+            {
+                httpContext.Response.Headers.Append("Set-Cookie", cookie);
+            }
+        }
+
         return Results.NoContent();
     }
 }
