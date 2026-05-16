@@ -49,7 +49,9 @@ public sealed class InventoryDbContext(
             entity.Property(x => x.ExpirationDate);
             entity.Property(x => x.SourceType).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.SourceMetadata).HasColumnType("jsonb");
+            entity.Property(x => x.ReservedForOrderId);
             entity.HasIndex(x => x.SourceReference).IsUnique();
+            entity.HasIndex(x => x.ReservedForOrderId).HasFilter("\"ReservedForOrderId\" IS NOT NULL");
         });
 
         modelBuilder.Entity<Material>(entity =>

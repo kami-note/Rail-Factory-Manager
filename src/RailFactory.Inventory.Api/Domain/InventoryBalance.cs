@@ -67,6 +67,11 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
     /// </summary>
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>
+    /// When reserved, references the Production Order that holds this stock.
+    /// </summary>
+    public Guid? ReservedForOrderId { get; private set; }
+
     private InventoryBalance() : base(Guid.Empty)
     {
         MaterialCode = string.Empty;
@@ -127,6 +132,60 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
             sourceType,
             InventoryBalanceStatus.Pending,
             sourceMetadata);
+    }
+
+    /// <summary>
+    /// Reserves this balance for a Production Order, blocking it from other uses.
+    /// </summary>
+    /// <param name="productionOrderId">The Production Order claiming this stock.</param>
+    /// <param name="requiredQuantity">The quantity required by the order. Must be less than or equal to the balance quantity.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the balance is not Available or has insufficient quantity.</exception>
+    public void Reserve(Guid productionOrderId, decimal requiredQuantity)
+    {
+        if (Status != InventoryBalanceStatus.Available)
+            throw new InvalidOperationException($"Cannot reserve balance in status '{Status}'. Only 'Available' balances can be reserved.");
+
+        if (requiredQuantity > Quantity)
+            throw new InvalidOperationException($"Insufficient stock: required {requiredQuantity}, available {Quantity}.");
+
+        ReservedForOrderId = productionOrderId;
+        Status = InventoryBalanceStatus.Reserved;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Records the actual consumption of a reserved balance by a Production Order.
+    /// Reduces quantity by the consumed amount and releases any remaining stock back to Available.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the balance is not Reserved.</exception>
+    public void Consume(decimal consumedQuantity)
+    {
+        if (Status != InventoryBalanceStatus.Reserved)
+            throw new InvalidOperationException($"Cannot consume balance in status '{Status}'. Only 'Reserved' balances can be consumed.");
+
+        if (consumedQuantity < 0)
+            throw new ArgumentException("Consumed quantity cannot be negative.", nameof(consumedQuantity));
+
+        Quantity = consumedQuantity;
+        ReservedForOrderId = null;
+
+        // Remaining stock (if any) returns to Available after actual consumption is recorded separately.
+        Status = InventoryBalanceStatus.Available;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Releases a reservation without consuming the stock (e.g., cancelled Production Order).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the balance is not Reserved.</exception>
+    public void ReleaseReservation()
+    {
+        if (Status != InventoryBalanceStatus.Reserved)
+            throw new InvalidOperationException($"Cannot release reservation for balance in status '{Status}'.");
+
+        ReservedForOrderId = null;
+        Status = InventoryBalanceStatus.Available;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>

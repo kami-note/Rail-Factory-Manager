@@ -5,6 +5,7 @@ using RailFactory.Production.Api.Application.Boms;
 using RailFactory.Production.Api.Application.Orders;
 using RailFactory.Production.Api.Application.Ports;
 using RailFactory.Production.Api.Application.WorkCenters;
+using RailFactory.Production.Api.Infrastructure.Integration;
 using RailFactory.Production.Api.Infrastructure.Persistence;
 
 namespace RailFactory.Production.Api.Infrastructure;
@@ -24,12 +25,20 @@ public static class ProductionModule
         });
 
         services.AddHostedService<ProductionSchemaInitializer>();
+        services.AddHostedService<ProductionInventoryDispatcher>();
+
+        services.AddHttpClient("inventory-integration", client =>
+        {
+            client.BaseAddress = new Uri("http://inventory");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
 
         services.AddScoped<GetProductionInfo>();
 
         services.AddScoped<IWorkCenterRepository, PostgresWorkCenterRepository>();
         services.AddScoped<IBomRepository, PostgresBomRepository>();
         services.AddScoped<IProductionOrderRepository, PostgresProductionOrderRepository>();
+        services.AddScoped<IExecutionRepository, PostgresExecutionRepository>();
 
         services.AddScoped<CreateWorkCenter>();
         services.AddScoped<DeactivateWorkCenter>();
@@ -44,6 +53,11 @@ public static class ProductionModule
         services.AddScoped<ReleaseProductionOrder>();
         services.AddScoped<CancelProductionOrder>();
         services.AddScoped<ListProductionOrders>();
+        services.AddScoped<StartOrderExecution>();
+        services.AddScoped<RecordConsumption>();
+        services.AddScoped<RecordScrap>();
+        services.AddScoped<RecordQualityInspection>();
+        services.AddScoped<CompleteProductionOrder>();
 
         services.AddHealthChecks()
             .AddCheck("production-db-check", () =>

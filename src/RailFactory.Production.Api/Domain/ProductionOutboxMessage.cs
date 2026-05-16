@@ -48,6 +48,16 @@ public sealed class ProductionOutboxMessage
     }
 
     /// <summary>
+    /// Number of dispatch attempts made.
+    /// </summary>
+    public int AttemptCount { get; private set; }
+
+    /// <summary>
+    /// Last error message from a failed dispatch attempt.
+    /// </summary>
+    public string? LastError { get; private set; }
+
+    /// <summary>
     /// Factory method for creating a pending outbox entry.
     /// </summary>
     public static ProductionOutboxMessage Create(string eventType, string payload)
@@ -56,5 +66,34 @@ public sealed class ProductionOutboxMessage
         ArgumentException.ThrowIfNullOrWhiteSpace(payload);
 
         return new ProductionOutboxMessage(Guid.NewGuid(), eventType, payload);
+    }
+
+    /// <summary>
+    /// Records a successful dispatch to the downstream service.
+    /// </summary>
+    public void MarkDispatched()
+    {
+        AttemptCount++;
+        DispatchedAt = DateTimeOffset.UtcNow;
+        LastError = null;
+    }
+
+    /// <summary>
+    /// Records a transient failure without permanently blocking the message.
+    /// </summary>
+    public void MarkTransientFailure(string error)
+    {
+        AttemptCount++;
+        LastError = error.Length > 2000 ? error[..2000] : error;
+    }
+
+    /// <summary>
+    /// Permanently blocks the message from future dispatch after max retries.
+    /// </summary>
+    public void MarkDeadLetter(string error)
+    {
+        AttemptCount++;
+        LastError = error.Length > 2000 ? error[..2000] : error;
+        DispatchedAt = null;
     }
 }

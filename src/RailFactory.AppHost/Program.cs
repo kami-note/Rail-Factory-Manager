@@ -126,17 +126,20 @@ static AppHostDomainServices AddDomainServices(
 
     var production = builder.AddProject<Projects.RailFactory_Production_Api>("production")
         .WithReference(tenantManagement)
+        .WithReference(inventory)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevProductionDb)
         .WithReference(infra.TenantAcmeProductionDb)
         .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "productiondb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
+        .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevProductionDb)
         .WaitFor(infra.RabbitMq)
-        .WaitFor(tenantManagement);
+        .WaitFor(tenantManagement)
+        .WaitFor(inventory);
 
     return new AppHostDomainServices(tenantManagement, iam, supplyChain, inventory, production);
 }

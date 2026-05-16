@@ -124,6 +124,36 @@ public sealed class ProductionOrder : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Transitions the order to InExecution once the operator starts work on the shop floor.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the order is not in <see cref="ProductionOrderStatus.Released"/> status.</exception>
+    public void StartExecution()
+    {
+        if (Status != ProductionOrderStatus.Released)
+            throw new InvalidOperationException($"Cannot start execution for a Production Order in status '{Status}'. Only Released orders can be started.");
+
+        Status = ProductionOrderStatus.InExecution;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Completes the Production Order. Requires a passed quality inspection.
+    /// </summary>
+    /// <param name="inspectionPassed">Whether the quality inspection was approved.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the order is not InExecution or inspection failed.</exception>
+    public void Complete(bool inspectionPassed)
+    {
+        if (Status != ProductionOrderStatus.InExecution)
+            throw new InvalidOperationException($"Cannot complete a Production Order in status '{Status}'. Only InExecution orders can be completed.");
+
+        if (!inspectionPassed)
+            throw new InvalidOperationException("Cannot complete Production Order: quality inspection has not been approved.");
+
+        Status = ProductionOrderStatus.Completed;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
     /// Cancels the Production Order. Not permitted once execution has started.
     /// </summary>
     /// <exception cref="InvalidOperationException">
