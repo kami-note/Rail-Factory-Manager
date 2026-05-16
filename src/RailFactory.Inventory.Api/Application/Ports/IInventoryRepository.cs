@@ -16,5 +16,16 @@ public interface IInventoryRepository
     Task<List<InventoryBalance>> GetBalancesByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken);
     Task<List<InventoryLedgerEntry>> GetLedgerEntriesByBalanceIdAsync(Guid balanceId, CancellationToken cancellationToken);
     Task<List<InventoryBalance>> ListBalancesAsync(InventoryBalanceStatus? status, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns all Available balances for a given material code, ordered by creation date (FIFO).
+    /// </summary>
+    Task<List<InventoryBalance>> GetAvailableBalancesByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns all Reserved balances for a given Production Order.
+    /// </summary>
+    Task<List<InventoryBalance>> GetReservedBalancesByOrderIdAsync(Guid productionOrderId, CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

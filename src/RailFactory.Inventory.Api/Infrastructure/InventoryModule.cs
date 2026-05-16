@@ -31,6 +31,7 @@ public static class InventoryModule
         services.AddScoped<CreatePendingBalance>();
         services.AddScoped<GetInventoryBalanceDetails>();
         services.AddScoped<ConfirmInventoryBalance>();
+        services.AddScoped<ReserveInventoryBalance>();
         services.AddScoped<ListInventoryBalances>();
         services.AddScoped<CreateMaterial>();
         services.AddScoped<GetMaterialDetails>();

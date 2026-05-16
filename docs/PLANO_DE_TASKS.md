@@ -18,7 +18,7 @@ Este documento é o backlog executável do projeto. Cada task deve entregar um v
 
 ---
 
-## P3 - Conferência Cega e Saldo Disponível (ATUAL) 🚧
+## P3 - Conferência Cega e Saldo Disponível ✅
 
 Objetivo: Transformar o recebimento pendente em saldo real (Disponível ou Bloqueado) através de conferência cega.
 
@@ -26,15 +26,14 @@ Objetivo: Transformar o recebimento pendente em saldo real (Disponível ou Bloqu
 - [x] **Expandir estados do recebimento**: Adicionar `InConference`, `Approved`, `Divergent`.
 - [x] **Comando `StartConference`**: Muda status e bloqueia edições fiscais.
 - [x] **Workspace de Conferência na UI**: Operador registra contagem sem ver o esperado (RN-05).
-- [ ] **Comando `CloseConference`**: Compara contagem vs esperado e define status final.
-  - Aceite: Se bater -> `Approved`; se divergir -> `Divergent`.
-- [ ] **Emissão de Evento `ReceiptItemConferred`**: Via Outbox para sincronização com Inventory.
+- [x] **Comando `CloseConference`**: Compara contagem vs esperado e define status final (`Approved`/`Divergent`).
+- [x] **Emissão de Evento `ReceiptItemConferred`**: Via Outbox (`supply.receipt_item_conferred`). Dispatcher HTTP em `InventoryPendingBalanceDispatcher`.
 
 ### P3.2 - Ativação de Saldo (Inventory)
-- [ ] **Processar `ReceiptItemConferred`**: Use case no Inventory para ativar saldo pendente.
-- [ ] **Liberar Saldo `Available`**: Se aprovado, saldo fica disponível para uso/produção.
-- [ ] **Bloquear Saldo `Blocked`**: Se divergente, saldo fica retido para inspeção/devolução.
-- [ ] **Atualizar Ledger**: Registrar a transição de status e correção de quantidades.
+- [x] **Processar `ReceiptItemConferred`**: `ConfirmInventoryBalance` use case no endpoint `/internal/confirmed-balances`.
+- [x] **Liberar Saldo `Available`**: `balance.Confirm(isApproved: true)` → status `Available`.
+- [x] **Bloquear Saldo `Blocked`**: `balance.Confirm(isApproved: false)` → status `Blocked`.
+- [x] **Atualizar Ledger**: `InventoryLedgerEntry` com delta de quantidade e metadados do evento.
 
 ---
 

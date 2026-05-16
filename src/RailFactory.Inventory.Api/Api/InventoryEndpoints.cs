@@ -77,6 +77,7 @@ public static class InventoryEndpoints
         internalGroup.MapPost(InternalCreateMaterialPath, HandleCreateMaterialInternal);
         internalGroup.MapPost("/pending-balances", HandleCreatePendingBalance);
         internalGroup.MapPost("/confirmed-balances", HandleConfirmInventoryBalance);
+        internalGroup.MapPost("/reserve-balances", HandleReserveInventoryBalance);
         internalGroup.MapPost("/supplier-material-mapping", HandleSupplierMaterialMappingCreated);
 
         return app;
@@ -333,6 +334,33 @@ public static class InventoryEndpoints
             cancellationToken);
 
         return Results.Accepted();
+    }
+
+    private static async Task<IResult> HandleReserveInventoryBalance(
+        [FromBody] ReserveInventoryBalanceRequest request,
+        ReserveInventoryBalance reserveBalance,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await reserveBalance.ExecuteAsync(
+                new ReserveInventoryBalanceInput(
+                    request.EventId,
+                    request.EventType,
+                    request.CorrelationId,
+                    request.Payload.ProductionOrderId,
+                    request.Payload.OrderNumber,
+                    request.Payload.MaterialCode,
+                    request.Payload.RequiredQuantity,
+                    request.Payload.UnitOfMeasure),
+                cancellationToken);
+
+            return Results.Accepted();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(title: "reservation.failed", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
+        }
     }
 
     private static async Task<IResult> HandleSupplierMaterialMappingCreated(

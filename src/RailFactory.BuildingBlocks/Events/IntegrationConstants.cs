@@ -16,6 +16,12 @@ public static class IntegrationConstants
     {
         public const string InternalPendingBalances = "/api/inventory/internal/pending-balances";
         public const string InternalConfirmedBalances = "/api/inventory/internal/confirmed-balances";
+        public const string InternalReserveBalances = "/api/inventory/internal/reserve-balances";
         public const string InternalSupplierMaterialMapping = "/api/inventory/internal/supplier-material-mapping";
+    }
+
+    public static class ProductionEvents
+    {
+        public const string ProductionOrderReleased = "production_order_released";
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Production.Api.Api.Requests;
@@ -73,7 +74,22 @@ public static class ProductionEndpoints
         secure.MapPut("/production-orders/{id:guid}/release", HandleReleaseOrder)
             .RequirePermission(SystemPermissions.Production.Write);
 
+        secure.MapPut("/production-orders/{id:guid}/start-execution", HandleStartExecution)
+            .RequirePermission(SystemPermissions.Production.Write);
+
         secure.MapPut("/production-orders/{id:guid}/cancel", HandleCancelOrder)
+            .RequirePermission(SystemPermissions.Production.Write);
+
+        secure.MapPost("/production-orders/{id:guid}/consumptions", HandleRecordConsumption)
+            .RequirePermission(SystemPermissions.Production.Write);
+
+        secure.MapPost("/production-orders/{id:guid}/scraps", HandleRecordScrap)
+            .RequirePermission(SystemPermissions.Production.Write);
+
+        secure.MapPost("/production-orders/{id:guid}/inspections", HandleRecordInspection)
+            .RequirePermission(SystemPermissions.Production.Write);
+
+        secure.MapPut("/production-orders/{id:guid}/complete", HandleCompleteOrder)
             .RequirePermission(SystemPermissions.Production.Write);
 
         return app;
@@ -214,6 +230,79 @@ public static class ProductionEndpoints
 
     private static async Task<IResult> HandleCancelOrder(
         Guid id, CancelProductionOrder useCase, CancellationToken ct)
+    {
+        try
+        {
+            await useCase.ExecuteAsync(id, ct);
+            return Results.NoContent();
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+    }
+
+    // ── Execution ─────────────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleStartExecution(
+        Guid id, StartOrderExecution useCase, CancellationToken ct)
+    {
+        try
+        {
+            await useCase.ExecuteAsync(id, ct);
+            return Results.NoContent();
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+    }
+
+    private static async Task<IResult> HandleRecordConsumption(
+        Guid id,
+        [FromBody] RecordConsumptionRequest req,
+        RecordConsumption useCase,
+        CancellationToken ct)
+    {
+        try
+        {
+            await useCase.ExecuteAsync(new RecordConsumptionInput(id, req.MaterialCode, req.ConsumedQuantity, req.UnitOfMeasure, req.InventoryBalanceId), ct);
+            return Results.NoContent();
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+    }
+
+    private static async Task<IResult> HandleRecordScrap(
+        Guid id,
+        [FromBody] RecordScrapRequest req,
+        RecordScrap useCase,
+        CancellationToken ct)
+    {
+        try
+        {
+            await useCase.ExecuteAsync(new RecordScrapInput(id, req.MaterialCode, req.ScrapQuantity, req.UnitOfMeasure, req.Reason), ct);
+            return Results.NoContent();
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+    }
+
+    private static async Task<IResult> HandleRecordInspection(
+        Guid id,
+        [FromBody] RecordInspectionRequest req,
+        RecordQualityInspection useCase,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = Enum.Parse<InspectionResult>(req.Result, ignoreCase: true);
+            await useCase.ExecuteAsync(new RecordQualityInspectionInput(id, result, req.InspectedBy, req.Notes), ct);
+            return Results.NoContent();
+        }
+        catch (ArgumentException) { return Results.BadRequest(new { Error = $"Invalid inspection result. Valid values: {string.Join(", ", Enum.GetNames<InspectionResult>())}" }); }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+    }
+
+    private static async Task<IResult> HandleCompleteOrder(
+        Guid id, CompleteProductionOrder useCase, CancellationToken ct)
     {
         try
         {

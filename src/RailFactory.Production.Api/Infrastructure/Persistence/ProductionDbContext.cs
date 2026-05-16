@@ -11,6 +11,9 @@ public sealed class ProductionDbContext(DbContextOptions<ProductionDbContext> op
     public DbSet<BomItem> BomItems => Set<BomItem>();
     public DbSet<ProductionOrder> ProductionOrders => Set<ProductionOrder>();
     public DbSet<ProductionOutboxMessage> OutboxMessages => Set<ProductionOutboxMessage>();
+    public DbSet<QualityInspection> QualityInspections => Set<QualityInspection>();
+    public DbSet<ConsumptionRecord> ConsumptionRecords => Set<ConsumptionRecord>();
+    public DbSet<ScrapRecord> ScrapRecords => Set<ScrapRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -93,8 +96,58 @@ public sealed class ProductionDbContext(DbContextOptions<ProductionDbContext> op
             entity.Property(x => x.Payload).HasColumnType("jsonb").IsRequired();
             entity.Property(x => x.OccurredAt).IsRequired();
             entity.Property(x => x.DispatchedAt);
+            entity.Property(x => x.AttemptCount).IsRequired();
+            entity.Property(x => x.LastError).HasMaxLength(2000);
 
             entity.HasIndex(x => x.DispatchedAt);
+        });
+
+        modelBuilder.Entity<QualityInspection>(entity =>
+        {
+            entity.ToTable("quality_inspections");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ProductionOrderId).IsRequired();
+            entity.Property(x => x.Result).HasConversion<string>().HasMaxLength(24).IsRequired();
+            entity.Property(x => x.InspectedBy).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.Property(x => x.InspectedAt).IsRequired();
+            entity.HasIndex(x => new { x.ProductionOrderId, x.InspectedAt });
+        });
+
+        modelBuilder.Entity<ConsumptionRecord>(entity =>
+        {
+            entity.ToTable("consumption_records");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ProductionOrderId).IsRequired();
+
+            entity.Property(x => x.MaterialCode)
+                .HasConversion(v => v.Value, v => MaterialCode.From(v))
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.Property(x => x.ConsumedQuantity).HasColumnType("numeric(18,4)").IsRequired();
+            entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.InventoryBalanceId);
+            entity.Property(x => x.RecordedAt).IsRequired();
+            entity.HasIndex(x => x.ProductionOrderId);
+        });
+
+        modelBuilder.Entity<ScrapRecord>(entity =>
+        {
+            entity.ToTable("scrap_records");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ProductionOrderId).IsRequired();
+
+            entity.Property(x => x.MaterialCode)
+                .HasConversion(v => v.Value, v => MaterialCode.From(v))
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.Property(x => x.ScrapQuantity).HasColumnType("numeric(18,4)").IsRequired();
+            entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.RecordedAt).IsRequired();
+            entity.HasIndex(x => x.ProductionOrderId);
         });
     }
 }

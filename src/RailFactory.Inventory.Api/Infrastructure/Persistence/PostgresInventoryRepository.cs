@@ -76,6 +76,17 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
             .ToListAsync(cancellationToken);
     }
 
+    public Task<List<InventoryBalance>> GetAvailableBalancesByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken)
+        => dbContext.Balances
+            .Where(x => x.MaterialCode == materialCode && x.Status == InventoryBalanceStatus.Available)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+    public Task<List<InventoryBalance>> GetReservedBalancesByOrderIdAsync(Guid productionOrderId, CancellationToken cancellationToken)
+        => dbContext.Balances
+            .Where(x => x.ReservedForOrderId == productionOrderId && x.Status == InventoryBalanceStatus.Reserved)
+            .ToListAsync(cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
         => dbContext.SaveChangesAsync(cancellationToken);
 }
