@@ -21,6 +21,7 @@ import {
 import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { usePermissions } from '../../features/auth';
+import { SystemPermissions } from '../types/permissions';
 
 const drawerWidth = 220;
 
@@ -33,11 +34,11 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: '/app', label: 'VISÃO GERAL', icon: <LayoutDashboard size={18} /> },
-  { href: '/app/receipts', label: 'RECEBIMENTOS', icon: <ReceiptText size={18} />, permission: 'supplychain.read' },
-  { href: '/app/supply-chain/association', label: 'BANCADA', icon: <Link2 size={18} />, permission: 'supplychain.read' },
-  { href: '/app/inventory', label: 'ESTOQUE', icon: <Boxes size={18} />, permission: 'inventory.read' },
-  { href: '/app/iam/users', label: 'USUÁRIOS / ACESSO', icon: <Users size={18} />, permission: 'iam.roles.manage' },
-  { href: '/app/iam/roles', label: 'PERFIS / ROLES', icon: <ShieldCheck size={18} />, permission: 'iam.roles.manage' },
+  { href: '/app/receipts', label: 'RECEBIMENTOS', icon: <ReceiptText size={18} />, permission: SystemPermissions.SupplyChain.Read },
+  { href: '/app/supply-chain/association', label: 'BANCADA', icon: <Link2 size={18} />, permission: SystemPermissions.SupplyChain.Read },
+  { href: '/app/inventory', label: 'ESTOQUE', icon: <Boxes size={18} />, permission: SystemPermissions.Inventory.Read },
+  { href: '/app/iam/users', label: 'USUÁRIOS / ACESSO', icon: <Users size={18} />, permission: SystemPermissions.Iam.RolesManage },
+  { href: '/app/iam/roles', label: 'PERFIS / ROLES', icon: <ShieldCheck size={18} />, permission: SystemPermissions.Iam.RolesManage },
 ];
 
 type ProtectedDashboardLayoutProps = {

@@ -26,9 +26,11 @@ public static class FrontendHostingExtensions
         builder.Services.AddAntiforgery(options =>
         {
             options.HeaderName = "X-CSRF-TOKEN";
-            options.Cookie.Name = "__Host-railfactory-csrf";
+            options.Cookie.Name = builder.Environment.IsDevelopment() ? "railfactory-csrf" : "__Host-railfactory-csrf";
             options.Cookie.HttpOnly = false;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+                ? CookieSecurePolicy.None 
+                : CookieSecurePolicy.Always;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.Cookie.Path = "/";
         });
@@ -69,6 +71,11 @@ public static class FrontendHostingExtensions
         if (string.IsNullOrWhiteSpace(options.SigningKey))
         {
             throw new InvalidOperationException("InternalToken:SigningKey must be configured.");
+        }
+
+        if (System.Text.Encoding.UTF8.GetByteCount(options.SigningKey) < 32)
+        {
+            throw new InvalidOperationException("InternalToken:SigningKey must be at least 32 bytes (256 bits) for HS256.");
         }
 
         if (options.LifetimeMinutes <= 0)
