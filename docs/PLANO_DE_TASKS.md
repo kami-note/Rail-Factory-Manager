@@ -40,11 +40,88 @@ Objetivo: Transformar o recebimento pendente em saldo real (Disponível ou Bloqu
 
 ## P4 - Produção Inicial (PRÓXIMO) 🚀
 
-Objetivo: Estruturar OPs, BOM e Work Centers.
+Objetivo: Estruturar Work Centers, BOM e Ordens de Produção no `RailFactory.Production.Api`.
 
-- [ ] **P4.1 - Cadastro Industrial**: Materiais (tipo Produto Acabado) e Work Centers.
-- [ ] **P4.2 - Bill of Materials (BOM)**: Lista de insumos por produto com versionamento.
-- [ ] **P4.3 - Ordem de Produção (OP)**: Criação, planejamento e liberação de OPs.
+> **Escopo cortado intencionalmente:** sem capacity em WorkCenter, sem FinishedGood duplicado do Inventory, sem PlannedStartDate na OP, sem evento BomVersionSuperseded (nenhum consumidor em P4).
+
+### P4.1 — Work Centers ✅
+
+**Domínio:**
+- `WorkCenter` — `Id`, `Code` (Value Object), `Name`, `Status` (`Active`/`Inactive`).
+- Guard: não pode inativar se houver OP `Released` ou `InExecution` vinculada.
+
+**Application:**
+- `IWorkCenterRepository` — Save, GetById, List.
+- Use cases: `CreateWorkCenter`, `DeactivateWorkCenter`.
+
+**API:**
+- `POST /work-centers`
+- `GET /work-centers`
+- `GET /work-centers/{id}`
+- `PUT /work-centers/{id}/deactivate`
+
+**Aceite:** Work Center criado, listado e inativado. Guard impede inativação com OP ativa vinculada.
+
+---
+
+### P4.2 — Bill of Materials (BOM) ✅
+
+**Domínio:**
+- `BillOfMaterials` — `Id`, `ProductCode` (`MaterialCode`), `Version` (int), `Status` (`Draft`/`Active`).
+- `BomItem` — `MaterialCode`, `Quantity`, `UnitOfMeasure`.
+- Invariante: ao ativar uma versão, a versão `Active` anterior volta para `Draft` (lógica interna do aggregate, sem evento).
+- Guard: não pode ativar BOM sem ao menos um item.
+
+**Application:**
+- `IBomRepository`.
+- Use cases: `CreateBom`, `AddBomItem`, `ActivateBomVersion`.
+
+**API:**
+- `POST /boms`
+- `POST /boms/{id}/items`
+- `PUT /boms/{id}/activate`
+- `GET /boms?productCode=X`
+- `GET /boms/{id}`
+
+**Aceite:** BOM criada com itens. Ativação troca versão anterior para `Draft` automaticamente.
+
+---
+
+### P4.3 — Ordem de Produção (OP) ✅
+
+**Domínio:**
+- `ProductionOrder` — `Id`, `OrderNumber`, `ProductCode` (`MaterialCode`), `BomId`, `PlannedQuantity`, `WorkCenterId`, `Status`.
+- Estados: `Draft` → `Released` → `InExecution` → `Completed` | `Cancelled`.
+- Guards:
+  - `Release()`: exige BOM com status `Active` e WorkCenter `Active`.
+  - `Cancel()`: permitido em `Draft` e `Released`; bloqueado em `InExecution` e `Completed`.
+- `Release()` persiste evento `ProductionOrderReleased` no Outbox (base para P5 reservar estoque).
+
+**Application:**
+- `IProductionOrderRepository`.
+- Use cases: `CreateProductionOrder`, `ReleaseProductionOrder`, `CancelProductionOrder`.
+
+**API:**
+- `POST /production-orders`
+- `PUT /production-orders/{id}/release`
+- `PUT /production-orders/{id}/cancel`
+- `GET /production-orders` (filtros: `status`, `workCenterId`)
+- `GET /production-orders/{id}`
+
+**Aceite:** OP criada, liberada (valida BOM e WorkCenter ativos), cancelada (bloqueada se `InExecution`). Evento `ProductionOrderReleased` no Outbox ao liberar.
+
+---
+
+### P4 — Infraestrutura
+
+| Item | Ação |
+|---|---|
+| `AppHost` | Adicionar `production-db` para o tenant `dev`. |
+| `Gateway` | Rotas `/production/*` com JWT interno. |
+| `ProductionDbContext` | Tabelas: `work_centers`, `boms`, `bom_items`, `production_orders`, `production_outbox`. |
+| `Frontend` | Navegação: Work Centers, BOMs, Ordens de Produção (esqueleto). |
+
+**Sequência de execução:** Domínio → DbContext + Migrations → Repositories + Use Cases → Endpoints + AppHost/Gateway → Testes → UI.
 
 ---
 
