@@ -21,6 +21,12 @@ public sealed class PostgresExecutionRepository(ProductionDbContext context) : I
             .OrderByDescending(x => x.InspectedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<List<QualityInspection>> GetInspectionsByOrderAsync(Guid productionOrderId, CancellationToken cancellationToken)
+        => context.QualityInspections
+            .Where(x => x.ProductionOrderId == productionOrderId)
+            .OrderByDescending(x => x.InspectedAt)
+            .ToListAsync(cancellationToken);
+
     public Task<List<ConsumptionRecord>> GetConsumptionByOrderAsync(Guid productionOrderId, CancellationToken cancellationToken)
         => context.ConsumptionRecords
             .Where(x => x.ProductionOrderId == productionOrderId)

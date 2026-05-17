@@ -13,7 +13,8 @@ public sealed class InventoryMaterialService(
     IMemoryCache cache) : IInventoryMaterialService
 {
     private const string ClientName = "inventory-integration";
-    private const string InternalCreateMaterialPath = "/internal/materials/create";
+    private const string InternalMaterialsPath = "/api/inventory/internal/materials";
+    private const string InternalCreateMaterialPath = "/api/inventory/internal/materials/create";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
 
     public async Task<IDictionary<string, MaterialMetadata>> GetMaterialsByCodesAsync(IEnumerable<string> materialCodes, CancellationToken cancellationToken)
@@ -101,7 +102,7 @@ public sealed class InventoryMaterialService(
         var client = httpClientFactory.CreateClient(ClientName);
         var apiKey = configuration["InternalApiKey"];
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/internal/materials");
+        using var request = new HttpRequestMessage(HttpMethod.Post, InternalMaterialsPath);
         request.Headers.Add(TenantConstants.TenantCodeHeaderName, tenantCode);
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
@@ -159,16 +160,12 @@ public sealed class InventoryMaterialService(
 
             if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
-                // Material already exists, try to fetch its metadata to maintain idempotency
-                var existing = await GetMaterialsByCodesAsync(new[] { input.MaterialCode }, cancellationToken);
-                if (existing.TryGetValue(input.MaterialCode, out var meta))
-                {
-                    return meta;
-                }
-
+                // A conflict on CREATE means the SKU already belongs to an existing material.
+                // Silently reusing it would allow a different product to be mapped to the wrong SKU.
+                // The caller should use the "associate existing" flow instead.
                 throw new RemoteServiceConflictException(
-                    problem?.Code ?? "inventory.conflict", 
-                    problem?.Detail ?? $"Material '{input.MaterialCode}' already exists but metadata could not be retrieved.");
+                    problem?.Code ?? "inventory.material_already_exists",
+                    problem?.Detail ?? $"SKU '{input.MaterialCode}' já existe no inventário. Para utilizá-lo, use a opção 'Vincular Existente' na bancada de associação.");
             }
 
             if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)

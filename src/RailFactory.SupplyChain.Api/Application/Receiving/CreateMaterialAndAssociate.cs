@@ -20,7 +20,7 @@ public sealed class CreateMaterialAndAssociate(
         DateTimeOffset expectedVersion,
         CreateMaterialInput materialInput,
         decimal conversionFactor,
-        string actor,
+        EmailAddress actor,
         CancellationToken cancellationToken)
     {
         if (conversionFactor <= 0)
@@ -77,7 +77,7 @@ public sealed class CreateMaterialAndAssociate(
                         freshMaterial.UnitOfMeasure,
                         item.SupplierUnitOfMeasure,
                         conversionFactor,
-                        EmailAddress.From(actor)),
+                        actor),
                     ct);
             }
             else
@@ -98,7 +98,7 @@ public sealed class CreateMaterialAndAssociate(
             await outbox.EnqueueAsync("supply.supplier_material_mapping_created", integrationEvent, Guid.NewGuid().ToString(), ct);
 
             // Update the current item state (Now with the real internal unit)
-            item.MapToNewMaterial(freshMaterial.MaterialCode, freshMaterial.UnitOfMeasure, conversionFactor, actor);
+            item.MapToNewMaterial(freshMaterial.MaterialCode, freshMaterial.UnitOfMeasure, conversionFactor, actor.Value);
             await repository.SaveChangesAsync(ct);
 
             result = new AssociateReceiptItemResponse(

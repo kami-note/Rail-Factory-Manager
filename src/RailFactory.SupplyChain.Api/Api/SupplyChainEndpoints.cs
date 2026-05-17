@@ -211,18 +211,18 @@ public static class SupplyChainEndpoints
         Guid receiptId,
         Guid itemId,
         [FromBody] CreateMaterialAndAssociateRequest request,
-        HttpContext context,
+        IUserContext userContext,
         CreateMaterialAndAssociate createAndAssociate,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email;
         try
         {
             var result = await createAndAssociate.ExecuteAsync(
-                receiptId, itemId, request.ExpectedVersion, 
+                receiptId, itemId, request.ExpectedVersion,
                 new CreateMaterialInput(
-                    request.MaterialCode, request.OfficialName, request.Description, 
-                    request.UnitOfMeasure, request.ProcurementType, request.Category, 
+                    request.MaterialCode, request.OfficialName, request.Description,
+                    request.UnitOfMeasure, request.ProcurementType, request.Category,
                     request.Gtin, request.Ncm),
                 request.ConversionFactor,
                 actor,
@@ -237,6 +237,14 @@ public static class SupplyChainEndpoints
         catch (AssociationConflictException ex)
         {
             return ToProblemResult("association.conflict", ex.Message);
+        }
+        catch (RemoteServiceConflictException ex)
+        {
+            return Results.Problem(
+                title: "SKU já existe no inventário",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
         }
         catch (RemoteServiceValidationException ex)
         {
@@ -342,7 +350,7 @@ public static class SupplyChainEndpoints
         try
         {
             var result = await releaseToConference.ExecuteAsync(
-                receiptId, request.ExpectedReceiptVersion, 
+                receiptId, request.ExpectedVersion,
                 actor,
                 cancellationToken);
 

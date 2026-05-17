@@ -27,5 +27,13 @@ public interface IInventoryRepository
     /// </summary>
     Task<List<InventoryBalance>> GetReservedBalancesByOrderIdAsync(Guid productionOrderId, CancellationToken cancellationToken);
 
+    Task<InventoryStockSummary> GetStockSummaryAsync(CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }
+
+public sealed record InventoryStockSummary(
+    int TotalMaterials,
+    int MaterialsWithStock,
+    int AvailableCount,
+    int ReservedCount);

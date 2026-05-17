@@ -16,6 +16,7 @@ public interface IExecutionRepository
     /// </summary>
     Task<QualityInspection?> GetLatestInspectionAsync(Guid productionOrderId, CancellationToken cancellationToken);
 
+    Task<List<QualityInspection>> GetInspectionsByOrderAsync(Guid productionOrderId, CancellationToken cancellationToken);
     Task<List<ConsumptionRecord>> GetConsumptionByOrderAsync(Guid productionOrderId, CancellationToken cancellationToken);
     Task<List<ScrapRecord>> GetScrapByOrderAsync(Guid productionOrderId, CancellationToken cancellationToken);
 
