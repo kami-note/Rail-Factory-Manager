@@ -87,6 +87,20 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
             .Where(x => x.ReservedForOrderId == productionOrderId && x.Status == InventoryBalanceStatus.Reserved)
             .ToListAsync(cancellationToken);
 
+    public async Task<InventoryStockSummary> GetStockSummaryAsync(CancellationToken cancellationToken)
+    {
+        var balances = await dbContext.Balances.AsNoTracking().ToListAsync(cancellationToken);
+        var totalMaterials = balances.Select(x => x.MaterialCode).Distinct().Count();
+        var materialsWithStock = balances
+            .Where(x => x.Status == InventoryBalanceStatus.Available)
+            .Select(x => x.MaterialCode)
+            .Distinct()
+            .Count();
+        var availableCount = balances.Count(x => x.Status == InventoryBalanceStatus.Available);
+        var reservedCount = balances.Count(x => x.Status == InventoryBalanceStatus.Reserved);
+        return new InventoryStockSummary(totalMaterials, materialsWithStock, availableCount, reservedCount);
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
         => dbContext.SaveChangesAsync(cancellationToken);
 }

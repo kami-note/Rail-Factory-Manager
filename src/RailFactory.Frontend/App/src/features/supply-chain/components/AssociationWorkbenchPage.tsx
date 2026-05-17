@@ -355,7 +355,8 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
         {/* Side Panel: Painel de Decisão */}
         <Box sx={{ width: { xs: '100%', md: '25%' }, borderLeft: 1, borderColor: 'divider', bgcolor: 'background.paper', overflowY: 'auto' }}>
           {selectedItem ? (
-            <DecisionPanel 
+            <DecisionPanel
+              key={selectedItem.itemId}
               tenantCode={tenantCode}
               receiptId={selectedReceiptId!}
               item={selectedItem}

@@ -92,6 +92,13 @@ public static class ProductionEndpoints
         secure.MapPut("/production-orders/{id:guid}/complete", HandleCompleteOrder)
             .RequirePermission(SystemPermissions.Production.Write);
 
+        secure.MapGet("/production-orders/{id:guid}/execution", HandleGetOrderExecution)
+            .RequirePermission(SystemPermissions.Production.Read);
+
+        // Dashboard
+        secure.MapGet("/dashboard", HandleGetDashboard)
+            .RequirePermission(SystemPermissions.Production.Read);
+
         return app;
     }
 
@@ -313,6 +320,13 @@ public static class ProductionEndpoints
         catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
     }
 
+    private static async Task<IResult> HandleGetOrderExecution(
+        Guid id, GetOrderExecutionHistory useCase, CancellationToken ct)
+    {
+        var result = await useCase.ExecuteAsync(id, ct);
+        return result is not null ? Results.Ok(result) : Results.NotFound();
+    }
+
     // ── Mappers ───────────────────────────────────────────────────────────────
 
     private static object MapWorkCenterResponse(WorkCenter wc) => new
@@ -337,6 +351,13 @@ public static class ProductionEndpoints
         }),
         bom.CreatedAt, bom.UpdatedAt
     };
+
+    private static async Task<IResult> HandleGetDashboard(
+        GetProductionDashboard useCase, CancellationToken ct)
+    {
+        var result = await useCase.ExecuteAsync(ct);
+        return Results.Ok(result);
+    }
 
     private static object MapOrderResponse(ProductionOrder order) => new
     {

@@ -39,6 +39,7 @@ public static class ProductionModule
         services.AddScoped<IBomRepository, PostgresBomRepository>();
         services.AddScoped<IProductionOrderRepository, PostgresProductionOrderRepository>();
         services.AddScoped<IExecutionRepository, PostgresExecutionRepository>();
+        services.AddScoped<IProductionDashboardRepository, PostgresProductionDashboardRepository>();
 
         services.AddScoped<CreateWorkCenter>();
         services.AddScoped<DeactivateWorkCenter>();
@@ -58,6 +59,8 @@ public static class ProductionModule
         services.AddScoped<RecordScrap>();
         services.AddScoped<RecordQualityInspection>();
         services.AddScoped<CompleteProductionOrder>();
+        services.AddScoped<GetOrderExecutionHistory>();
+        services.AddScoped<GetProductionDashboard>();
 
         services.AddHealthChecks()
             .AddCheck("production-db-check", () =>
