@@ -54,7 +54,7 @@ export function AuthSessionProvider({ tenantCode, children }: AuthSessionProvide
 
     setState(previous => ({
       ...previous,
-      status: 'loading',
+      status: previous.status === 'authenticated' ? 'authenticated' : 'loading',
       error: undefined
     }));
 

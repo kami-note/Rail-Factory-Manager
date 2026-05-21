@@ -10,6 +10,7 @@ public interface IBomRepository
     Task AddAsync(BillOfMaterials bom, CancellationToken cancellationToken);
     Task<BillOfMaterials?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<BillOfMaterials>> ListByProductCodeAsync(string productCode, CancellationToken cancellationToken);
+    Task<List<BillOfMaterials>> ListAllAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Returns the currently Active BOM for the given product, or null if none exists.

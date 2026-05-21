@@ -146,9 +146,6 @@ public static class ProductionEndpoints
     private static async Task<IResult> HandleListBoms(
         string? productCode, ListBoms useCase, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(productCode))
-            return Results.BadRequest(new { Error = "productCode query parameter is required." });
-
         var result = await useCase.ExecuteAsync(productCode, ct);
         return Results.Ok(result.Select(MapBomResponse));
     }

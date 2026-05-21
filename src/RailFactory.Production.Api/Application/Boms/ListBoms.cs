@@ -8,6 +8,8 @@ namespace RailFactory.Production.Api.Application.Boms;
 /// </summary>
 public sealed class ListBoms(IBomRepository repository)
 {
-    public Task<List<BillOfMaterials>> ExecuteAsync(string productCode, CancellationToken cancellationToken)
-        => repository.ListByProductCodeAsync(productCode, cancellationToken);
+    public Task<List<BillOfMaterials>> ExecuteAsync(string? productCode, CancellationToken cancellationToken)
+        => string.IsNullOrWhiteSpace(productCode)
+            ? repository.ListAllAsync(cancellationToken)
+            : repository.ListByProductCodeAsync(productCode, cancellationToken);
 }

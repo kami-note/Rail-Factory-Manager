@@ -89,15 +89,19 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
 
     public async Task<InventoryStockSummary> GetStockSummaryAsync(CancellationToken cancellationToken)
     {
-        var balances = await dbContext.Balances.AsNoTracking().ToListAsync(cancellationToken);
-        var totalMaterials = balances.Select(x => x.MaterialCode).Distinct().Count();
-        var materialsWithStock = balances
+        var totalMaterials = await dbContext.Balances.AsNoTracking()
+            .Select(x => x.MaterialCode).Distinct().CountAsync(cancellationToken);
+
+        var materialsWithStock = await dbContext.Balances.AsNoTracking()
             .Where(x => x.Status == InventoryBalanceStatus.Available)
-            .Select(x => x.MaterialCode)
-            .Distinct()
-            .Count();
-        var availableCount = balances.Count(x => x.Status == InventoryBalanceStatus.Available);
-        var reservedCount = balances.Count(x => x.Status == InventoryBalanceStatus.Reserved);
+            .Select(x => x.MaterialCode).Distinct().CountAsync(cancellationToken);
+
+        var availableCount = await dbContext.Balances.AsNoTracking()
+            .CountAsync(x => x.Status == InventoryBalanceStatus.Available, cancellationToken);
+
+        var reservedCount = await dbContext.Balances.AsNoTracking()
+            .CountAsync(x => x.Status == InventoryBalanceStatus.Reserved, cancellationToken);
+
         return new InventoryStockSummary(totalMaterials, materialsWithStock, availableCount, reservedCount);
     }
 

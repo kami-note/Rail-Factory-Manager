@@ -39,7 +39,7 @@ static AppHostInfrastructure AddInfrastructure(
     AppHostParameters parameters)
 {
     var postgres = builder.AddPostgres("postgres", password: parameters.PostgresPassword)
-        .WithDataVolume("rail-factory-fork-postgres-data-v3")
+        .WithDataVolume("rail-factory-fork-postgres-data-v4")
         .WithPgAdmin();
 
     var redis = builder.AddRedis("redis")

@@ -16,8 +16,13 @@ export const deactivateWorkCenter = (tenantCode: string, id: string): Promise<vo
 
 // --- BOMs ---
 
-export const listBoms = (tenantCode: string, productCode: string): Promise<Bom[]> =>
-  fetchJsonOrThrow<Bom[]>(`${base}/boms?productCode=${encodeURIComponent(productCode)}`, { headers: buildTenantHeaders(tenantCode), credentials: 'include' }, 'Falha ao carregar BOMs');
+export const listBoms = (tenantCode: string, productCode?: string): Promise<Bom[]> => {
+  const qs = productCode ? `?productCode=${encodeURIComponent(productCode)}` : '';
+  return fetchJsonOrThrow<Bom[]>(`${base}/boms${qs}`, { headers: buildTenantHeaders(tenantCode), credentials: 'include' }, 'Falha ao carregar BOMs');
+};
+
+export const getBom = (tenantCode: string, bomId: string): Promise<Bom> =>
+  fetchJsonOrThrow<Bom>(`${base}/boms/${bomId}`, { headers: buildTenantHeaders(tenantCode), credentials: 'include' }, 'Falha ao carregar BOM');
 
 export const createBom = (tenantCode: string, payload: { productCode: string }): Promise<Bom> =>
   fetchJsonOrThrow<Bom>(`${base}/boms`, { method: 'POST', headers: buildTenantHeaders(tenantCode), credentials: 'include', body: JSON.stringify(payload) }, 'Falha ao criar BOM');
