@@ -150,15 +150,13 @@ export async function fetchJsonOrThrow<T>(
     init.headers = headers;
   }
 
-  // ELITE FIX: Add Content-Type header for JSON bodies to avoid HTTP 415 errors.
-  // We ONLY set Content-Type: application/json if the body is a string.
-  // For other types (FormData, Blob, etc.), we let the browser set the correct header natively.
-  const existingContentType = new Headers(init.headers).get('Content-Type');
-  if (typeof init.body === 'string' && !existingContentType) {
-    init.headers = {
-      ...init.headers,
-      'Content-Type': 'application/json'
-    };
+  // Add Content-Type for JSON bodies — use Headers object to avoid losing previously set headers.
+  if (typeof init.body === 'string') {
+    const ctHeaders = new Headers(init.headers);
+    if (!ctHeaders.get('Content-Type')) {
+      ctHeaders.set('Content-Type', 'application/json');
+      init.headers = ctHeaders;
+    }
   }
 
   let response: Response;
@@ -169,14 +167,24 @@ export async function fetchJsonOrThrow<T>(
     throw new Error(`Network connection failed: ${fallbackMessage}`);
   }
 
-  if (!response.ok) {
-    // If CSRF failed, clear cache and try to handle it (though usually it's a hard fail)
-    if (response.status === 403) {
-      const tenantCode = new Headers(init.headers).get('X-Tenant-Code');
-      if (tenantCode) {
-        csrfTokenByTenant.delete(tenantCode);
+  // On CSRF failure: refresh token and retry once
+  if (response.status === 403 && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+    const tenantCode = new Headers(init.headers).get('X-Tenant-Code');
+    if (tenantCode) {
+      csrfTokenByTenant.delete(tenantCode);
+      try {
+        const freshToken = await fetchCsrfToken(tenantCode);
+        const retryHeaders = new Headers(init.headers);
+        retryHeaders.set('X-CSRF-TOKEN', freshToken);
+        init.headers = retryHeaders;
+        response = await fetch(input, init);
+      } catch {
+        // retry failed — fall through to error handling below
       }
     }
+  }
+
+  if (!response.ok) {
 
     const contentType = response.headers.get('content-type');
     let problemCode: string | undefined;

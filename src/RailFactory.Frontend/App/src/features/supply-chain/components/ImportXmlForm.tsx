@@ -196,6 +196,7 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
                 multiple
                 hidden
                 onChange={handleFileChange}
+                onClick={(e) => ((e.target as HTMLInputElement).value = '')}
               />
               <UploadCloud size={48} color={theme.palette.primary.main} style={{ marginBottom: 16 }} />
               <Typography variant="body1" sx={{ fontWeight: 700 }}>

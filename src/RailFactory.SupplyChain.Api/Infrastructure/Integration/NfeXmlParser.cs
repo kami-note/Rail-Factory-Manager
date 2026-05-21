@@ -76,7 +76,7 @@ internal sealed class NfeXmlParser
             originalDescription,
             OptionalChildValue(product, "NCM"),
             OptionalChildValue(product, "CFOP"),
-            OptionalChildValue(product, "cEAN"),
+            OptionalEan(product, "cEAN"),
             OptionalChildValue(product, "xPed"),
             int.TryParse(purchaseOrderItem, out var parsedItem) ? parsedItem : null);
     }
@@ -88,6 +88,13 @@ internal sealed class NfeXmlParser
     {
         var value = parent.Elements().FirstOrDefault(x => NfeXmlLocator.HasLocalName(x, localName))?.Value.Trim();
         return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static string? OptionalEan(XElement parent, string localName)
+    {
+        var value = OptionalChildValue(parent, localName);
+        // SEFAZ uses "SEM GTIN" as a sentinel for products without a barcode
+        return value == null || value.Equals("SEM GTIN", StringComparison.OrdinalIgnoreCase) ? null : value;
     }
 
     private static decimal ParseDecimal(string value) =>

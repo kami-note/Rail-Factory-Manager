@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -34,7 +35,9 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
   const [centers, setCenters] = useState<WorkCenter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -53,14 +56,24 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
   const handleCreated = (wc: WorkCenter) => {
     setCenters(prev => [wc, ...prev]);
     setShowForm(false);
+    setError(null);
+    setSuccess(`Centro "${wc.name}" criado com sucesso.`);
   };
 
   const handleDeactivate = async (id: string) => {
+    setDeactivatingId(id);
+    setSuccess(null);
+    setError(null);
     try {
       await deactivateWorkCenter(tenantCode, id);
       setCenters(prev => prev.map(c => c.id === id ? { ...c, status: 'Inactive' } : c));
+      setError(null);
+      setSuccess('Centro de trabalho desativado.');
     } catch (err) {
+      setSuccess(null);
       setError(toUiErrorMessage(err, 'Não foi possível desativar o centro de trabalho.'));
+    } finally {
+      setDeactivatingId(null);
     }
   };
 
@@ -81,6 +94,7 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
         }
       />
 
+      {success && <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2 }}>{success}</Alert>}
       {error && <InlineError message={error} marginBottom={2} />}
 
       {showForm && (
@@ -128,8 +142,15 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
                   {wc.status === 'Active' && (
                     <Authorized permission="production.write">
                       <Tooltip title="Desativar">
-                        <IconButton size="small" color="warning" onClick={() => void handleDeactivate(wc.id)}>
-                          <PowerOff size={16} />
+                        <IconButton
+                          size="small"
+                          color="warning"
+                          onClick={() => void handleDeactivate(wc.id)}
+                          disabled={deactivatingId === wc.id}
+                        >
+                          {deactivatingId === wc.id
+                            ? <CircularProgress size={16} color="inherit" />
+                            : <PowerOff size={16} />}
                         </IconButton>
                       </Tooltip>
                     </Authorized>

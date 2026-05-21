@@ -23,6 +23,13 @@ public sealed class PostgresBomRepository(ProductionDbContext context) : IBomRep
             .ToListAsync(cancellationToken);
     }
 
+    public Task<List<BillOfMaterials>> ListAllAsync(CancellationToken cancellationToken)
+        => context.Boms
+            .Include(x => x.Items)
+            .OrderBy(x => x.ProductCode)
+            .ThenByDescending(x => x.Version)
+            .ToListAsync(cancellationToken);
+
     public Task<BillOfMaterials?> GetActiveByProductCodeAsync(string productCode, CancellationToken cancellationToken)
     {
         var code = MaterialCode.From(productCode).Value;
