@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
   Chip,
@@ -27,9 +26,8 @@ import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { InlineError } from '../../../shared/components/common/InlineError';
 import { Authorized } from '../../auth';
 import { listBoms, createBom, addBomItem, activateBom, getBom } from '../api/production';
-import { searchMaterials } from '../../inventory';
+import { MaterialCodeAutocomplete } from '../../inventory';
 import type { Bom } from '../types';
-import type { MaterialSearchResult } from '../../inventory';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 
 type BomsPageProps = {
@@ -116,18 +114,14 @@ export function BomsPage({ tenantCode }: BomsPageProps) {
 
       <Paper variant="outlined" sx={{ p: 2, mt: 3 }}>
         <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-          <TextField
-            size="small"
-            placeholder="Filtrar por código do produto..."
+          <MaterialCodeAutocomplete
+            tenantCode={tenantCode}
             value={filter}
-            onChange={e => setFilter(e.target.value.toUpperCase())}
+            onInputChange={setFilter}
+            onMaterialSelect={m => setFilter(m.materialCode)}
+            placeholder="Filtrar por código do produto..."
             sx={{ flexGrow: 1 }}
-            slotProps={{
-              input: {
-                startAdornment: <InputAdornment position="start"><Search size={16} /></InputAdornment>,
-                style: { fontFamily: 'monospace', fontWeight: 700 }
-              }
-            }}
+            startAdornment={<InputAdornment position="start"><Search size={16} /></InputAdornment>}
           />
           <Authorized permission="production.write">
             <Button
@@ -335,33 +329,6 @@ function AddBomItemForm({ tenantCode, bom, onAdded, onCancel }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [options, setOptions] = useState<MaterialSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, []);
-
-  const handleMaterialInputChange = (_: React.SyntheticEvent, value: string) => {
-    const upper = value.toUpperCase();
-    setMaterialCode(upper);
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (upper.length < 2) { setOptions([]); return; }
-
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        setOptions(await searchMaterials(tenantCode, upper));
-      } catch {
-        setOptions([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
-  };
-
   const handleSubmit = async () => {
     if (!materialCode.trim() || !quantity || !unitOfMeasure.trim()) return;
     setSaving(true);
@@ -386,54 +353,13 @@ function AddBomItemForm({ tenantCode, bom, onAdded, onCancel }: {
     <Box sx={{ mt: 1 }}>
       {error && <InlineError message={error} marginBottom={1} />}
       <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-        <Autocomplete
-          freeSolo
+        <MaterialCodeAutocomplete
+          tenantCode={tenantCode}
+          value={materialCode}
+          onInputChange={setMaterialCode}
+          onMaterialSelect={m => { setMaterialCode(m.materialCode); setUnitOfMeasure(m.unitOfMeasure.toUpperCase()); }}
+          label="Código do material"
           sx={{ flexGrow: 1 }}
-          options={options}
-          getOptionLabel={o => typeof o === 'string' ? o : o.materialCode}
-          filterOptions={x => x}
-          loading={searching}
-          inputValue={materialCode}
-          onInputChange={handleMaterialInputChange}
-          onChange={(_, value) => {
-            if (value && typeof value !== 'string') {
-              setMaterialCode(value.materialCode);
-              if (value.stockUnit) setUnitOfMeasure(value.stockUnit.toUpperCase());
-            }
-          }}
-          renderOption={(props, option) => (
-            <Box component="li" {...props} key={option.materialCode}>
-              <Stack>
-                <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>
-                  {option.materialCode}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {option.officialName}
-                </Typography>
-              </Stack>
-            </Box>
-          )}
-          renderInput={params => (
-            <TextField
-              {...params}
-              label="Código do material"
-              size="small"
-              slotProps={{
-                input: {
-                  ...params.slotProps?.input,
-                  endAdornment: (
-                    <>
-                      {searching && <CircularProgress size={14} />}
-                      {params.slotProps?.input && typeof params.slotProps.input === 'object' && 'endAdornment' in params.slotProps.input
-                        ? (params.slotProps.input as { endAdornment?: React.ReactNode }).endAdornment
-                        : null}
-                    </>
-                  ),
-                  style: { fontFamily: 'monospace', fontWeight: 700 }
-                }
-              }}
-            />
-          )}
         />
         <TextField
           label="Qtd"
@@ -448,7 +374,7 @@ function AddBomItemForm({ tenantCode, bom, onAdded, onCancel }: {
           size="small"
           sx={{ width: 90 }}
           value={unitOfMeasure}
-          onChange={e => setUnitOfMeasure(e.target.value.toUpperCase())}
+          slotProps={{ input: { readOnly: true } }}
         />
         <Button
           variant="contained"

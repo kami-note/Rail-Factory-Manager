@@ -59,6 +59,7 @@ import {
 } from '../api/production';
 import type { ProductionOrder, WorkCenter, Bom, OrderExecutionHistory } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { MaterialCodeAutocomplete } from '../../inventory';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos' },
@@ -508,10 +509,17 @@ function ConsumptionForm({ tenantCode, orderId, onRecorded }: { tenantCode: stri
     <Stack spacing={2}>
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
       {success && <Alert severity="success" onClose={() => setSuccess(false)}>Consumo registrado.</Alert>}
-      <TextField label="Código do material" size="small" fullWidth value={materialCode} onChange={e => setMaterialCode(e.target.value.toUpperCase())} slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }} />
+      <MaterialCodeAutocomplete
+        tenantCode={tenantCode}
+        value={materialCode}
+        onInputChange={setMaterialCode}
+        onMaterialSelect={m => { setMaterialCode(m.materialCode); setUnit(m.unitOfMeasure.toUpperCase()); }}
+        label="Código do material"
+        fullWidth
+      />
       <Stack direction="row" spacing={1}>
         <TextField label="Quantidade" type="number" size="small" sx={{ flexGrow: 1 }} value={quantity} onChange={e => setQuantity(e.target.value)} />
-        <TextField label="Unidade" size="small" sx={{ width: 80 }} value={unit} onChange={e => setUnit(e.target.value.toUpperCase())} />
+        <TextField label="Unidade" size="small" sx={{ width: 80 }} value={unit} slotProps={{ input: { readOnly: true } }} />
       </Stack>
       <Authorized permission="production.write">
         <Button variant="contained" fullWidth onClick={() => void handleSubmit()} disabled={saving || !materialCode.trim() || !quantity} sx={{ fontWeight: 800 }}>
@@ -545,10 +553,17 @@ function ScrapForm({ tenantCode, orderId, onRecorded }: { tenantCode: string; or
     <Stack spacing={2}>
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
       {success && <Alert severity="success" onClose={() => setSuccess(false)}>Scrap registrado.</Alert>}
-      <TextField label="Código do material" size="small" fullWidth value={materialCode} onChange={e => setMaterialCode(e.target.value.toUpperCase())} slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }} />
+      <MaterialCodeAutocomplete
+        tenantCode={tenantCode}
+        value={materialCode}
+        onInputChange={setMaterialCode}
+        onMaterialSelect={m => { setMaterialCode(m.materialCode); setUnit(m.unitOfMeasure.toUpperCase()); }}
+        label="Código do material"
+        fullWidth
+      />
       <Stack direction="row" spacing={1}>
         <TextField label="Quantidade" type="number" size="small" sx={{ flexGrow: 1 }} value={quantity} onChange={e => setQuantity(e.target.value)} />
-        <TextField label="Unidade" size="small" sx={{ width: 80 }} value={unit} onChange={e => setUnit(e.target.value.toUpperCase())} />
+        <TextField label="Unidade" size="small" sx={{ width: 80 }} value={unit} slotProps={{ input: { readOnly: true } }} />
       </Stack>
       <TextField label="Motivo" size="small" fullWidth multiline rows={2} value={reason} onChange={e => setReason(e.target.value)} />
       <Authorized permission="production.write">

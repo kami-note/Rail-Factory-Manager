@@ -115,6 +115,7 @@ export function MergeMaterialModal({
               fullWidth
               options={options}
               getOptionLabel={(option) => `${option.materialCode} - ${option.officialName}`}
+              filterOptions={(x) => x}
               loading={searching}
               onInputChange={(_, value) => setSearchTerm(value)}
               onChange={(_, value) => setSelectedMaterial(value)}
