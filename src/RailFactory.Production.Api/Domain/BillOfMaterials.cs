@@ -167,7 +167,7 @@ public sealed class BomItem : Entity<Guid>
 
     internal static BomItem Create(Guid bomId, MaterialCode materialCode, decimal quantity, string unitOfMeasure)
     {
-        return new BomItem(Guid.NewGuid(), bomId, materialCode, quantity, unitOfMeasure.Trim().ToUpperInvariant());
+        return new BomItem(Guid.Empty, bomId, materialCode, quantity, unitOfMeasure.Trim().ToUpperInvariant());
     }
 }
 

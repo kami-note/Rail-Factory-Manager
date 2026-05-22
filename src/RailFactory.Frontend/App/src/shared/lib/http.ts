@@ -202,6 +202,10 @@ export async function fetchJsonOrThrow<T>(
     throw new HttpRequestError(message, response.status, problemCode);
   }
 
+  if (response.status === 204 || response.status === 205) {
+    return undefined as T;
+  }
+
   try {
     return await response.json() as T;
   } catch {

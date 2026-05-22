@@ -14,5 +14,5 @@ public abstract class Entity<TId>
         Id = default!;
     }
 
-    public TId Id { get; private init; }
+    public TId Id { get; private set; }
 }
