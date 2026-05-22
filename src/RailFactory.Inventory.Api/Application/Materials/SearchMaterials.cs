@@ -30,7 +30,8 @@ public sealed class SearchMaterials(IMaterialRepository repository)
             m.ImageUrl,
             m.Category.ToString(),
             m.Gtin,
-            m.Ncm
+            m.Ncm,
+            m.UnitOfMeasure
         )).ToList();
     }
 }
@@ -45,4 +46,5 @@ public sealed record MaterialSearchResult(
     string? ImageUrl,
     string Category,
     string? Gtin,
-    string? Ncm);
+    string? Ncm,
+    string UnitOfMeasure);

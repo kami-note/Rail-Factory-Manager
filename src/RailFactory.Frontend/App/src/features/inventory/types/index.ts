@@ -26,5 +26,5 @@ export type MaterialSearchResult = {
   category: string;
   gtin?: string;
   ncm?: string;
-  stockUnit?: string;
+  unitOfMeasure: string;
 };

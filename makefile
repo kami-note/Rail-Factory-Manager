@@ -1,5 +1,5 @@
 ngrok:
-	ngrok http --url unarticulative-unelectrical-shavon.ngrok-free.dev 5082
+	ngrok http --url apparent-driving-horse.ngrok-free.app 5082
 
 deadcode-csharp:
 	./scripts/find-dead-code-csharp.sh

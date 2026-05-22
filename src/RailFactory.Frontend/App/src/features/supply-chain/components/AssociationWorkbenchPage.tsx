@@ -414,7 +414,7 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
     }
   }, [searchQuery]);
 
-  const handleMapExisting = async (material: MaterialSearchResult | { materialCode: string, officialName: string, stockUnit?: string }) => {
+  const handleMapExisting = async (material: MaterialSearchResult | { materialCode: string, officialName: string, unitOfMeasure?: string }) => {
     setIsSubmitting(true);
     setError(null);
     try {
@@ -513,12 +513,12 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                     <ListItemButton 
                       key={s.materialCode} 
                       onClick={() => {
-                        setSelectedMaterial({ 
-                          materialCode: s.materialCode, 
-                          officialName: s.officialName, 
-                          description: '', 
+                        setSelectedMaterial({
+                          materialCode: s.materialCode,
+                          officialName: s.officialName,
+                          description: '',
                           category: '',
-                          stockUnit: s.stockUnit
+                          unitOfMeasure: s.stockUnit
                         });
                       }}
                       sx={{ 
@@ -573,10 +573,10 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                     value={conversionFactor} 
                     onChange={e => setConversionFactor(Number(e.target.value))}
                   />
-                  <Typography variant="body2">{selectedMaterial.stockUnit}</Typography>
+                  <Typography variant="body2">{selectedMaterial.unitOfMeasure}</Typography>
                 </Stack>
                 <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
-                  Entrada no estoque: {(item.quantity * conversionFactor).toFixed(4)} {selectedMaterial.stockUnit}
+                  Entrada no estoque: {(item.quantity * conversionFactor).toFixed(4)} {selectedMaterial.unitOfMeasure}
                 </Typography>
                 
                 <Button 
