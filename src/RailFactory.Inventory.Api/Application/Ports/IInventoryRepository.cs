@@ -15,7 +15,7 @@ public interface IInventoryRepository
     Task<InventoryBalance?> GetLatestBalanceByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken);
     Task<List<InventoryBalance>> GetBalancesByMaterialCodeAsync(string materialCode, CancellationToken cancellationToken);
     Task<List<InventoryLedgerEntry>> GetLedgerEntriesByBalanceIdAsync(Guid balanceId, CancellationToken cancellationToken);
-    Task<List<InventoryBalance>> ListBalancesAsync(InventoryBalanceStatus? status, CancellationToken cancellationToken);
+    Task<List<InventoryBalance>> ListBalancesAsync(InventoryBalanceStatus? status, InventorySourceType? sourceType, CancellationToken cancellationToken);
 
     /// <summary>
     /// Returns all Available balances for a given material code, ordered by creation date (FIFO).
@@ -36,4 +36,5 @@ public sealed record InventoryStockSummary(
     int TotalMaterials,
     int MaterialsWithStock,
     int AvailableCount,
-    int ReservedCount);
+    int ReservedCount,
+    int BlockedCount);

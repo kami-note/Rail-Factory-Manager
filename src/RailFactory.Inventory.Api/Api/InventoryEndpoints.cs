@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,7 @@ public static class InventoryEndpoints
 {
     private const string ApiGroup = "/api/inventory";
     private const string InfoPath = "/info";
+    private const string DashboardPath = "/dashboard";
     private const string BalancesPath = "/balances";
     private const string BalanceDetailsPath = "/balances/{id:guid}";
     private const string MaterialsPath = "/materials";
@@ -41,9 +43,12 @@ public static class InventoryEndpoints
         var group = app.MapGroup(ApiGroup);
 
         group.MapGet(InfoPath, HandleGetInventoryInfo).AllowAnonymous();
-        
+
         // SECURE PUBLIC API
         var secureGroup = group.MapGroup("/").RequireAuthorization();
+
+        secureGroup.MapGet(DashboardPath, HandleGetDashboard)
+            .RequirePermission(SystemPermissions.Inventory.Read);
 
         secureGroup.MapGet(BalancesPath, HandleListBalances)
             .RequirePermission(SystemPermissions.Inventory.Read);
@@ -85,16 +90,10 @@ public static class InventoryEndpoints
 
     private static async Task<IResult> HandleCreateMaterial(
         [FromBody] CreateMaterialRequest request,
-        HttpContext context,
+        IUserContext userContext,
         CreateMaterial createMaterial,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name;
-        if (string.IsNullOrWhiteSpace(actor))
-        {
-            return Results.Unauthorized();
-        }
-
         try
         {
             var created = await createMaterial.ExecuteAsync(
@@ -107,7 +106,7 @@ public static class InventoryEndpoints
                     request.Category,
                     request.Gtin,
                     request.Ncm),
-                actor,
+                userContext.Email,
                 cancellationToken);
 
             return Results.Created($"{ApiGroup}{MaterialsPath}/{Uri.EscapeDataString(created.MaterialCode)}", created);
@@ -128,11 +127,18 @@ public static class InventoryEndpoints
 
     private static async Task<IResult> HandleListBalances(
         [FromQuery] string? status,
+        [FromQuery] string? sourceType,
         ListInventoryBalances listBalances,
         CancellationToken cancellationToken)
     {
         InventoryBalanceStatus? filterStatus = Enum.TryParse<InventoryBalanceStatus>(status, true, out var s) ? s : null;
-        var result = await listBalances.ExecuteAsync(filterStatus, cancellationToken);
+        InventorySourceType? filterSource = sourceType?.ToLowerInvariant() switch
+        {
+            "purchase" => InventorySourceType.Purchase,
+            "production" => InventorySourceType.Production,
+            _ => null
+        };
+        var result = await listBalances.ExecuteAsync(filterStatus, filterSource, cancellationToken);
         return Results.Ok(result);
     }
 
@@ -147,10 +153,17 @@ public static class InventoryEndpoints
 
     private static async Task<IResult> HandleSearchMaterials(
         [FromQuery] string q,
+        [FromQuery] string? category,
         SearchMaterials searchMaterials,
         CancellationToken cancellationToken)
     {
-        var result = await searchMaterials.ExecuteAsync(q, cancellationToken);
+        MaterialCategory? categoryFilter = category?.ToLowerInvariant() switch
+        {
+            "rawmaterial" => MaterialCategory.RawMaterial,
+            "finishedgood" => MaterialCategory.FinishedGood,
+            _ => null
+        };
+        var result = await searchMaterials.ExecuteAsync(q, cancellationToken, categoryFilter);
         return Results.Ok(result);
     }
 
@@ -172,12 +185,11 @@ public static class InventoryEndpoints
     private static async Task<IResult> HandleUpdateMaterialImage(
         string materialCode,
         [FromBody] UpdateMaterialImageRequest request,
-        HttpContext context,
+        IUserContext userContext,
         UpdateMaterialImage updateImage,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
-        await updateImage.ExecuteAsync(MaterialCode.From(materialCode), request.ImageUrl, actor, cancellationToken);
+        await updateImage.ExecuteAsync(MaterialCode.From(materialCode), request.ImageUrl, userContext.Email, cancellationToken);
         return Results.NoContent();
     }
 
@@ -192,23 +204,17 @@ public static class InventoryEndpoints
 
     private static async Task<IResult> HandleMergeMaterials(
         [FromBody] MergeMaterialsRequest request,
-        HttpContext context,
+        IUserContext userContext,
         IMergeMaterialUseCase mergeUseCase,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name;
-        if (string.IsNullOrWhiteSpace(actor))
-        {
-            return Results.Unauthorized();
-        }
-
         try
         {
             await mergeUseCase.ExecuteAsync(
                 new MergeMaterialCommand(
                     MaterialCode.From(request.ObsoleteMaterialCode),
                     MaterialCode.From(request.OfficialMaterialCode),
-                    EmailAddress.From(actor)),
+                    userContext.Email),
                 cancellationToken);
 
             return Results.NoContent();
@@ -220,6 +226,14 @@ public static class InventoryEndpoints
                 detail: ex.Message,
                 statusCode: StatusCodes.Status400BadRequest);
         }
+    }
+
+    private static async Task<IResult> HandleGetDashboard(
+        RailFactory.Inventory.Api.Application.Balances.GetInventoryDashboard getDashboard,
+        CancellationToken cancellationToken)
+    {
+        var result = await getDashboard.ExecuteAsync(cancellationToken);
+        return Results.Ok(result);
     }
 
     private static IResult HandleGetInventoryInfo(HttpContext context, IHostEnvironment environment, GetInventoryInfo getInventoryInfo)

@@ -23,5 +23,31 @@ public static class IntegrationConstants
     public static class ProductionEvents
     {
         public const string ProductionOrderReleased = "production_order_released";
+
+        /// <summary>
+        /// Published per BOM item when a production order is released.
+        /// Replaces the HTTP fan-out; Inventory consumes this to create a stock reservation.
+        /// </summary>
+        public const string StockReservationRequested = "production.stock_reservation_requested";
+    }
+
+    /// <summary>
+    /// RabbitMQ exchange names used by publishers and the topology declarator.
+    /// </summary>
+    public static class Exchanges
+    {
+        public const string SupplyChain = "railfactory.supply-chain";
+        public const string Production = "railfactory.production";
+        public const string DeadLetter = "railfactory.dlx";
+    }
+
+    /// <summary>
+    /// RabbitMQ queue names consumed by the Inventory integration consumer.
+    /// </summary>
+    public static class Queues
+    {
+        public const string InventorySupplyIntegration = "inventory.supply.integration";
+        public const string InventoryProductionIntegration = "inventory.production.integration";
+        public const string DeadLetters = "railfactory.dead-letters";
     }
 }

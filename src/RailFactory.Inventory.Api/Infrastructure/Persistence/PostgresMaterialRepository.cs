@@ -37,7 +37,7 @@ public sealed class PostgresMaterialRepository(InventoryDbContext dbContext) : I
         await dbContext.Materials.AddAsync(material, cancellationToken);
     }
 
-    public Task<List<Material>> SearchAsync(string term, CancellationToken cancellationToken)
+    public Task<List<Material>> SearchAsync(string term, MaterialCategory? category, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(term))
         {
@@ -48,13 +48,18 @@ public sealed class PostgresMaterialRepository(InventoryDbContext dbContext) : I
 
         // ELITE FIX: Do NOT use .Value inside ILike for Value Objects with HasConversion.
         // EF Core needs to see the property as its domain type for the translator to work.
-        // However, for string-based partial matches (ILIKE), we cast to (string)(object) 
+        // However, for string-based partial matches (ILIKE), we cast to (string)(object)
         // or rely on the fact that EF.Functions.ILike expects a string.
-        
-        return dbContext.Materials
+
+        var query = dbContext.Materials
             .Where(x => EF.Functions.ILike((string)(object)x.MaterialCode, normalizedTerm) ||
                         EF.Functions.ILike(x.OfficialName, normalizedTerm) ||
-                        (x.Gtin != null && EF.Functions.ILike(x.Gtin, normalizedTerm)))
+                        (x.Gtin != null && EF.Functions.ILike(x.Gtin, normalizedTerm)));
+
+        if (category.HasValue)
+            query = query.Where(x => x.Category == category.Value);
+
+        return query
             .OrderBy(x => x.OfficialName)
             .Take(20)
             .ToListAsync(cancellationToken);

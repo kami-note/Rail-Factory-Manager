@@ -1,17 +1,47 @@
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
 import { MaterialSearchResult } from '../types';
 
+export interface CreateMaterialPayload {
+  materialCode: string;
+  officialName: string;
+  description: string;
+  unitOfMeasure: string;
+  procurementType: 'Buy' | 'Make';
+  category: 'RawMaterial' | 'FinishedGood';
+  gtin?: string;
+  ncm?: string;
+}
+
+export const createMaterial = (
+  tenantCode: string,
+  payload: CreateMaterialPayload
+): Promise<void> =>
+  fetchJsonOrThrow<void>(
+    '/api/inventory/materials',
+    {
+      method: 'POST',
+      headers: buildTenantHeaders(tenantCode),
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    },
+    'Falha ao cadastrar material'
+  );
+
 /**
  * Searches the material catalog by name, code or GTIN.
  */
 export const searchMaterials = async (
-  tenantCode: string, 
-  query: string
+  tenantCode: string,
+  query: string,
+  category?: 'RawMaterial' | 'FinishedGood'
 ): Promise<MaterialSearchResult[]> => {
   if (query.length < 2) return [];
 
+  const params = new URLSearchParams({ q: query });
+  if (category) params.set('category', category);
+
   return fetchJsonOrThrow<MaterialSearchResult[]>(
-    `/api/inventory/materials/search?q=${encodeURIComponent(query)}`,
+    `/api/inventory/materials/search?${params.toString()}`,
     {
       headers: buildTenantHeaders(tenantCode),
       credentials: 'include'

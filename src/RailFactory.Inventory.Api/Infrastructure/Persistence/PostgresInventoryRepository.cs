@@ -63,14 +63,15 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-    public Task<List<InventoryBalance>> ListBalancesAsync(InventoryBalanceStatus? status, CancellationToken cancellationToken)
+    public Task<List<InventoryBalance>> ListBalancesAsync(InventoryBalanceStatus? status, InventorySourceType? sourceType, CancellationToken cancellationToken)
     {
         var query = dbContext.Balances.AsNoTracking();
 
         if (status.HasValue)
-        {
             query = query.Where(x => x.Status == status.Value);
-        }
+
+        if (sourceType.HasValue)
+            query = query.Where(x => x.SourceType == sourceType.Value);
 
         return query.OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -102,7 +103,10 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
         var reservedCount = await dbContext.Balances.AsNoTracking()
             .CountAsync(x => x.Status == InventoryBalanceStatus.Reserved, cancellationToken);
 
-        return new InventoryStockSummary(totalMaterials, materialsWithStock, availableCount, reservedCount);
+        var blockedCount = await dbContext.Balances.AsNoTracking()
+            .CountAsync(x => x.Status == InventoryBalanceStatus.Blocked, cancellationToken);
+
+        return new InventoryStockSummary(totalMaterials, materialsWithStock, availableCount, reservedCount, blockedCount);
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken)

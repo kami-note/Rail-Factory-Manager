@@ -33,6 +33,13 @@ public sealed class ProductionOutboxMessage
     /// </summary>
     public DateTimeOffset? DispatchedAt { get; private set; }
 
+    /// <summary>
+    /// Timestamp when the message was permanently moved to dead-letter state.
+    /// Null for pending and successfully dispatched messages.
+    /// The dispatcher query filters on <c>DeadLetteredAt IS NULL</c> to skip these rows.
+    /// </summary>
+    public DateTimeOffset? DeadLetteredAt { get; private set; }
+
     private ProductionOutboxMessage()
     {
         EventType = string.Empty;
@@ -88,12 +95,14 @@ public sealed class ProductionOutboxMessage
     }
 
     /// <summary>
-    /// Permanently blocks the message from future dispatch after max retries.
+    /// Permanently blocks the message from future dispatch.
+    /// Sets <see cref="DeadLetteredAt"/> so the dispatcher's
+    /// <c>WHERE "DeadLetteredAt" IS NULL</c> filter excludes it on the next poll cycle.
     /// </summary>
     public void MarkDeadLetter(string error)
     {
         AttemptCount++;
         LastError = error.Length > 2000 ? error[..2000] : error;
-        DispatchedAt = null;
+        DeadLetteredAt = DateTimeOffset.UtcNow;
     }
 }

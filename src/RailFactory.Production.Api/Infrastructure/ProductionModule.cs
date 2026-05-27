@@ -5,6 +5,7 @@ using RailFactory.Production.Api.Application.Boms;
 using RailFactory.Production.Api.Application.Orders;
 using RailFactory.Production.Api.Application.Ports;
 using RailFactory.Production.Api.Application.WorkCenters;
+using RailFactory.BuildingBlocks.Events;
 using RailFactory.Production.Api.Infrastructure.Integration;
 using RailFactory.Production.Api.Infrastructure.Persistence;
 
@@ -26,12 +27,9 @@ public static class ProductionModule
 
         services.AddHostedService<ProductionSchemaInitializer>();
         services.AddHostedService<ProductionInventoryDispatcher>();
-
-        services.AddHttpClient("inventory-integration", client =>
-        {
-            client.BaseAddress = new Uri("http://inventory");
-            client.Timeout = TimeSpan.FromSeconds(10);
-        });
+        services.AddSingleton<RabbitMqPublisher>(sp => new RabbitMqPublisher(
+            sp.GetRequiredService<RabbitMQ.Client.IConnection>(),
+            IntegrationConstants.Exchanges.Production));
 
         services.AddScoped<GetProductionInfo>();
 
@@ -43,6 +41,7 @@ public static class ProductionModule
 
         services.AddScoped<CreateWorkCenter>();
         services.AddScoped<DeactivateWorkCenter>();
+        services.AddScoped<ActivateWorkCenter>();
         services.AddScoped<ListWorkCenters>();
 
         services.AddScoped<CreateBom>();

@@ -50,4 +50,24 @@ public sealed class PostgresBomRepository(ProductionDbContext context) : IBomRep
 
     public Task SaveChangesAsync(CancellationToken cancellationToken)
         => context.SaveChangesAsync(cancellationToken);
+
+    public async Task AddItemDirectAsync(Guid bomId, BomItem item, DateTimeOffset bomUpdatedAt, CancellationToken cancellationToken)
+    {
+        // Bypass EF Core change tracking entirely to avoid Npgsql ValueGeneratedOnAdd conflicts.
+        // EF Core 10 + Npgsql 10 treats new BomItem entities as Unchanged (non-zero Guid PK with
+        // ValueGeneratedOnAdd convention), causing SaveChanges to generate an UPDATE on a non-existent
+        // row → DbUpdateConcurrencyException. Raw SQL is the reliable escape hatch.
+        await context.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO bom_items ("Id", "BomId", "MaterialCode", "Quantity", "UnitOfMeasure")
+            VALUES ({item.Id}, {bomId}, {item.MaterialCode.Value}, {item.Quantity}, {item.UnitOfMeasure})
+            """,
+            cancellationToken);
+
+        await context.Database.ExecuteSqlAsync(
+            $"""
+            UPDATE boms SET "UpdatedAt" = {bomUpdatedAt} WHERE "Id" = {bomId}
+            """,
+            cancellationToken);
+    }
 }

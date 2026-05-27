@@ -174,6 +174,9 @@ namespace RailFactory.Production.Api.Infrastructure.Persistence.Migrations
                     b.Property<int>("AttemptCount")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("DeadLetteredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset?>("DispatchedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -195,7 +198,7 @@ namespace RailFactory.Production.Api.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DispatchedAt");
+                    b.HasIndex("DispatchedAt", "DeadLetteredAt");
 
                     b.ToTable("production_outbox", (string)null);
                 });

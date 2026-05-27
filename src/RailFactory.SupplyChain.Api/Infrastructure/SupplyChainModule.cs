@@ -4,6 +4,7 @@ using RailFactory.SupplyChain.Api.Application.Integration;
 using RailFactory.SupplyChain.Api.Application.Ports;
 using RailFactory.SupplyChain.Api.Application.Receiving;
 using RailFactory.SupplyChain.Api.Application.Suppliers;
+using RailFactory.BuildingBlocks.Events;
 using RailFactory.SupplyChain.Api.Infrastructure.Integration;
 using RailFactory.SupplyChain.Api.Infrastructure.Persistence;
 
@@ -23,7 +24,13 @@ public static class SupplyChainModule
 
         services.AddHostedService<SupplyChainSchemaInitializer>();
         services.AddHostedService<InventoryPendingBalanceDispatcher>();
+        services.AddSingleton<RabbitMqPublisher>(sp => new RabbitMqPublisher(
+            sp.GetRequiredService<RabbitMQ.Client.IConnection>(),
+            IntegrationConstants.Exchanges.SupplyChain));
 
+        // Used by InventoryMaterialService for synchronous request/response calls
+        // (material lookup and creation during the association workbench workflow).
+        // This is distinct from the Outbox dispatcher which uses RabbitMQ for async events.
         services.AddHttpClient("inventory-integration", client =>
         {
             client.BaseAddress = new Uri("http://inventory");

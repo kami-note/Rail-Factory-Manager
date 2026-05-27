@@ -7,6 +7,7 @@ public static class ProductionHostingExtensions
         builder.AddServiceDefaults();
         builder.Services.AddInternalTokenAuthentication(builder.Configuration);
         builder.AddTenantResolution();
+        builder.AddRabbitMQClient("rabbitmq");
         return builder;
     }
 

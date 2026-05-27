@@ -183,11 +183,11 @@ public static class SupplyChainEndpoints
         Guid receiptId,
         Guid itemId,
         [FromBody] AssociateReceiptItemRequest request,
-        HttpContext context,
+        IUserContext userContext,
         AssociateReceiptItem associateItem,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email.Value;
         try
         {
             var result = await associateItem.ExecuteAsync(
@@ -219,6 +219,7 @@ public static class SupplyChainEndpoints
         try
         {
             var result = await createAndAssociate.ExecuteAsync(
+
                 receiptId, itemId, request.ExpectedVersion,
                 new CreateMaterialInput(
                     request.MaterialCode, request.OfficialName, request.Description,
@@ -256,11 +257,11 @@ public static class SupplyChainEndpoints
         Guid receiptId,
         Guid itemId,
         [FromBody] ControlledAssociationDecisionRequest request,
-        HttpContext context,
+        IUserContext userContext,
         RecordControlledAssociationDecision reviewLater,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email.Value;
         try
         {
             var result = await reviewLater.ExecuteAsync(
@@ -285,11 +286,11 @@ public static class SupplyChainEndpoints
         Guid receiptId,
         Guid itemId,
         [FromBody] ControlledAssociationDecisionRequest request,
-        HttpContext context,
+        IUserContext userContext,
         RecordControlledAssociationDecision ignoreItem,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email.Value;
         try
         {
             var result = await ignoreItem.ExecuteAsync(
@@ -314,11 +315,11 @@ public static class SupplyChainEndpoints
         Guid receiptId,
         Guid itemId,
         [FromBody] OverrideSupplierProductCodeRequest request,
-        HttpContext context,
+        IUserContext userContext,
         OverrideSupplierProductCode overrideSku,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email.Value;
         try
         {
             var result = await overrideSku.ExecuteAsync(
@@ -342,11 +343,11 @@ public static class SupplyChainEndpoints
     private static async Task<IResult> HandleReleaseToConference(
         Guid receiptId,
         [FromBody] ReleaseReceiptToConferenceRequest request,
-        HttpContext context,
+        IUserContext userContext,
         ReleaseReceiptToConference releaseToConference,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email.Value;
         try
         {
             var result = await releaseToConference.ExecuteAsync(
@@ -380,11 +381,11 @@ public static class SupplyChainEndpoints
 
     private static async Task<IResult> HandleCreateMapping(
         [FromBody] CreateSupplierMaterialMappingRequest request,
-        HttpContext context,
+        IUserContext userContext,
         CreateSupplierMaterialMapping registerMapping,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email.Value;
         await registerMapping.ExecuteAsync(
             request.SupplierFiscalId, 
             request.SupplierProductCode, 
@@ -449,11 +450,11 @@ public static class SupplyChainEndpoints
 
     private static async Task<IResult> HandleStartConference(
         Guid id,
-        HttpContext context,
+        IUserContext userContext,
         StartMaterialReceiptConference startConference,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email.Value;
         try
         {
             var result = await startConference.ExecuteAsync(id, actor, cancellationToken);
@@ -468,11 +469,11 @@ public static class SupplyChainEndpoints
     private static async Task<IResult> HandleCloseConference(
         Guid id,
         [FromBody] CloseConferenceRequest request,
-        HttpContext context,
+        IUserContext userContext,
         CloseMaterialReceiptConference closeConference,
         CancellationToken cancellationToken)
     {
-        var actor = context.User.Identity?.Name ?? "system";
+        var actor = userContext.Email.Value;
         try
         {
             var result = await closeConference.ExecuteAsync(

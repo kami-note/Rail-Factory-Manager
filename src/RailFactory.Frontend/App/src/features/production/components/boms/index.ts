@@ -1,0 +1,1 @@
+export { BomsPage } from './BomsPage';

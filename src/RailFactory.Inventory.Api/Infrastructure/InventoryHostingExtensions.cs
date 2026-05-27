@@ -8,6 +8,7 @@ public static class InventoryHostingExtensions
         builder.AddServiceDefaults();
         builder.Services.AddInternalTokenAuthentication(builder.Configuration);
         builder.AddTenantResolution();
+        builder.AddRabbitMQClient("rabbitmq");
         return builder;
     }
 

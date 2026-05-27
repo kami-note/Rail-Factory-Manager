@@ -5,8 +5,8 @@ const base = '/api/production';
 
 // --- Work Centers ---
 
-export const listWorkCenters = (tenantCode: string): Promise<WorkCenter[]> =>
-  fetchJsonOrThrow<WorkCenter[]>(`${base}/work-centers`, { headers: buildTenantHeaders(tenantCode), credentials: 'include' }, 'Falha ao carregar centros de trabalho');
+export const listWorkCenters = (tenantCode: string, signal?: AbortSignal): Promise<WorkCenter[]> =>
+  fetchJsonOrThrow<WorkCenter[]>(`${base}/work-centers`, { headers: buildTenantHeaders(tenantCode), credentials: 'include', signal }, 'Falha ao carregar centros de trabalho');
 
 export const createWorkCenter = (tenantCode: string, payload: { code: string; name: string }): Promise<WorkCenter> =>
   fetchJsonOrThrow<WorkCenter>(`${base}/work-centers`, { method: 'POST', headers: buildTenantHeaders(tenantCode), credentials: 'include', body: JSON.stringify(payload) }, 'Falha ao criar centro de trabalho');
@@ -14,11 +14,14 @@ export const createWorkCenter = (tenantCode: string, payload: { code: string; na
 export const deactivateWorkCenter = (tenantCode: string, id: string): Promise<void> =>
   fetchJsonOrThrow<void>(`${base}/work-centers/${id}/deactivate`, { method: 'PUT', headers: buildTenantHeaders(tenantCode), credentials: 'include', body: '{}' }, 'Falha ao desativar centro de trabalho');
 
+export const activateWorkCenter = (tenantCode: string, id: string): Promise<void> =>
+  fetchJsonOrThrow<void>(`${base}/work-centers/${id}/activate`, { method: 'PUT', headers: buildTenantHeaders(tenantCode), credentials: 'include', body: '{}' }, 'Falha ao ativar centro de trabalho');
+
 // --- BOMs ---
 
-export const listBoms = (tenantCode: string, productCode?: string): Promise<Bom[]> => {
+export const listBoms = (tenantCode: string, productCode?: string, signal?: AbortSignal): Promise<Bom[]> => {
   const qs = productCode ? `?productCode=${encodeURIComponent(productCode)}` : '';
-  return fetchJsonOrThrow<Bom[]>(`${base}/boms${qs}`, { headers: buildTenantHeaders(tenantCode), credentials: 'include' }, 'Falha ao carregar BOMs');
+  return fetchJsonOrThrow<Bom[]>(`${base}/boms${qs}`, { headers: buildTenantHeaders(tenantCode), credentials: 'include', signal }, 'Falha ao carregar BOMs');
 };
 
 export const getBom = (tenantCode: string, bomId: string): Promise<Bom> =>
@@ -35,12 +38,12 @@ export const activateBom = (tenantCode: string, bomId: string): Promise<void> =>
 
 // --- Production Orders ---
 
-export const listProductionOrders = (tenantCode: string, status?: string, workCenterId?: string): Promise<ProductionOrder[]> => {
+export const listProductionOrders = (tenantCode: string, status?: string, workCenterId?: string, signal?: AbortSignal): Promise<ProductionOrder[]> => {
   const params = new URLSearchParams();
   if (status) params.set('status', status);
   if (workCenterId) params.set('workCenterId', workCenterId);
   const qs = params.toString();
-  return fetchJsonOrThrow<ProductionOrder[]>(`${base}/production-orders${qs ? `?${qs}` : ''}`, { headers: buildTenantHeaders(tenantCode), credentials: 'include' }, 'Falha ao carregar ordens de produção');
+  return fetchJsonOrThrow<ProductionOrder[]>(`${base}/production-orders${qs ? `?${qs}` : ''}`, { headers: buildTenantHeaders(tenantCode), credentials: 'include', signal }, 'Falha ao carregar ordens de produção');
 };
 
 export const getProductionOrder = (tenantCode: string, id: string): Promise<ProductionOrder> =>

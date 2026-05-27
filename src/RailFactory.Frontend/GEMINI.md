@@ -11,21 +11,26 @@ All domain logic must reside in `src/features/`. Each feature slice must follow 
 
 ```text
 src/features/[feature-name]/
-├── api/          # API calls and React Query hooks
+├── api/          # API calls and data-fetching functions
 ├── components/   # Feature-specific UI components
-├── hooks/        # Feature-specific logic hooks
+├── hooks/        # Feature-specific logic hooks (create only when used inside the feature)
 ├── types/        # Type definitions for the feature
 └── index.ts      # Public API: Export ONLY what is needed by other features/pages
 ```
+
+> **Nota:** `hooks/` é opcional — crie o diretório somente quando a feature tiver hooks reutilizáveis internos. Features simples mantêm a lógica diretamente nos componentes. Atualmente apenas `auth` possui `hooks/`.
 
 ### 1.2 The "Shared Kernel" (`src/shared/`)
 Common logic, UI primitives, and infrastructure are stored in `src/shared/`.
 
 - `components/`: Generic UI components (Atomic design: atoms/molecules).
-- `lib/`: Infrastructure (HTTP client, internationalization, etc.).
-- `hooks/`: Generic utility hooks.
+- `lib/`: Infrastructure (HTTP client, utilities, etc.).
+- `styles/`: Global CSS and style overrides.
 - `layouts/`: Application-wide layouts.
 - `types/`: Common DTOs and utility types.
+- `theme.ts`: MUI theme configuration.
+
+> **Nota:** `src/shared/hooks/` **não existe**. Hooks utilitários globais entram em `src/shared/lib/` ou ficam nas features que os utilizam.
 
 ## 2. Dependency Rules (The Golden Rules)
 
