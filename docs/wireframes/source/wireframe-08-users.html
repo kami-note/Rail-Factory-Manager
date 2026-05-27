@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Wireframe - 08 Users Management</title>
+    <style>
+        :root { --line: #000000; --bg: #ffffff; }
+        body { margin: 0; background: #cccccc; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: "Courier New", Courier, monospace; }
+        .canvas { background: var(--bg); width: 1024px; height: 768px; border: 2px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+        header { height: 50px; border-bottom: 2px solid var(--line); display: flex; align-items: center; padding: 0 24px; justify-content: space-between; font-weight: bold; }
+        .layout-main { display: flex; flex: 1; }
+        aside { width: 180px; border-right: 2px solid var(--line); padding: 20px; }
+        .content { flex: 1; padding: 25px; }
+        .nav-link { border: 1px solid var(--line); padding: 8px; margin-bottom: 10px; font-size: 10px; text-align: center; }
+        .user-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .user-card { border: 2px solid #000; padding: 15px; background: white; display: flex; flex-direction: column; align-items: center; }
+        .avatar-mock { width: 50px; height: 50px; border: 1px solid #000; border-radius: 50%; position: relative; margin-bottom: 10px; overflow: hidden; }
+        .avatar-mock::after { content: 'U'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; }
+        .user-info { text-align: center; width: 100%; }
+        .user-name { font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+        .user-role { font-size: 9px; border: 1px solid #000; display: inline-block; padding: 2px 6px; background: #eee; }
+        .btn-row { margin-top: 15px; display: flex; gap: 5px; width: 100%; }
+        .btn-s { flex: 1; border: 1px solid #000; font-size: 9px; padding: 4px; text-align: center; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        <header><div>RAIL FACTORY :: [IDENTITY_AND_ACCESS]</div><div style="font-size: 10px;">[TOTAL_USERS: 12]</div></header>
+        <div class="layout-main">
+            <aside><div class="nav-link">DASHBOARD</div><div class="nav-link" style="background: #000; color: #fff;">USERS</div><div class="nav-link">ROLES</div></aside>
+            <div class="content">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
+                    <div style="font-size: 16px; font-weight: bold;">[USERS_DIRECTORY]</div>
+                    <div style="border: 2px solid #000; padding: 8px 16px; font-size: 12px; font-weight: bold;">[+] INVITE_NEW_USER</div>
+                </div>
+                <div class="user-grid">
+                    <div class="user-card">
+                        <div class="avatar-mock"></div>
+                        <div class="user-info"><div class="user-name">LEVI_GOMES</div><div class="user-role">ADMINISTRATOR</div></div>
+                        <div class="btn-row"><div class="btn-s">EDIT</div><div class="btn-s">REVOKE</div></div>
+                    </div>
+                    <div class="user-card">
+                        <div class="avatar-mock"></div>
+                        <div class="user-info"><div class="user-name">OPERATOR_X</div><div class="user-role">PRODUCTION_OPS</div></div>
+                        <div class="btn-row"><div class="btn-s">EDIT</div><div class="btn-s">REVOKE</div></div>
+                    </div>
+                    <div class="user-card">
+                        <div class="avatar-mock"></div>
+                        <div class="user-info"><div class="user-name">VIEWER_Y</div><div class="user-role">READ_ONLY</div></div>
+                        <div class="btn-row"><div class="btn-s">EDIT</div><div class="btn-s">REVOKE</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

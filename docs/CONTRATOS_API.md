@@ -836,6 +836,313 @@ Target error:
 |---|---|---|
 | `association.partial_create_material_failed` | `409` | Material may have been created but association did not complete; operator must reload and retry association. |
 
+## P4 - Produção
+
+Base via Gateway local:
+
+```text
+/api/production
+```
+
+Headers obrigatórios em todas as rotas (via Internal JWT emitido pelo BFF):
+
+| Header | Obrigatorio | Observação |
+|---|---|---|
+| `X-Tenant-Code` | Sim | Tenant do contexto da sessão |
+| `Authorization: Bearer <jwt>` | Sim (interno) | JWT Interno emitido pelo BFF com claim `tenant` |
+
+### POST `/api/production/work-centers`
+
+Cria um novo Work Center.
+
+Request:
+
+```json
+{
+  "code": "WC-FRESAMENTO",
+  "name": "Fresamento CNC"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "id": "uuid",
+  "code": "WC-FRESAMENTO",
+  "name": "Fresamento CNC",
+  "status": "Active"
+}
+```
+
+### GET `/api/production/work-centers`
+
+Lista todos os Work Centers do tenant.
+
+Response `200`:
+
+```json
+[
+  {
+    "id": "uuid",
+    "code": "WC-FRESAMENTO",
+    "name": "Fresamento CNC",
+    "status": { "key": "Active", "label": "Ativo", "color": "success" }
+  }
+]
+```
+
+### PUT `/api/production/work-centers/{id}/deactivate`
+
+Inativa um Work Center. Bloqueado se houver OP `Released` ou `InExecution` vinculada.
+
+Response `204` — sem corpo.  
+Response `404` — Work Center não encontrado.  
+Response `409` — Work Center já inativo ou há OPs ativas vinculadas.
+
+### PUT `/api/production/work-centers/{id}/activate`
+
+Ativa um Work Center previamente inativo.
+
+Response `204` — sem corpo.  
+Response `404` — Work Center não encontrado.  
+Response `409` — Work Center já está ativo.
+
+---
+
+### POST `/api/production/boms`
+
+Cria uma nova BOM em rascunho para o produto.
+
+Request:
+
+```json
+{
+  "productCode": "PROD-TRILHO-50",
+  "version": 1
+}
+```
+
+Response `201`:
+
+```json
+{
+  "id": "uuid",
+  "productCode": "PROD-TRILHO-50",
+  "version": 1,
+  "status": "Draft",
+  "items": [],
+  "createdAt": "2026-05-27T10:00:00Z",
+  "updatedAt": "2026-05-27T10:00:00Z"
+}
+```
+
+### POST `/api/production/boms/{id}/items`
+
+Adiciona um item de material à BOM (somente status `Draft`).
+
+Request:
+
+```json
+{
+  "materialCode": "MAT-ACO-4340",
+  "quantity": 12.5,
+  "unitOfMeasure": "KG"
+}
+```
+
+Response `200` — BOM atualizada com item incluído.  
+Response `404` — BOM não encontrada.  
+Response `409` — Material já existe na BOM ou BOM não está em Draft.
+
+**Nota técnica:** A persistência do `BomItem` usa raw SQL via `AddItemDirectAsync` para contornar o quirk de `ValueGeneratedOnAdd` do EF Core 10 + Npgsql 10. Veja `ISSUES_CONHECIDOS.md #3`.
+
+### PUT `/api/production/boms/{id}/activate`
+
+Ativa a versão da BOM. A versão `Active` anterior do mesmo produto volta para `Draft`. Requer pelo menos um item.
+
+Response `200` — BOM atualizada com `status: "Active"`.  
+Response `404` — BOM não encontrada.  
+Response `409` — BOM sem itens, ou BOM não está em Draft.
+
+### GET `/api/production/boms`
+
+Lista BOMs, opcionalmente filtradas por `productCode`.
+
+Query params:
+
+| Parâmetro | Obrigatório | Exemplo |
+|---|---|---|
+| `productCode` | Não | `PROD-TRILHO-50` |
+
+Response `200`:
+
+```json
+[
+  {
+    "id": "uuid",
+    "productCode": "PROD-TRILHO-50",
+    "version": 1,
+    "status": { "key": "Active", "label": "Ativo", "color": "success" },
+    "itemCount": 3,
+    "createdAt": "2026-05-27T10:00:00Z",
+    "updatedAt": "2026-05-27T10:05:00Z"
+  }
+]
+```
+
+---
+
+### POST `/api/production/production-orders`
+
+Cria uma nova Ordem de Produção em rascunho.
+
+Request:
+
+```json
+{
+  "productCode": "PROD-TRILHO-50",
+  "plannedQuantity": 100,
+  "workCenterId": "uuid"
+}
+```
+
+Response `201` — OP criada com `status: "Draft"`.
+
+### PUT `/api/production/production-orders/{id}/release`
+
+Libera a OP para execução. Valida que há uma BOM `Active` para o produto e que o WorkCenter está `Active`. Emite evento `stock_reservation_requested` via RabbitMQ.
+
+Response `200` — OP com `status: "Released"`.  
+Response `409` — BOM inativa, WorkCenter inativo, ou OP não está em Draft.
+
+### PUT `/api/production/production-orders/{id}/cancel`
+
+Cancela a OP. Bloqueado em `InExecution` e `Completed`.
+
+Response `200` — OP com `status: "Cancelled"`.  
+Response `409` — OP não pode ser cancelada no estado atual.
+
+### PUT `/api/production/production-orders/{id}/start-execution`
+
+Inicia a execução da OP. Altera para `InExecution`.
+
+Response `200` — OP com `status: "InExecution"`.
+
+### POST `/api/production/production-orders/{id}/executions`
+
+Registra uma entrada de execução: consumo, scrap ou inspeção.
+
+Request (consumo):
+
+```json
+{
+  "type": "Consumption",
+  "materialCode": "MAT-ACO-4340",
+  "quantity": 12.5,
+  "unitOfMeasure": "KG"
+}
+```
+
+Request (inspeção):
+
+```json
+{
+  "type": "QualityInspection",
+  "approved": true,
+  "notes": "Aprovado na 1ª inspeção"
+}
+```
+
+Response `200`.
+
+### PUT `/api/production/production-orders/{id}/complete`
+
+Conclui a OP. Requer pelo menos uma inspeção aprovada.
+
+Response `200` — OP com `status: "Completed"`.
+
+### GET `/api/production/production-orders/{id}/executions`
+
+Lista o histórico de execuções de uma OP.
+
+Response `200`:
+
+```json
+[
+  {
+    "id": "uuid",
+    "type": "Consumption",
+    "materialCode": "MAT-ACO-4340",
+    "quantity": 12.5,
+    "unitOfMeasure": "KG",
+    "occurredAt": "2026-05-27T11:00:00Z"
+  }
+]
+```
+
+---
+
+## P6 - Dashboards
+
+### GET `/api/production/dashboard`
+
+Retorna KPIs de produção agregados para o tenant.
+
+Headers: `X-Tenant-Code` obrigatório.
+
+Response `200`:
+
+```json
+{
+  "ordersByStatus": { "Draft": 1, "Released": 2, "InExecution": 1, "Completed": 12, "Cancelled": 1 },
+  "activeOrders": 3,
+  "topScrap": [
+    { "materialCode": "MAT-ACO-4340", "totalScrap": 8.5, "unitOfMeasure": "KG" }
+  ],
+  "inspectionSummary": { "passed": 11, "failed": 1, "passRate": 0.917 },
+  "averageLeadTimeHours": 4.3,
+  "workCenterSummary": [
+    {
+      "workCenterId": "uuid",
+      "workCenterCode": "WC-FRESAMENTO",
+      "workCenterName": "Fresamento CNC",
+      "totalOrders": 8,
+      "completedOrders": 6,
+      "completionRate": 0.75
+    }
+  ]
+}
+```
+
+Campos:
+- `averageLeadTimeHours` — média de horas de `CreatedAt` até `Complete()` para ordens Completed. Null quando não há ordens concluídas.
+- `workCenterSummary` — taxa de conclusão (`completedOrders / totalOrders`) por centro de trabalho. Exclui work centers sem ordens.
+
+### GET `/api/inventory/dashboard`
+
+Retorna KPIs de inventário agregados para o tenant.
+
+Headers: `X-Tenant-Code` obrigatório.
+
+Response `200`:
+
+```json
+{
+  "totalMaterials": 47,
+  "materialsWithStock": 32,
+  "availableCount": 28,
+  "reservedCount": 4,
+  "blockedCount": 3,
+  "stockAccuracy": 0.9032
+}
+```
+
+Campos:
+- `stockAccuracy` — `availableCount / (availableCount + blockedCount)`. Null quando nenhum saldo passou pela conferência. Saldos `Pending` e `Reserved` são excluídos do cálculo.
+
+---
+
 ## Fronteiras de Utilitários UI (Utility Boundaries)
 
 Utilitários de formatação devem ser globais no Frontend, encapsulando regras para consistência visual.

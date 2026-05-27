@@ -1,344 +1,172 @@
-# Analise Dos Requisitos E Passadas
+# Análise dos Requisitos e Passadas
 
-Este documento transforma os requisitos canonicos do PDF e os requisitos derivados em uma ordem de construcao.
+Este documento mapeia os requisitos canônicos do PDF e os requisitos derivados para a **ordem de construção** (Passadas P0–P10). A lista de requisitos está em `REQUISITOS.md`; o backlog executável está em `PLANO_DE_TASKS.md`.
 
-Regra usada na analise:
+**Regra de priorização:**
+- Primeiro o que desbloqueia outros fluxos.
+- Depois o que usa dados reais já criados.
+- Integrações externas completas entram após a regra interna estar estável.
+- Recursos avançados não entram antes de existir dado operacional confiável.
 
-- primeiro vem o que desbloqueia outros fluxos;
-- depois vem o que usa dados reais ja criados;
-- integracoes externas completas entram depois da regra interna estar estavel;
-- recursos avancados nao entram antes de existir dado operacional confiavel.
+---
 
-## 1. Passadas
+## 1. Tabela de Passadas
 
 | Passada | Nome | Objetivo |
 |---|---|---|
-| P0 | Base tecnica | Estrutura da solucao, AppHost, infra, Gateway, BFF, defaults, logs e health checks |
-| P1 | IAM e tenant dev | OAuth Google, usuario, sessao simples, tenant `dev`, tenant resolver |
-| P2 | Entrada de materiais | Recebimento por upload/XML/manual, Inventory proprio e saldo pendente |
-| P3 | Conferencia e saldo | Conferencia cega, divergencias, saldo bloqueado/disponivel |
-| P4 | Producao inicial | Produtos/materiais, dimensoes, BOM, Work Centers e OP basica |
-| P5 | Execucao de OP | Reserva, consumo, scrap, paradas, qualidade, lotes e ledger |
-| P6 | Dashboard inicial | Indicadores simples com dados reais e inventario global |
-| P7 | Pessoas e frota base | Pessoas, horas, veiculos, capacidade e alocacao |
-| P8 | Expedicao base | Picking/packing, embarque, transportadoras, frete e status B2B simples |
-| P9 | Integracoes e recursos avancados | PlugNotas real, API keys, MFA, tracking, webhooks, OEE completo, relatorios |
-| P10 | Endurecimento final | Outbox amplo, observabilidade, seguranca, performance, escalabilidade, docs e deploy |
+| P0 | Base técnica | Estrutura da solução, AppHost, infra, Gateway, BFF, defaults, logs e health checks |
+| P1 | IAM e tenant dev | OAuth Google, usuário, sessão simples, tenant `dev`, tenant resolver |
+| P2 | Entrada de materiais | Recebimento por upload/XML/manual, Inventory próprio e saldo pendente |
+| P3 | Conferência e saldo | Conferência cega, divergências, saldo bloqueado/disponível |
+| P4 | Produção inicial | Produtos/materiais, dimensões, BOM, Work Centers e OP básica |
+| P5 | Execução de OP | Reserva, consumo, scrap, paradas, qualidade, lotes e ledger |
+| P6 | Dashboard inicial | Indicadores simples com dados reais e inventário global |
+| P7 | Pessoas e frota base | Pessoas, horas, veículos, capacidade e alocação |
+| P8 | Expedição base | Picking/packing, embarque, transportadoras, frete e status B2B simples |
+| P9 | Integrações e recursos avançados | PlugNotas real, API keys, MFA, tracking, webhooks, OEE completo, relatórios |
+| P10 | Endurecimento final | Outbox amplo, observabilidade, segurança, performance, docs e deploy |
 
-Status atual: consultar `CONTEXTO_ATUAL.md`. Em 2026-05-01, P0 foi concluido como base inicial. P1 foi iniciado pelo Tenancy: tenant `dev` persistido no Tenant Catalog, leitura via Gateway validada e proxima task definida como resolver `X-Tenant-Code`.
+*Status atual: consultar `CONTEXTO_ATUAL.md`.*
 
-## 2. Matriz Requisito Por Requisito
+---
+
+## 2. Matriz Requisito → Passada
 
 ### IAM
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
-| RF-01 | Frontend/API minimos, credenciais OAuth | Login Google funcional com sessao | P1 |
-| RF-02 | Modelo de tenant e banco inicial | Tenant `dev` seedado; gestao completa depois | P1, volta P9 |
-| RF-03 | Usuario autenticado | Autorizacao minima; granular depois | P1, volta P5/P9 |
-| RF-04 | Login funcionando | Sessao simples; revogacao/timeout depois | P1, volta P9 |
-| RF-05 | Usuario, tenant e recursos sensiveis | Auditoria basica em entradas/OP; append-only completo depois | P2, volta P5/P10 |
-| RF-06 | Integracoes externas reais | Adiar ate webhooks/API B2B | P9 |
-| RF-07 | Login estavel e usuarios reais | Adiar ate hardening de seguranca | P9 |
-| RD-IAM-01 | RF-02 e RN-01 | `X-Tenant-Code: dev` obrigatorio nas APIs tenant-aware | P1 |
+| RF-01 | Frontend/API mínimos, credenciais OAuth | Login Google funcional com sessão | P1 |
+| RF-02 | Modelo de tenant e banco inicial | Tenant `dev` seedado; gestão completa depois | P1, volta P9 |
+| RF-03 | Usuário autenticado | Autorização mínima; granular depois | P1, volta P5/P9 |
+| RF-04 | Login funcionando | Sessão simples; revogação/timeout depois | P1, volta P9 |
+| RF-05 | Usuário, tenant e recursos sensíveis | Auditoria básica em entradas/OP; append-only completo depois | P2, volta P5/P10 |
+| RF-06 | Integrações externas reais | Adiar até webhooks/API B2B | P9 |
+| RF-07 | Login estável e usuários reais | Adiar até hardening de segurança | P9 |
+| RD-IAM-01 | RF-02 e RN-01 | `X-Tenant-Code: dev` obrigatório nas APIs tenant-aware | P1 |
 
 ### Supply Chain
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
 | RF-16 | IAM, tenant, recebimento | Upload/XML/manual de NF-e; PlugNotas real depois | P2, volta P9 |
 | RF-17 | Recebimento e itens | Conferente registra contagem sem ver quantidade esperada | P3 |
-| RF-18 | Divergencia detectada | Devolucao simples vinculada ao recebimento/divergencia | P3, volta P8/P9 |
+| RF-18 | Divergência detectada | Devolução simples vinculada ao recebimento/divergência | P3, volta P8/P9 |
 | RD-SUP-01 | RF-16 | Fallback manual/upload como caminho oficial inicial | P2 |
-| RD-SUP-02 | RF-16 | Interface interna de provider; PlugNotas/SEFAZ ficam substituiveis | P2, volta P9 |
+| RD-SUP-02 | RF-16 | Interface interna de provider; PlugNotas/SEFAZ ficam substituíveis | P2, volta P9 |
 
 ### Inventory
 
-Inventory e requisito derivado porque o PDF fala de estoque, movimentacao, reserva e inventario global, mas nao cria um RF proprio para esse dominio.
-
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
-| RD-INV-01 | RF-16 | API Inventory e banco proprio por tenant; saldo pendente/disponivel/bloqueado por tenant, material, UoM | P2/P3 |
-| RD-INV-02 | RD-INV-01, RF-11, RF-12 | Ledger de entrada, liberacao, bloqueio, reserva, consumo, scrap e ajuste | P3/P5 |
+| RD-INV-01 | RF-16 | API Inventory e banco próprio por tenant; saldo pendente/disponível/bloqueado | P2/P3 |
+| RD-INV-02 | RD-INV-01, RF-11, RF-12 | Ledger de entrada, liberação, bloqueio, reserva, consumo, scrap e ajuste | P3/P5 |
 | RD-INV-03 | RD-INV-01 | Consulta consolidada para Admin Matriz | P6 |
 
 ### Production
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
-| RF-08 | Produto/material basico | BOM com versao ativa | P4 |
+| RF-08 | Produto/material básico | BOM com versão ativa | P4 |
 | RF-09 | Cadastro operacional | CRUD de Work Center | P4 |
 | RF-10 | RF-08, RF-09 | OP com estados principais | P4, volta P5 |
 | RF-11 | RF-10, RD-INV-01 | Reserva no Inventory ao liberar OP | P5 |
-| RF-12 | RF-11, OP em execucao | Scrap com motivo e impacto no ledger | P5 |
-| RF-13 | RF-09, OP opcional | Parada com causa, inicio e fim | P5 |
-| RF-14 | RF-10 | Inspecao obrigatoria antes de finalizar OP | P5 |
+| RF-12 | RF-11, OP em execução | Scrap com motivo e impacto no ledger | P5 |
+| RF-13 | RF-09, OP opcional | Parada com causa, início e fim | P5 |
+| RF-14 | RF-10 | Inspeção obrigatória antes de finalizar OP | P5 |
 | RF-15 | RD-INV-01, RF-12 | Lote acabado ligado aos insumos | P5, volta P9 |
-| RD-PRD-01 | Cadastro de produto | Dimensoes para cubagem/frete/carga | P4, volta P8 |
+| RD-PRD-01 | Cadastro de produto | Dimensões para cubagem/frete/carga | P4, volta P8 |
 
-### Dashboard E Reporting
+### Dashboard e Reporting
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
 | RF-34 | RF-10, RF-13, RF-14 | Indicadores simples; OEE completo depois | P6, volta P9 |
-| RF-35 | RF-21, dados de entrega/localizacao | Adiar ate tracking/logistica avancada | P9 |
-| RF-36 | Eventos reais de estoque/producao | Alertas simples; tempo real depois | P6, volta P9 |
-| RF-37 | Consultas estaveis | Exportacao depois dos dashboards basicos | P9 |
+| RF-35 | RF-21, dados de entrega/localização | Adiar até tracking/logística avançada | P9 |
+| RF-36 | Eventos reais de estoque/produção | Alertas simples; tempo real depois | P6, volta P9 |
+| RF-37 | Consultas estáveis | Exportação depois dos dashboards básicos | P9 |
 | RF-38 | RF-12, RF-15, RD-INV-02 | Custos depois de consumo/scrap/lotes | P9 |
 
 ### HR
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
-| RF-31 | Tenant | Pessoa basica sem acesso ao sistema | P7 |
-| RF-32 | RF-31 | Competencias simples por pessoa | P9 |
-| RF-33 | Nao definido no PDF | Nao implementar nem reutilizar sem decisao | N/A |
-| RD-HR-01 | RF-31, usuario/tenant | Apontamento simples de horas | P7 |
-| RD-HR-02 | RD-HR-01, integracao externa | Exportacao/envio contabil depois | P9 |
-| RD-HR-03 | RF-31 | Turnos simples; regras avancadas depois | P9 |
+| RF-31 | Tenant | Pessoa básica sem acesso ao sistema | P7 |
+| RF-32 | RF-31 | Competências simples por pessoa | P9 |
+| RF-33 | Não definido no PDF | **Não implementar nem reutilizar sem decisão** | N/A |
+| RD-HR-01 | RF-31, usuário/tenant | Apontamento simples de horas | P7 |
+| RD-HR-02 | RD-HR-01, integração externa | Exportação/envio contábil depois | P9 |
+| RD-HR-03 | RF-31 | Turnos simples; regras avançadas depois | P9 |
 
 ### Fleet
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
-| RF-25 | Tenant | Veiculo com placa, documentos e status | P7 |
+| RF-25 | Tenant | Veículo com placa, documentos e status | P7 |
 | RF-26 | RF-25 | Plano simples por data/km | P8, volta P9 |
 | RF-27 | RF-25, RF-31 | Registro simples de abastecimento | P8 |
-| RF-28 | RF-25, RF-31 | Vinculo motorista-veiculo por periodo | P7 |
-| RF-29 | Logistics com entregas, RF-25 | Adiar ate expedicao/tracking existirem | P9 |
-| RF-30 | RF-25, eventos externos/manual | Adiar ate frota estar operacional | P9 |
+| RF-28 | RF-25, RF-31 | Vínculo motorista-veículo por período | P7 |
+| RF-29 | Logistics com entregas, RF-25 | Adiar até expedição/tracking existirem | P9 |
+| RF-30 | RF-25, eventos externos/manual | Adiar até frota estar operacional | P9 |
 | RD-FLE-01 | RF-25 | Capacidade de carga em peso/volume | P7, volta P8 |
 
 ### Logistics
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
-| RF-19 | Produto acabado/saldo expedivel | Separacao e embalagem simples | P8 |
-| RF-20 | Expedicao basica | Transportadora e tabela simples | P8 |
+| RF-19 | Produto acabado/saldo expedível | Separação e embalagem simples | P8 |
+| RF-20 | Expedição básica | Transportadora e tabela simples | P8 |
 | RF-21 | Despacho criado | Status manual/inicial; tracking externo depois | P8, volta P9 |
 | RF-22 | RF-21, RF-06, RD-TEC-01 | Webhook com retry/outbox depois | P9 |
-| RF-23 | RF-19 | Conferencia de volumes antes da saida | P8 |
+| RF-23 | RF-19 | Conferência de volumes antes da saída | P8 |
 | RF-24 | RF-20, RD-PRD-01, RD-FLE-01 | Frete simples por tabela/cubagem | P8, volta P9 |
 | RD-LOG-01 | RF-21 | Endpoint B2B simples de consulta de status | P8, volta P9 |
 
-### Tecnicos, UI E Documentacao
+### Técnicos, UI e Documentação
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
-| RD-TEC-01 | Fluxos com mudanca de estado | Contratos de evento primeiro; RabbitMQ real nos fluxos criticos | P3/P5, volta P10 |
-| RD-EDGE-01 | BFF, Gateway e IAM minimos | UI no browser chama BFF; BFF encaminha pelo Gateway; Gateway normaliza tenant | P1 |
-| RD-AUD-01 | RF-05, RN-08 | Politica fail-closed/fail-open definida por tipo de acao | P2, volta P10 |
-| RD-UI-01 | Frontend base | Responsivo desde as telas iniciais | P1, volta continua |
-| RD-DOC-01 | Fluxos implementados | Documentacao tecnica, manual e deploy final | P10 |
+| RD-TEC-01 | Fluxos com mudança de estado | Contratos de evento primeiro; RabbitMQ real nos fluxos críticos | P3/P5, volta P10 |
+| RD-EDGE-01 | BFF, Gateway e IAM mínimos | UI no browser chama BFF; BFF encaminha pelo Gateway | P1 |
+| RD-AUD-01 | RF-05, RN-08 | Política fail-closed/fail-open definida por tipo de ação | P2, volta P10 |
+| RD-UI-01 | Frontend base | Responsivo desde as telas iniciais | P1, volta contínua |
+| RD-DOC-01 | Fluxos implementados | Documentação técnica, manual e deploy final | P10 |
 
-### Nao Funcionais
+### Não Funcionais
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
-| NF-01 | APIs/integracoes | Erros padronizados e retry simples | P1, volta P9/P10 |
-| NF-02 | Eventos criticos | Outbox em recebimento/reserva/finalizacao/despacho | P3/P5/P8, volta P10 |
-| NF-03 | AppHost/servicos | Logs, health checks e tracing basico | P0/P1, volta P10 |
-| NF-04 | Endpoints e dados reais | Medicao e ajustes depois dos fluxos | P10 |
-| NF-05 | Auth e dados sensiveis | Segredos protegidos; TLS/criptografia formal depois | P1, volta P10 |
-| NF-06 | Servicos stateless | Evitar estado local desde o inicio | P0, volta P10 |
+| NF-01 | APIs/integrações | Erros padronizados e retry simples | P1, volta P9/P10 |
+| NF-02 | Eventos críticos | Outbox em recebimento/reserva/finalização/despacho | P3/P5/P8, volta P10 |
+| NF-03 | AppHost/serviços | Logs, health checks e tracing básico | P0/P1, volta P10 |
+| NF-04 | Endpoints e dados reais | Medição e ajustes depois dos fluxos | P10 |
+| NF-05 | Auth e dados sensíveis | Segredos protegidos; TLS/criptografia formal depois | P1, volta P10 |
+| NF-06 | Serviços stateless | Evitar estado local desde o início | P0, volta P10 |
 | NF-07 | Tenant com locale/timezone | `pt-BR` inicial e campos preparados | P1, volta P9 |
 
-### Regras De Negocio
+### Regras de Negócio
 
-| ID | Precisa antes | Primeira entrega util | Passada |
+| ID | Precisa antes | Primeira entrega útil | Passada |
 |---|---|---|---|
 | RN-01 | RF-02, RD-IAM-01 | Toda API tenant-aware exige tenant | P1 |
-| RN-02 | RF-01, RF-03 | Autorizacao minima; granular depois | P1, volta P5/P9 |
+| RN-02 | RF-01, RF-03 | Autorização mínima; granular depois | P1, volta P5/P9 |
 | RN-03 | RF-10, RF-11, RD-INV-01 | Reserva ao liberar OP | P5 |
-| RN-04 | RF-14 | Bloquear finalizacao sem qualidade | P5 |
-| RN-05 | RF-17 | Ocultar quantidades esperadas ate fechar contagem | P3 |
-| RN-06 | RF-17, RF-18 | Bloquear material divergente ate decisao | P3 |
-| RN-07 | RF-23 | Bloquear saida com divergencia | P8 |
-| RN-08 | RF-05, RF-06, RF-03 | Auditoria basica primeiro; correlacao completa depois | P2, volta P10 |
+| RN-04 | RF-14 | Bloquear finalização sem qualidade | P5 |
+| RN-05 | RF-17 | Ocultar quantidades esperadas até fechar contagem | P3 |
+| RN-06 | RF-17, RF-18 | Bloquear material divergente até decisão | P3 |
+| RN-07 | RF-23 | Bloquear saída com divergência | P8 |
+| RN-08 | RF-05, RF-06, RF-03 | Auditoria básica primeiro; correlação completa depois | P2, volta P10 |
 
-## 2.1. Decisoes De Correcao Arquitetural
+---
 
-Estas decisoes resolvem os riscos encontrados na arquitetura original.
+## 3. Decisões de Correção Arquitetural
 
-| Area | Problema a evitar | Decisao de implementacao |
+| Área | Problema a evitar | Decisão de implementação |
 |---|---|---|
-| Inventory | Saldo duplicado em Supply Chain e Production | Criar `Inventory` como bounded context proprio desde P2 |
+| Inventory | Saldo duplicado em Supply Chain e Production | Criar `Inventory` como bounded context próprio desde P2 |
 | Inventory | Production recalcular saldo ou consumir direto | Production deve reservar/consumir por contrato do Inventory |
-| Supply Chain | Entrada virar estoque disponivel cedo demais | Recebimento cria saldo pendente; conferencia libera ou bloqueia |
+| Supply Chain | Entrada virar estoque disponível cedo demais | Recebimento cria saldo pendente; conferência libera ou bloqueia |
 | Tenant | Eventos sem tenant ou dependentes de HTTP | Todo evento, outbox e job carrega `tenantCode` explicitamente |
-| Borda | BFF e Gateway duplicando regra | UI no browser -> BFF; BFF -> Gateway; Gateway -> servicos |
-| Auditoria | Falha silenciosa em acao sensivel | Definir fail-closed para seguranca e registro local para fluxo operacional |
-| Dashboard | Relatorio consultar varios bancos e recriar regra | Dashboard le read model/consulta consolidada, sem calcular saldo |
-
-## 3. Ordem Final Recomendada
-
-### P0 - Base tecnica
-
-Entregar:
-
-- [x] solucao/projetos;
-- [x] AppHost;
-- [x] PostgreSQL;
-- [x] Tenant Catalog separado;
-- [x] bancos tenant `dev` por servico inicial: IAM, SupplyChain, Inventory e Production;
-- [x] Redis para cache/sessao/estado de auth quando necessario;
-- [x] RabbitMQ;
-- [x] Gateway YARP;
-- [x] Frontend BFF .NET + React/Vite;
-- [x] service defaults;
-- [x] health checks basicos;
-- [x] OpenTelemetry basico;
-- [x] resiliencia HTTP inicial;
-- [x] logs estruturados com convencao explicita de `correlationId`;
-- [x] convencoes de erro;
-- [x] contratos HTTP iniciais;
-- [x] convencao de evento com `eventId`, `eventType`, `eventVersion`, `occurredAt`, `tenantCode`, `correlationId`, `producer` e payload.
-
-### P1 - IAM e tenant dev
-
-Entregar:
-
-- [x] tenant `dev` persistido no Tenant Catalog;
-- [x] endpoint de leitura do tenant via Gateway;
-- [ ] tenant resolver por `X-Tenant-Code`;
-- [ ] middleware tenant-aware;
-- [ ] OAuth Google;
-- [ ] usuario autenticado;
-- [ ] sessao basica;
-- [ ] autorizacao minima;
-- [ ] frontend responsivo inicial.
-
-Cobre: RF-01, RF-02 minimo, RF-03 minimo, RF-04 minimo, RD-IAM-01, RD-EDGE-01, RN-01, RN-02 minimo, RD-UI-01.
-
-### P2 - Entrada de materiais
-
-Entregar:
-
-- Supply Chain inicial;
-- upload/importacao XML ou entrada manual;
-- recebimento com itens;
-- provider interno substituivel;
-- Inventory como API propria;
-- banco tenant `dev` de Inventory;
-- saldo pendente no Inventory;
-- auditoria basica da entrada.
-
-Cobre: RF-16 minimo, RD-SUP-01, RD-SUP-02, RD-INV-01 inicial, RD-AUD-01 inicial, RN-08 minimo.
-
-### P3 - Conferencia e saldo
-
-Entregar:
-
-- conferencia cega;
-- comparacao apos contagem;
-- divergencia simples;
-- bloqueio/liberacao de saldo;
-- ledger minimo de entrada, bloqueio, liberacao e devolucao;
-- devolucao simples;
-- primeiro uso critico de evento/outbox se necessario.
-
-Cobre: RF-17, RF-18 minimo, RD-INV-01 completo, RN-05, RN-06, parte de NF-02.
-
-### P4 - Producao inicial
-
-Entregar:
-
-- produto/material basico;
-- dimensoes de produto;
-- BOM versionada;
-- Work Centers;
-- OP com estados principais.
-
-Cobre: RF-08, RF-09, RF-10 minimo, RD-PRD-01 inicial.
-
-### P5 - Execucao de OP
-
-Entregar:
-
-- reserva de material;
-- consumo;
-- scrap;
-- paradas;
-- qualidade;
-- lote/rastreabilidade inicial;
-- ledger de estoque.
-
-Regra: OP nunca baixa estoque diretamente em Production. Toda reserva, consumo e scrap passa por contrato do Inventory.
-
-Cobre: RF-11 a RF-15, RD-INV-02, RN-03, RN-04.
-
-### P6 - Dashboard inicial
-
-Entregar:
-
-- indicadores simples de entrada, estoque e producao;
-- saldos por tenant;
-- visao global de inventario para matriz;
-- alertas simples, se ja houver evento critico confiavel.
-
-Cobre: RF-34 minimo, RF-36 minimo, RD-INV-03.
-
-### P7 - Pessoas e frota base
-
-Entregar:
-
-- cadastro de pessoas;
-- apontamento simples de horas;
-- cadastro de veiculos;
-- capacidade de carga;
-- vinculo motorista/veiculo.
-
-Cobre: RF-31, RF-25, RF-28 minimo, RD-HR-01, RD-FLE-01.
-
-### P8 - Expedicao base
-
-Entregar:
-
-- picking/packing;
-- conferencia de embarque;
-- transportadoras;
-- frete simples;
-- status de despacho;
-- API B2B simples de status;
-- manutencao/abastecimento basicos se necessarios para a demonstracao.
-
-Cobre: RF-19, RF-20, RF-21 minimo, RF-23, RF-24 minimo, RD-LOG-01, RF-26 minimo, RF-27 minimo, RN-07.
-
-### P9 - Integracoes e recursos avancados
-
-Entregar:
-
-- PlugNotas/SEFAZ real;
-- API keys;
-- MFA;
-- RBAC granular;
-- gestao completa de sessao;
-- tracking externo;
-- webhooks externos;
-- roteirizacao;
-- telemetria;
-- competencias;
-- turnos;
-- integracao contabil;
-- OEE completo;
-- custos;
-- mapas;
-- exportacoes.
-
-Cobre: complementos de RF-02, RF-03, RF-04, RF-06, RF-07, RF-16, RF-21, RF-22, RF-29, RF-30, RF-32, RF-34 a RF-38, RD-HR-02, RD-HR-03.
-
-### P10 - Endurecimento final
-
-Entregar:
-
-- Outbox nos fluxos criticos;
-- observabilidade completa;
-- teste de performance;
-- validacao de escalabilidade;
-- seguranca formal;
-- auditoria completa com correlacao;
-- manual do usuario;
-- documentacao tecnica;
-- procedimentos de deploy.
-
-Cobre: NF-01 a NF-07 no nivel final, RN-08 completo, RD-DOC-01.
+| Borda | BFF e Gateway duplicando regra | UI → BFF → Gateway → Serviços |
+| Auditoria | Falha silenciosa em ação sensível | Definir fail-closed para segurança e registro local para fluxo operacional |
+| Dashboard | Relatório consultar vários bancos e recriar regra | Dashboard lê read model/consulta consolidada, sem calcular saldo |

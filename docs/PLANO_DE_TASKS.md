@@ -37,7 +37,7 @@ Objetivo: Transformar o recebimento pendente em saldo real (Disponível ou Bloqu
 
 ---
 
-## P4 - Produção Inicial (PRÓXIMO) 🚀
+## P4 - Produção Inicial ✅
 
 Objetivo: Estruturar Work Centers, BOM e Ordens de Produção no `RailFactory.Production.Api`.
 
@@ -51,15 +51,16 @@ Objetivo: Estruturar Work Centers, BOM e Ordens de Produção no `RailFactory.Pr
 
 **Application:**
 - `IWorkCenterRepository` — Save, GetById, List.
-- Use cases: `CreateWorkCenter`, `DeactivateWorkCenter`.
+- Use cases: `CreateWorkCenter`, `DeactivateWorkCenter`, `ActivateWorkCenter`.
 
 **API:**
 - `POST /work-centers`
 - `GET /work-centers`
 - `GET /work-centers/{id}`
 - `PUT /work-centers/{id}/deactivate`
+- `PUT /work-centers/{id}/activate` ← *adicionado em P6*
 
-**Aceite:** Work Center criado, listado e inativado. Guard impede inativação com OP ativa vinculada.
+**Aceite:** Work Center criado, listado, ativado e inativado. Guard impede inativação com OP ativa vinculada. Validado via frontend.
 
 ---
 
@@ -82,7 +83,9 @@ Objetivo: Estruturar Work Centers, BOM e Ordens de Produção no `RailFactory.Pr
 - `GET /boms?productCode=X`
 - `GET /boms/{id}`
 
-**Aceite:** BOM criada com itens. Ativação troca versão anterior para `Draft` automaticamente.
+**Nota técnica:** `AddBomItem` usa raw SQL (`AddItemDirectAsync`) para contornar quirk de `ValueGeneratedOnAdd` no EF Core 10 + Npgsql 10. Ver `ISSUES_CONHECIDOS.md #3`.
+
+**Aceite:** BOM criada com itens. Ativação troca versão anterior para `Draft` automaticamente. Validado via frontend.
 
 ---
 
@@ -94,7 +97,7 @@ Objetivo: Estruturar Work Centers, BOM e Ordens de Produção no `RailFactory.Pr
 - Guards:
   - `Release()`: exige BOM com status `Active` e WorkCenter `Active`.
   - `Cancel()`: permitido em `Draft` e `Released`; bloqueado em `InExecution` e `Completed`.
-- `Release()` persiste evento `ProductionOrderReleased` no Outbox (base para P5 reservar estoque).
+- `Release()` persiste evento `ProductionOrderReleased` no Outbox.
 
 **Application:**
 - `IProductionOrderRepository`.
@@ -107,7 +110,7 @@ Objetivo: Estruturar Work Centers, BOM e Ordens de Produção no `RailFactory.Pr
 - `GET /production-orders` (filtros: `status`, `workCenterId`)
 - `GET /production-orders/{id}`
 
-**Aceite:** OP criada, liberada (valida BOM e WorkCenter ativos), cancelada (bloqueada se `InExecution`). Evento `ProductionOrderReleased` no Outbox ao liberar.
+**Aceite:** OP criada, liberada (valida BOM e WorkCenter ativos), cancelada (bloqueada se `InExecution`). Evento `ProductionOrderReleased` no Outbox ao liberar. Validado via frontend.
 
 ---
 
@@ -115,19 +118,75 @@ Objetivo: Estruturar Work Centers, BOM e Ordens de Produção no `RailFactory.Pr
 
 | Item | Ação |
 |---|---|
-| `AppHost` | Adicionar `production-db` para o tenant `dev`. |
-| `Gateway` | Rotas `/production/*` com JWT interno. |
-| `ProductionDbContext` | Tabelas: `work_centers`, `boms`, `bom_items`, `production_orders`, `production_outbox`. |
-| `Frontend` | Navegação: Work Centers, BOMs, Ordens de Produção (esqueleto). |
-
-**Sequência de execução:** Domínio → DbContext + Migrations → Repositories + Use Cases → Endpoints + AppHost/Gateway → Testes → UI.
+| `AppHost` | `production-db` para o tenant `dev`. ✅ |
+| `Gateway` | Rotas `/production/*` com JWT interno. ✅ |
+| `ProductionDbContext` | Tabelas: `work_centers`, `boms`, `bom_items`, `production_orders`, `production_outbox`. ✅ |
+| `Frontend` | Work Centers, BOMs, Ordens de Produção. ✅ |
 
 ---
 
-## P5 a P10: Visão de Longo Prazo
+## P5 - Execução de OP ✅
 
-- **P5 - Execução de OP**: Consumo real de estoque, scrap e apontamento de produção.
-- **P6 - Dashboards**: KPIs reais (OEE, Acuracidade de Estoque, Lead Time).
+Objetivo: Implementar fluxo completo de execução: Reserva de Estoque → Consumo → Scrap → Inspeção → Conclusão.
+
+### P5.1 — Reserva de Estoque (via RabbitMQ)
+
+- [x] Evento `stock_reservation_requested` emitido pelo Production Dispatcher ao liberar OP.
+- [x] Inventory Consumer processa a reserva e altera saldo de `Available` → `Reserved`.
+- [x] TopologyDeclarator declara exchanges, filas e bindings no startup do Inventory.
+- [x] DLX configurado para mensagens rejeitadas (`railfactory.dead-letters`).
+
+### P5.2 — Execução da OP
+
+- [x] `PUT /production-orders/{id}/start-execution` — altera status para `InExecution`.
+- [x] `POST /production-orders/{id}/executions` — registra consumo, scrap e inspeção de qualidade.
+- [x] `PUT /production-orders/{id}/complete` — conclui a OP (requer inspeção aprovada).
+- [x] `GET /production-orders/{id}/executions` — lista histórico de execuções.
+
+### P5.3 — Frontend
+
+- [x] `ProductionOrdersPage` — botões de Liberar, Iniciar, Concluir, Cancelar por status.
+- [x] Modal de registro de consumo de material (`MaterialCodeAutocomplete`).
+- [x] Modal de registro de inspeção de qualidade.
+- [x] Histórico de execuções por OP.
+
+**Aceite:** Fluxo completo validado end-to-end via frontend (2026-05-27):
+1. Criar BOM → adicionar componente → ativar versão
+2. Criar Ordem de Produção (Rascunho)
+3. Liberar Ordem (validação de BOM Ativa + WorkCenter Ativo)
+4. Iniciar Execução
+5. Registrar Consumo de Material
+6. Registrar Inspeção de Qualidade (Aprovado)
+7. Concluir Ordem
+8. Verificar Histórico de Execução
+
+---
+
+## P6 - Dashboards & KPIs ✅
+
+Objetivo: KPIs reais de produção e inventário visíveis no painel principal.
+
+### P6.1 — Dashboards Backend ✅
+
+- [x] `GET /api/production/dashboard` — ordens ativas/concluídas, top scrap, taxa de inspeção.
+- [x] `GET /api/inventory/dashboard` — totais de materiais, saldo disponível, saldo reservado.
+
+### P6.2 — Dashboard Frontend (parcial)
+
+- [x] `OverviewPanel` conectado com dados reais de produção e inventário.
+- [x] Exibir taxa de aprovação em inspeção no painel (card KPI + painel de inspeções).
+- [x] Exibir top scrap por material no painel (tabela com top 5).
+
+### P6.3 — Métricas Avançadas (pendente)
+
+- [x] Desempenho por Work Center — taxa de conclusão de OPs com barra de progresso.
+- [x] Lead Time médio de OPs — card KPI no OverviewPanel (horas ou dias).
+- [x] Acuracidade de Estoque — `Available / (Available + Blocked)` com barra visual e métricas.
+
+---
+
+## P7 a P10: Visão de Longo Prazo
+
 - **P7 - Pessoas & Frota**: Gestão de operadores e veículos.
 - **P8 - Expedição**: Picking, Packing e Despacho de Produto Acabado.
 - **P9 - Integrações**: Sefaz real, Webhooks e APIs B2B.

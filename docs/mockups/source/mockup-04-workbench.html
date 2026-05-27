@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Mockup - 04 Bancada</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #001a41;
+            --bg: #f3f2f1;
+            --white: #ffffff;
+            --border: #edebe9;
+            --text-main: #1a1a1a;
+            --text-sec: #605e5c;
+            --accent: #0078d4;
+            --success: #107c10;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); overflow: hidden; }
+
+        .app-shell { display: flex; flex-direction: column; height: 100vh; }
+        header { height: 48px; background: var(--primary); color: white; display: flex; align-items: center; padding: 0 32px; justify-content: space-between; }
+        
+        .workbench-container { display: flex; flex: 1; gap: 1px; background: var(--border); overflow: hidden; }
+        
+        .wb-col { background: var(--white); display: flex; flex-direction: column; }
+        .col-queue { width: 300px; }
+        .col-grid { flex: 1; }
+        .col-decision { width: 360px; border-left: 1px solid var(--border); }
+
+        .col-header { 
+            padding: 16px 20px; border-bottom: 1px solid var(--border); background: #fafafa;
+            font-size: 11px; font-weight: 800; color: var(--text-sec); text-transform: uppercase;
+            letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* Queue UI */
+        .queue-item { padding: 20px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
+        .queue-item:hover { background: #f8f9fa; }
+        .queue-item.active { background: #f0f7ff; border-left: 4px solid var(--accent); }
+        .receipt-num { font-size: 14px; font-weight: 800; margin-bottom: 4px; color: var(--primary); }
+        .supplier-name { font-size: 11px; color: var(--text-sec); font-weight: 600; }
+
+        /* Table UI */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; border-bottom: 2px solid var(--border); font-size: 10px; font-weight: 800; color: var(--text-sec); }
+        td { padding: 14px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+        tr.selected { background: #fff9e6; }
+
+        /* Decision Panel UI */
+        .panel-content { padding: 24px; }
+        .section-tag { font-size: 10px; font-weight: 800; color: #999; margin-bottom: 16px; display: block; }
+        .item-title { font-size: 18px; font-weight: 900; color: var(--primary); margin-bottom: 8px; line-height: 1.2; }
+        
+        .ai-suggestion { 
+            background: #f0f7ff; border: 1px dashed var(--accent); padding: 16px; 
+            border-radius: 8px; margin-top: 24px; cursor: pointer;
+        }
+        .ai-header { font-size: 10px; font-weight: 800; color: var(--accent); margin-bottom: 8px; }
+        .suggestion-code { font-weight: 900; font-size: 14px; display: block; margin-bottom: 4px; }
+        .confidence { font-size: 10px; font-weight: 700; color: var(--success); }
+
+        .btn-decision {
+            background: var(--primary); color: white; border: none; width: 100%; height: 44px;
+            border-radius: 6px; font-weight: 800; font-size: 13px; margin-top: 24px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <header>
+            <div style="font-weight: 900; font-size: 14px;">RAIL FACTORY :: BANCADA</div>
+            <div style="font-size: 11px; font-weight: 700;">TENANT: RF-MATRIZ</div>
+        </header>
+
+        <div class="workbench-container">
+            <!-- Fila -->
+            <div class="wb-col col-queue">
+                <div class="col-header">NOTAS PENDENTES (03)</div>
+                <div class="queue-item active">
+                    <div class="receipt-num">NF-E 000.124.992</div>
+                    <div class="supplier-name">METALURGICA SUL LTDA</div>
+                    <div style="margin-top: 10px; font-size: 10px; color: var(--accent); font-weight: 800;">1 / 5 RESOLVIDOS</div>
+                </div>
+                <div class="queue-item">
+                    <div class="receipt-num">NF-E 000.125.102</div>
+                    <div class="supplier-name">DISTRIBUIDORA VALE SA</div>
+                    <div style="margin-top: 10px; font-size: 10px; color: #999; font-weight: 800;">0 / 2 RESOLVIDOS</div>
+                </div>
+            </div>
+
+            <!-- Grid -->
+            <div class="wb-col col-grid">
+                <div class="col-header">
+                    <span>ITENS DO RECEBIMENTO</span>
+                    <span style="color: var(--accent); text-decoration: underline; cursor: pointer;">LIBERAR PARA CONFERÊNCIA ↗</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">STS</th>
+                            <th style="width: 100px;">SKU FORN.</th>
+                            <th>DESCRIÇÃO NA NOTA</th>
+                            <th style="width: 80px;">QTD</th>
+                            <th>ASSOCIAÇÃO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="selected">
+                            <td>⚠️</td>
+                            <td style="font-weight: 700; font-family: monospace;">P-12499</td>
+                            <td>PARAFUSO ACO 1/4 X 2 ZINC</td>
+                            <td><strong>500</strong> UN</td>
+                            <td style="color: #999; font-style: italic;">Pendente</td>
+                        </tr>
+                        <tr>
+                            <td>✅</td>
+                            <td style="font-weight: 700; font-family: monospace;">A-0021</td>
+                            <td>ARRUELA LISA 1/4 ZINCADA</td>
+                            <td><strong>500</strong> UN</td>
+                            <td style="color: var(--success); font-weight: 700;">PF-ARR-025</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Decisão -->
+            <div class="wb-col col-decision">
+                <div class="col-header">RESOLVER ASSOCIAÇÃO</div>
+                <div class="panel-content">
+                    <span class="section-tag">ITEM SELECIONADO</span>
+                    <h3 class="item-title">PARAFUSO ACO 1/4 X 2 ZINC</h3>
+                    <p style="font-size: 11px; color: var(--text-sec); margin-bottom: 24px;">Origem: NF-e 124.992 • Item 01</p>
+                    
+                    <div style="display: flex; gap: 8px; margin-bottom: 32px;">
+                        <button style="flex: 1; height: 32px; border: 1.5px solid var(--primary); background: white; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">Vincular Existente</button>
+                        <button style="flex: 1; height: 32px; border: 1.5px solid #ddd; background: #fafafa; border-radius: 4px; font-size: 11px; font-weight: 700; color: #666;">Criar Novo</button>
+                    </div>
+
+                    <div class="ai-suggestion">
+                        <div class="ai-header">🤖 SUGESTÃO DA IA</div>
+                        <span class="suggestion-code">PF-SXT-M12-ZIN</span>
+                        <div style="font-size: 11px; color: var(--text-sec); margin-bottom: 8px;">Parafuso Sextavado M12 Zincado...</div>
+                        <div class="confidence">95% de Confiança</div>
+                    </div>
+
+                    <button class="btn-decision">Confirmar Associação</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

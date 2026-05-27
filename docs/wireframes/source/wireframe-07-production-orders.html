@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Wireframe - 07 Production Orders</title>
+    <style>
+        :root { --line: #000000; --bg: #ffffff; }
+        body { margin: 0; background: #cccccc; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: "Courier New", Courier, monospace; }
+        .canvas { background: var(--bg); width: 1024px; height: 768px; border: 2px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+        header { height: 50px; border-bottom: 2px solid var(--line); display: flex; align-items: center; padding: 0 24px; justify-content: space-between; font-weight: bold; }
+        .layout-main { display: flex; flex: 1; }
+        aside { width: 180px; border-right: 2px solid var(--line); padding: 20px; }
+        .content { flex: 1; padding: 25px; }
+        .nav-link { border: 1px solid var(--line); padding: 8px; margin-bottom: 10px; font-size: 10px; text-align: center; }
+        .kanban-board { display: flex; gap: 15px; height: 100%; }
+        .kanban-col { flex: 1; border: 1px solid #000; background: #f9f9f9; display: flex; flex-direction: column; }
+        .kanban-header { padding: 10px; border-bottom: 2px solid #000; font-size: 10px; font-weight: bold; background: #eee; text-align: center; }
+        .kanban-item { background: white; border: 1px solid #000; margin: 10px; padding: 10px; font-size: 9px; }
+        .op-tag { font-weight: bold; font-size: 11px; margin-bottom: 4px; display: block; }
+        .progress-mock { height: 4px; border: 1px solid #000; width: 100%; margin-top: 8px; position: relative; }
+        .progress-mock::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 60%; background: #000; }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        <header><div>RAIL FACTORY :: [PRODUCTION_CONTROL]</div><div style="font-size: 10px;">[VIEW_MODE: KANBAN]</div></header>
+        <div class="layout-main">
+            <aside><div class="nav-link">DASHBOARD</div><div class="nav-link">BOMS</div><div class="nav-link" style="background: #000; color: #fff;">PROD_ORDERS</div></aside>
+            <div class="content">
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 20px;">[PRODUCTION_FLOW_OVERVIEW]</div>
+                <div class="kanban-board">
+                    <div class="kanban-col">
+                        <div class="kanban-header">PLANNED (3)</div>
+                        <div class="kanban-item"><span class="op-tag">OP-2026-001</span>[SKU: COMP-X]<br>[QTY: 100]</div>
+                        <div class="kanban-item"><span class="op-tag">OP-2026-005</span>[SKU: COMP-Z]<br>[QTY: 50]</div>
+                    </div>
+                    <div class="kanban-col">
+                        <div class="kanban-header">IN_PROGRESS (2)</div>
+                        <div class="kanban-item">
+                            <span class="op-tag">OP-2026-002</span>[SKU: COMP-Y]<br>[QTY: 200]
+                            <div class="progress-mock"></div>
+                        </div>
+                    </div>
+                    <div class="kanban-col">
+                        <div class="kanban-header">QUALITY_CHECK (1)</div>
+                        <div class="kanban-item"><span class="op-tag">OP-2025-999</span>[SKU: COMP-A]<br>[QTY: 10]</div>
+                    </div>
+                    <div class="kanban-col">
+                        <div class="kanban-header">FINISHED (10)</div>
+                        <div class="kanban-item" style="opacity: 0.5;"><span class="op-tag">OP-2025-990</span>[DONE]</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
