@@ -4,6 +4,7 @@ using RailFactory.Inventory.Api.Application;
 using RailFactory.Inventory.Api.Application.Balances;
 using RailFactory.Inventory.Api.Application.Materials;
 using RailFactory.Inventory.Api.Application.Ports;
+using RailFactory.Inventory.Api.Infrastructure.Messaging;
 using RailFactory.Inventory.Api.Infrastructure.Persistence;
 
 namespace RailFactory.Inventory.Api.Infrastructure;
@@ -24,10 +25,13 @@ public static class InventoryModule
         });
 
         services.AddHostedService<InventorySchemaInitializer>();
+        services.AddHostedService<TopologyDeclarator>();
+        services.AddHostedService<InventoryIntegrationConsumer>();
         services.AddScoped<IInventoryRepository, PostgresInventoryRepository>();
         services.AddScoped<IMaterialRepository, PostgresMaterialRepository>();
 
         services.AddScoped<GetInventoryInfo>();
+        services.AddScoped<GetInventoryDashboard>();
         services.AddScoped<CreatePendingBalance>();
         services.AddScoped<GetInventoryBalanceDetails>();
         services.AddScoped<ConfirmInventoryBalance>();

@@ -96,10 +96,12 @@ public sealed class ProductionDbContext(DbContextOptions<ProductionDbContext> op
             entity.Property(x => x.Payload).HasColumnType("jsonb").IsRequired();
             entity.Property(x => x.OccurredAt).IsRequired();
             entity.Property(x => x.DispatchedAt);
+            entity.Property(x => x.DeadLetteredAt);
             entity.Property(x => x.AttemptCount).IsRequired();
             entity.Property(x => x.LastError).HasMaxLength(2000);
 
-            entity.HasIndex(x => x.DispatchedAt);
+            // Covering index for the dispatcher poll query: pending rows only.
+            entity.HasIndex(x => new { x.DispatchedAt, x.DeadLetteredAt });
         });
 
         modelBuilder.Entity<QualityInspection>(entity =>

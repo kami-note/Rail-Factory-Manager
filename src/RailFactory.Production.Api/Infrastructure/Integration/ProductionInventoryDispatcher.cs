@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RailFactory.BuildingBlocks.Events;
@@ -9,14 +9,18 @@ using RailFactory.Production.Api.Infrastructure.Persistence;
 namespace RailFactory.Production.Api.Infrastructure.Integration;
 
 /// <summary>
-/// Background service that dispatches Production outbox events to the Inventory microservice.
-/// Processes <c>production_order_released</c> events to reserve stock for each BOM item.
+/// Background service that reads pending Production outbox messages and publishes per-item
+/// <c>production.stock_reservation_requested</c> events to the <c>railfactory.production</c>
+/// exchange. Each BOM item becomes an independent message so the Inventory consumer can
+/// reserve stock atomically per material.
 /// </summary>
 public sealed class ProductionInventoryDispatcher(
     IServiceProvider serviceProvider,
+    RabbitMqPublisher publisher,
     ILogger<ProductionInventoryDispatcher> logger) : BackgroundService
 {
     private const int MaxTransientAttempts = 10;
+    private static readonly JsonSerializerOptions CaseInsensitiveOptions = new() { PropertyNameCaseInsensitive = true };
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -60,47 +64,47 @@ public sealed class ProductionInventoryDispatcher(
 
         var contextAccessor = scope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
         contextAccessor.Current = new TenantContext(
-            tenant.Code,
-            tenant.Locale,
-            tenant.TimeZone,
-            tenant.ConnectionStrings);
+            tenant.Code, tenant.Locale, tenant.TimeZone, tenant.ConnectionStrings);
 
         var dbContext = scope.ServiceProvider.GetRequiredService<ProductionDbContext>();
-        var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
-        var client = httpClientFactory.CreateClient("inventory-integration");
-        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+
+        // SKIP LOCKED ensures multiple dispatcher instances never process the same row.
+        // The transaction is held until SaveChanges commits, then the row locks are released.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         var pendingMessages = await dbContext.OutboxMessages
-            .Where(x => x.DispatchedAt == null)
-            .OrderBy(x => x.OccurredAt)
-            .Take(50)
+            .FromSqlRaw("""
+                SELECT * FROM "production_outbox"
+                WHERE "DispatchedAt" IS NULL
+                  AND "DeadLetteredAt" IS NULL
+                ORDER BY "OccurredAt" ASC
+                LIMIT 50
+                FOR UPDATE SKIP LOCKED
+                """)
             .ToListAsync(cancellationToken);
 
         foreach (var message in pendingMessages)
         {
             if (message.EventType == IntegrationConstants.ProductionEvents.ProductionOrderReleased)
-                await HandleOrderReleasedAsync(message, tenant, client, dbContext, configuration, cancellationToken);
+                await HandleOrderReleasedAsync(message, tenant, dbContext, cancellationToken);
             else
                 logger.LogWarning("Unknown production outbox event type {EventType}.", message.EventType);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private async Task HandleOrderReleasedAsync(
         ProductionOutboxMessage message,
         TenantResolutionResult tenant,
-        HttpClient client,
         ProductionDbContext dbContext,
-        IConfiguration configuration,
         CancellationToken cancellationToken)
     {
         OrderReleasedPayload? payload;
         try
         {
-            payload = JsonSerializer.Deserialize<OrderReleasedPayload>(
-                message.Payload,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            payload = JsonSerializer.Deserialize<OrderReleasedPayload>(message.Payload, CaseInsensitiveOptions);
         }
         catch (JsonException ex)
         {
@@ -125,50 +129,47 @@ public sealed class ProductionInventoryDispatcher(
             return;
         }
 
-        var apiKey = configuration["InternalApiKey"];
         var allSucceeded = true;
 
         foreach (var item in bom.Items)
         {
             var requiredQuantity = item.Quantity * payload.PlannedQuantity;
 
-            var request = new HttpRequestMessage(HttpMethod.Post, IntegrationConstants.ApiPaths.InternalReserveBalances)
-            {
-                Content = JsonContent.Create(new
-                {
-                    eventId = Guid.NewGuid(),
-                    eventType = IntegrationConstants.ProductionEvents.ProductionOrderReleased,
-                    correlationId = message.Id.ToString(),
-                    payload = new
-                    {
-                        productionOrderId = payload.OrderId,
-                        orderNumber = payload.OrderNumber,
-                        materialCode = item.MaterialCode.Value,
-                        requiredQuantity,
-                        unitOfMeasure = item.UnitOfMeasure
-                    }
-                })
-            };
+            // Deterministic EventId: derived from outbox message ID + BOM item ID.
+            // Guarantees idempotency even if the dispatcher crashes mid-batch and retries.
+            var eventId = CreateDeterministicId(message.Id, item.Id);
 
-            request.Headers.Add(TenantConstants.TenantCodeHeaderName, tenant.Code);
-            if (!string.IsNullOrWhiteSpace(apiKey))
-                request.Headers.Add("X-Internal-Key", apiKey);
+            var itemPayload = JsonSerializer.SerializeToElement(new
+            {
+                productionOrderId = payload.OrderId,
+                orderNumber = payload.OrderNumber,
+                materialCode = item.MaterialCode.Value,
+                requiredQuantity,
+                unitOfMeasure = item.UnitOfMeasure
+            });
+
+            var envelope = new RabbitMqEnvelope(
+                EventId: eventId,
+                EventType: IntegrationConstants.ProductionEvents.StockReservationRequested,
+                CorrelationId: message.Id.ToString(),
+                TenantCode: tenant.Code,
+                Payload: itemPayload,
+                OccurredAt: message.OccurredAt);
 
             try
             {
-                var response = await client.SendAsync(request, cancellationToken);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                    logger.LogWarning("Inventory reserve failed for material {MaterialCode} in order {OrderNumber}. Status: {Status}. Body: {Body}",
-                        item.MaterialCode.Value, payload.OrderNumber, response.StatusCode, body);
-                    allSucceeded = false;
-                    break;
-                }
+                await publisher.PublishAsync(
+                    IntegrationConstants.ProductionEvents.StockReservationRequested,
+                    envelope,
+                    cancellationToken);
+
+                logger.LogDebug(
+                    "Published stock reservation for material {MaterialCode} in order {OrderNumber} (EventId: {EventId}).",
+                    item.MaterialCode.Value, payload.OrderNumber, eventId);
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.LogWarning(ex, "Inventory reserve request failed for outbox message {MessageId}.", message.Id);
+                logger.LogWarning(ex, "Failed to publish stock reservation for outbox message {MessageId}.", message.Id);
                 allSucceeded = false;
                 break;
             }
@@ -177,7 +178,9 @@ public sealed class ProductionInventoryDispatcher(
         if (allSucceeded)
         {
             message.MarkDispatched();
-            logger.LogInformation("Dispatched production_order_released for order {OrderNumber}.", payload.OrderNumber);
+            logger.LogInformation(
+                "Dispatched production_order_released for order {OrderNumber} ({ItemCount} items).",
+                payload.OrderNumber, bom.Items.Count);
         }
         else if (message.AttemptCount + 1 >= MaxTransientAttempts)
         {
@@ -185,8 +188,21 @@ public sealed class ProductionInventoryDispatcher(
         }
         else
         {
-            message.MarkTransientFailure("Inventory reserve request failed. Will retry.");
+            message.MarkTransientFailure("RabbitMQ publish failed. Will retry.");
         }
+    }
+
+    /// <summary>
+    /// Creates a deterministic <see cref="Guid"/> from two source GUIDs using MD5.
+    /// Guarantees the same EventId is produced on retry — required for Inventory idempotency.
+    /// </summary>
+    private static Guid CreateDeterministicId(Guid outboxId, Guid itemId)
+    {
+        Span<byte> data = stackalloc byte[32];
+        outboxId.TryWriteBytes(data[..16]);
+        itemId.TryWriteBytes(data[16..]);
+        var hash = MD5.HashData(data);
+        return new Guid(hash);
     }
 
     private sealed record OrderReleasedPayload(

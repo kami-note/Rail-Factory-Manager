@@ -14,10 +14,11 @@ public sealed class ListInventoryBalances(
     IMaterialRepository materialRepository)
 {
     public async Task<List<InventoryBalanceListItemResponse>> ExecuteAsync(
-        InventoryBalanceStatus? status, 
+        InventoryBalanceStatus? status,
+        InventorySourceType? sourceType,
         CancellationToken cancellationToken)
     {
-        var balances = await repository.ListBalancesAsync(status, cancellationToken);
+        var balances = await repository.ListBalancesAsync(status, sourceType, cancellationToken);
         if (balances.Count == 0) return [];
 
         // ELITE FIX: Bulk fetch materials to eliminate N+1 query pattern.

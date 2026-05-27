@@ -12,8 +12,12 @@ public sealed class AddBomItem(IBomRepository repository)
         var bom = await repository.GetByIdAsync(input.BomId, cancellationToken)
             ?? throw new KeyNotFoundException($"BOM '{input.BomId}' not found.");
 
-        bom.AddItem(input.MaterialCode, input.Quantity, input.UnitOfMeasure);
-        await repository.SaveChangesAsync(cancellationToken);
+        var newItem = bom.AddItem(input.MaterialCode, input.Quantity, input.UnitOfMeasure);
+
+        // Use raw-SQL path to bypass EF Core 10 + Npgsql 10 change-tracking quirk where
+        // a new BomItem with a non-zero Guid PK (ValueGeneratedOnAdd convention) is treated
+        // as Unchanged → SaveChanges generates UPDATE on a non-existent row → concurrency error.
+        await repository.AddItemDirectAsync(bom.Id, newItem, bom.UpdatedAt, cancellationToken);
     }
 }
 

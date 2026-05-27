@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Autocomplete, Box, CircularProgress, Stack, TextField, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material';
 import { searchMaterials } from '../api/materials';
@@ -15,6 +15,7 @@ interface MaterialCodeAutocompleteProps {
   fullWidth?: boolean;
   sx?: SxProps<Theme>;
   startAdornment?: React.ReactNode;
+  category?: 'RawMaterial' | 'FinishedGood';
 }
 
 export function MaterialCodeAutocomplete({
@@ -27,8 +28,10 @@ export function MaterialCodeAutocomplete({
   size = 'small',
   fullWidth,
   sx,
-  startAdornment
+  startAdornment,
+  category
 }: MaterialCodeAutocompleteProps) {
+  const uid = useId();
   const [options, setOptions] = useState<MaterialSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
@@ -45,7 +48,7 @@ export function MaterialCodeAutocomplete({
     if (upper.length < 2) { setOptions([]); return; }
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
-      try { setOptions(await searchMaterials(tenantCode, upper)); }
+      try { setOptions(await searchMaterials(tenantCode, upper, category)); }
       catch { setOptions([]); }
       finally { setSearching(false); }
     }, 300);
@@ -53,6 +56,7 @@ export function MaterialCodeAutocomplete({
 
   return (
     <Autocomplete
+      id={uid}
       freeSolo
       fullWidth={fullWidth}
       sx={sx}

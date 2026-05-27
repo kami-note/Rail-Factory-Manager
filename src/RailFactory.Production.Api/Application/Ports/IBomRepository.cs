@@ -24,4 +24,10 @@ public interface IBomRepository
     Task<int> GetLatestVersionNumberAsync(string productCode, CancellationToken cancellationToken);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Directly inserts a BomItem and updates the parent BOM's UpdatedAt via raw SQL,
+    /// bypassing EF Core change tracking to avoid Npgsql ValueGeneratedOnAdd conflicts.
+    /// </summary>
+    Task AddItemDirectAsync(Guid bomId, BomItem item, DateTimeOffset bomUpdatedAt, CancellationToken cancellationToken);
 }

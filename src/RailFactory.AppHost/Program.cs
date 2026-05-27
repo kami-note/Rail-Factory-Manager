@@ -101,32 +101,35 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevInventoryDb)
         .WithReference(infra.TenantAcmeInventoryDb)
+        .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "inventorydb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevInventoryDb)
+        .WaitFor(infra.RabbitMq)
         .WaitFor(tenantManagement);
 
     var supplyChain = builder.AddProject<Projects.RailFactory_SupplyChain_Api>("supply-chain")
         .WithReference(tenantManagement)
-        .WithReference(inventory)
+        .WithReference(inventory)           // needed for InventoryMaterialService (sync HTTP calls)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevSupplyChainDb)
         .WithReference(infra.TenantAcmeSupplyChainDb)
+        .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "supplychaindb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevSupplyChainDb)
+        .WaitFor(infra.RabbitMq)
         .WaitFor(tenantManagement)
         .WaitFor(inventory);
 
     var production = builder.AddProject<Projects.RailFactory_Production_Api>("production")
         .WithReference(tenantManagement)
-        .WithReference(inventory)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevProductionDb)
         .WithReference(infra.TenantAcmeProductionDb)
@@ -138,8 +141,7 @@ static AppHostDomainServices AddDomainServices(
         .WaitFor(infra.TenantCatalogDb)
         .WaitFor(infra.TenantDevProductionDb)
         .WaitFor(infra.RabbitMq)
-        .WaitFor(tenantManagement)
-        .WaitFor(inventory);
+        .WaitFor(tenantManagement);
 
     return new AppHostDomainServices(tenantManagement, iam, supplyChain, inventory, production);
 }

@@ -1,5 +1,6 @@
 using RailFactory.BuildingBlocks.Presentation;
 using RailFactory.Inventory.Api.Application.Ports;
+using RailFactory.Inventory.Api.Domain;
 
 namespace RailFactory.Inventory.Api.Application.Materials;
 
@@ -14,14 +15,14 @@ public sealed class SearchMaterials(IMaterialRepository repository)
     /// <param name="term">Search term (code, name, or GTIN).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A list of search results formatted for presentation.</returns>
-    public async Task<List<MaterialSearchResult>> ExecuteAsync(string term, CancellationToken cancellationToken)
+    public async Task<List<MaterialSearchResult>> ExecuteAsync(string term, CancellationToken cancellationToken, MaterialCategory? category = null)
     {
         if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
         {
             return new List<MaterialSearchResult>();
         }
 
-        var results = await repository.SearchAsync(term, cancellationToken);
+        var results = await repository.SearchAsync(term, category, cancellationToken);
 
         return results.Select(m => new MaterialSearchResult(
             m.MaterialCode.Value,

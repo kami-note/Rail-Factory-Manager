@@ -12,6 +12,7 @@ internal static class FrontendAuthSessionEndpoint
 
     public static async Task<IResult> HandleGet(
         HttpContext httpContext,
+        IHostEnvironment env,
         IHttpClientFactory httpClientFactory,
         CancellationToken cancellationToken)
     {
@@ -19,6 +20,16 @@ internal static class FrontendAuthSessionEndpoint
         if (string.IsNullOrWhiteSpace(tenantCode))
         {
             return TenantHttpResults.CodeRequired();
+        }
+
+        // DEV BYPASS: X-Dev-User header → skip Google OAuth entirely
+        if (env.IsDevelopment()
+            && httpContext.Request.Headers.TryGetValue("X-Dev-User", out var devEmailHeader)
+            && !string.IsNullOrWhiteSpace(devEmailHeader))
+        {
+            var devEmail = devEmailHeader.ToString();
+            var fakeSession = AuthSessionDto.CreateAuthenticated(devEmail, devEmail, SystemPermissions.All());
+            return Results.Ok(fakeSession);
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Get, IamSessionPath);

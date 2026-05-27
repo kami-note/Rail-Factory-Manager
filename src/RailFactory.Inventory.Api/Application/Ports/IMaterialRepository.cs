@@ -39,9 +39,10 @@ public interface IMaterialRepository
     /// Searches for materials by a search term (matches code, name, or GTIN).
     /// </summary>
     /// <param name="term">The search term.</param>
+    /// <param name="category">Optional category filter (RawMaterial or FinishedGood).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A list of matching materials.</returns>
-    Task<List<Material>> SearchAsync(string term, CancellationToken cancellationToken);
+    Task<List<Material>> SearchAsync(string term, MaterialCategory? category, CancellationToken cancellationToken);
 
     /// <summary>
     /// Upserts a supplier material hint.

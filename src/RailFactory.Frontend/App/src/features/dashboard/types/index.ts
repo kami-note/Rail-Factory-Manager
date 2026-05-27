@@ -18,11 +18,23 @@ export type InspectionSummary = {
   passRate: number;
 };
 
+export type WorkCenterOrderSummary = {
+  workCenterId: string;
+  workCenterCode: string;
+  workCenterName: string;
+  totalOrders: number;
+  completedOrders: number;
+  completionRate: number;
+};
+
 export type ProductionDashboard = {
   ordersByStatus: Record<string, number>;
   activeOrders: number;
   topScrap: MaterialScrapSummary[];
   inspectionSummary: InspectionSummary;
+  /** Average lead time in hours for Completed orders. Null when no completed orders exist. */
+  averageLeadTimeHours: number | null;
+  workCenterSummary: WorkCenterOrderSummary[];
 };
 
 export type InventoryDashboard = {
@@ -30,4 +42,7 @@ export type InventoryDashboard = {
   materialsWithStock: number;
   availableCount: number;
   reservedCount: number;
+  blockedCount: number;
+  /** Ratio of Available to (Available + Blocked). Null when no balance completed conference. */
+  stockAccuracy: number | null;
 };

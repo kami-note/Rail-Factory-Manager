@@ -76,6 +76,19 @@ public sealed class WorkCenter : AggregateRoot<Guid>
         Status = WorkCenterStatus.Inactive;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
+
+    /// <summary>
+    /// Transitions the Work Center back to active status.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the Work Center is already active.</exception>
+    public void Activate()
+    {
+        if (Status == WorkCenterStatus.Active)
+            throw new InvalidOperationException("Work Center is already active.");
+
+        Status = WorkCenterStatus.Active;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 }
 
 /// <summary>

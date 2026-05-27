@@ -1,8 +1,11 @@
+import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping';
+
 export type WorkCenter = {
   id: string;
   code: string;
   name: string;
-  status: 'Active' | 'Inactive';
+  /** DisplayStatus object from the backend — use StatusChip to render. */
+  status: DisplayStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -18,7 +21,8 @@ export type Bom = {
   id: string;
   productCode: string;
   version: number;
-  status: 'Draft' | 'Active';
+  /** DisplayStatus object from the backend — use StatusChip to render. */
+  status: DisplayStatus;
   items: BomItem[];
   createdAt: string;
   updatedAt: string;
@@ -31,7 +35,8 @@ export type ProductionOrder = {
   bomId: string;
   workCenterId: string;
   plannedQuantity: number;
-  status: 'Draft' | 'Released' | 'InExecution' | 'Completed' | 'Cancelled';
+  /** DisplayStatus object from the backend — use StatusChip to render. */
+  status: DisplayStatus;
   createdAt: string;
   updatedAt: string;
 };

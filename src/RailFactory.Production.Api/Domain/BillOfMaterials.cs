@@ -77,7 +77,7 @@ public sealed class BillOfMaterials : AggregateRoot<Guid>
     /// Adds an input material item to this BOM draft.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when the BOM is not in <see cref="BomStatus.Draft"/> status.</exception>
-    public void AddItem(string materialCode, decimal quantity, string unitOfMeasure)
+    public BomItem AddItem(string materialCode, decimal quantity, string unitOfMeasure)
     {
         if (Status != BomStatus.Draft)
             throw new InvalidOperationException($"Cannot add items to a BOM in status '{Status}'. Only Draft BOMs can be modified.");
@@ -88,8 +88,15 @@ public sealed class BillOfMaterials : AggregateRoot<Guid>
         if (quantity <= 0)
             throw new ArgumentException("Item quantity must be greater than zero.", nameof(quantity));
 
-        _items.Add(BomItem.Create(Id, MaterialCode.From(materialCode), quantity, unitOfMeasure));
+        var normalizedCode = materialCode.Trim().ToUpperInvariant();
+
+        if (_items.Any(i => i.MaterialCode.Value == normalizedCode))
+            throw new InvalidOperationException($"Material '{normalizedCode}' already exists in this BOM. Remove the existing item before adding it again.");
+
+        var item = BomItem.Create(Id, MaterialCode.From(normalizedCode), quantity, unitOfMeasure);
+        _items.Add(item);
         UpdatedAt = DateTimeOffset.UtcNow;
+        return item;
     }
 
     /// <summary>
@@ -167,7 +174,7 @@ public sealed class BomItem : Entity<Guid>
 
     internal static BomItem Create(Guid bomId, MaterialCode materialCode, decimal quantity, string unitOfMeasure)
     {
-        return new BomItem(Guid.Empty, bomId, materialCode, quantity, unitOfMeasure.Trim().ToUpperInvariant());
+        return new BomItem(Guid.NewGuid(), bomId, materialCode, quantity, unitOfMeasure.Trim().ToUpperInvariant());
     }
 }
 

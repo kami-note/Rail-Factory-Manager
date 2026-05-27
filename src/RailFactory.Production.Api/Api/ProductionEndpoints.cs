@@ -45,6 +45,9 @@ public static class ProductionEndpoints
         secure.MapPut("/work-centers/{id:guid}/deactivate", HandleDeactivateWorkCenter)
             .RequirePermission(SystemPermissions.Production.Write);
 
+        secure.MapPut("/work-centers/{id:guid}/activate", HandleActivateWorkCenter)
+            .RequirePermission(SystemPermissions.Production.Write);
+
         // BOMs
         secure.MapGet("/boms", HandleListBoms)
             .RequirePermission(SystemPermissions.Production.Read);
@@ -131,6 +134,18 @@ public static class ProductionEndpoints
 
     private static async Task<IResult> HandleDeactivateWorkCenter(
         Guid id, DeactivateWorkCenter useCase, CancellationToken ct)
+    {
+        try
+        {
+            await useCase.ExecuteAsync(id, ct);
+            return Results.NoContent();
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+    }
+
+    private static async Task<IResult> HandleActivateWorkCenter(
+        Guid id, ActivateWorkCenter useCase, CancellationToken ct)
     {
         try
         {
@@ -329,7 +344,7 @@ public static class ProductionEndpoints
     private static object MapWorkCenterResponse(WorkCenter wc) => new
     {
         wc.Id, wc.Code, wc.Name,
-        Status = wc.Status.ToString(),
+        Status = wc.Status.ToDisplayStatus(),
         wc.CreatedAt, wc.UpdatedAt
     };
 
@@ -338,7 +353,7 @@ public static class ProductionEndpoints
         bom.Id,
         ProductCode = bom.ProductCode.Value,
         bom.Version,
-        Status = bom.Status.ToString(),
+        Status = bom.Status.ToDisplayStatus(),
         Items = bom.Items.Select(i => new
         {
             i.Id,
@@ -364,7 +379,7 @@ public static class ProductionEndpoints
         order.BomId,
         order.WorkCenterId,
         order.PlannedQuantity,
-        Status = order.Status.ToString(),
+        Status = order.Status.ToDisplayStatus(),
         order.CreatedAt, order.UpdatedAt
     };
 }

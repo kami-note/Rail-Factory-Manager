@@ -210,7 +210,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
           onLogout={handleLogout}
         >
           <Routes>
-            <Route index element={<OverviewPanel status={status} statusError={statusError} onNavigate={navigateTo} />} />
+            <Route index element={<OverviewPanel status={status} statusError={statusError} tenantCode={tenantCode} onNavigate={navigateTo} />} />
             <Route path="receipts" element={<ReceiptsWorkspace tenantCode={tenantCode} />} />
             <Route path="supply-chain/association" element={<AssociationWorkbenchPage tenantCode={tenantCode} />} />
             <Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />

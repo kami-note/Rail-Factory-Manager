@@ -163,7 +163,11 @@ export async function fetchJsonOrThrow<T>(
   try {
     response = await fetch(input, init);
   } catch (networkError) {
-    // Handle DNS failure, offline status, or aborted requests
+    // AbortError must propagate so useQuery's cancellation logic can identify it correctly.
+    if (networkError instanceof DOMException && networkError.name === 'AbortError') {
+      throw networkError;
+    }
+    // All other failures (DNS, offline, timeout) become a user-visible message.
     throw new Error(`Network connection failed: ${fallbackMessage}`);
   }
 
