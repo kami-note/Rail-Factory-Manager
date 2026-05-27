@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Wireframe - 06 Receipts</title>
+    <style>
+        :root { --line: #000000; --bg: #ffffff; }
+        body { margin: 0; background: #cccccc; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: "Courier New", Courier, monospace; }
+        .canvas { background: var(--bg); width: 1024px; height: 768px; border: 2px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+        header { height: 50px; border-bottom: 2px solid var(--line); display: flex; align-items: center; padding: 0 24px; justify-content: space-between; font-weight: bold; }
+        .layout-main { display: flex; flex: 1; }
+        aside { width: 180px; border-right: 2px solid var(--line); padding: 20px; }
+        .content { flex: 1; padding: 25px; }
+        .nav-link { border: 1px solid var(--line); padding: 8px; margin-bottom: 10px; font-size: 10px; text-align: center; }
+        .tool-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .btn { border: 2px solid var(--line); padding: 8px 16px; font-size: 12px; font-weight: bold; background: white; }
+        .btn-dark { background: #000; color: #fff; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th { border: 2px solid #000; padding: 10px; text-align: left; background: #eee; }
+        td { border: 1px solid #000; padding: 8px; }
+        .status-chip { border: 1px solid #000; padding: 2px 6px; font-size: 9px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        <header><div>RAIL FACTORY :: [RECEIPTS_WORKSPACE]</div><div style="font-size: 10px;">[TOTAL_PENDING: 08]</div></header>
+        <div class="layout-main">
+            <aside><div class="nav-link">DASHBOARD</div><div class="nav-link" style="background: #000; color: #fff;">RECEIPTS</div><div class="nav-link">WORKBENCH</div></aside>
+            <div class="content">
+                <div class="tool-bar">
+                    <div style="font-size: 18px; font-weight: bold;">[INCOMING_INVOICES]</div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="btn">[SEARCH]</div>
+                        <div class="btn btn-dark">[+] IMPORT_XML_NFE</div>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr><th>DATE</th><th>NUMBER</th><th>SUPPLIER_NAME</th><th>STATUS</th><th>ACTIONS</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>2026-05-27</td><td>000.124.992</td><td>METALURGICA_SUL_LTDA</td><td><span class="status-chip">ASSOCIATION</span></td><td>[VIEW] [EDIT]</td></tr>
+                        <tr><td>2026-05-26</td><td>000.125.102</td><td>DISTRIBUIDORA_VALE_SA</td><td><span class="status-chip" style="background: #eee;">CONFERENCE</span></td><td>[VIEW] [OPEN]</td></tr>
+                        <tr><td>2026-05-25</td><td>000.123.456</td><td>TECH_SUPPLY_CORP</td><td><span class="status-chip" style="background: #333; color: white;">COMPLETED</span></td><td>[VIEW]</td></tr>
+                        <tr><td>2026-05-24</td><td>000.123.001</td><td>GLOBAL_LOGISTICS</td><td><span class="status-chip">CANCELED</span></td><td>[VIEW]</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

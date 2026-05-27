@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Wireframe - 01 Login</title>
+    <style>
+        :root { --line: #000000; --bg: #ffffff; --fill: #f2f2f2; --text: #000000; }
+        body { margin: 0; background: #cccccc; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: "Courier New", Courier, monospace; }
+        .canvas { background: var(--bg); width: 1024px; height: 768px; border: 2px solid var(--line); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        .box { border: 2px solid var(--line); background: var(--fill); }
+        .logo-placeholder { width: 80px; height: 80px; position: relative; margin-bottom: 40px; }
+        .logo-placeholder::before, .logo-placeholder::after { content: ''; position: absolute; width: 100%; height: 1px; background: var(--line); top: 50%; left: 0; }
+        .logo-placeholder::before { transform: rotate(45deg); }
+        .logo-placeholder::after { transform: rotate(-45deg); }
+
+        .text-title { font-size: 24px; font-weight: bold; border-bottom: 3px solid var(--line); margin-bottom: 8px; padding-bottom: 4px; }
+        .text-sub { font-size: 14px; margin-bottom: 40px; }
+
+        .login-container { width: 400px; padding: 40px; border: 3px solid var(--line); }
+        .input-field { height: 40px; width: 100%; border: 2px solid var(--line); margin-bottom: 20px; display: flex; align-items: center; padding-left: 10px; font-size: 12px; color: #666; }
+        .button { height: 45px; width: 100%; border: 2px solid var(--line); background: #333333; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: default; }
+        
+        .label-tag { position: absolute; top: 10px; left: 10px; font-size: 12px; background: #000; color: #fff; padding: 4px 8px; }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        <div class="label-tag">WIRE-01: AUTHENTICATION / TENANT SELECT</div>
+        <div class="box logo-placeholder"></div>
+        <div class="text-title">RAIL FACTORY SYSTEM</div>
+        <div class="text-sub">[SUBTITLE_HINT: OPERATIONAL CONTROL]</div>
+        
+        <div class="login-container">
+            <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">SELECT ORGANIZATION:</div>
+            <div class="input-field">V -- [DROP_DOWN_SELECT]</div>
+            <div class="button">AUTHENTICATE WITH OAUTH</div>
+            <div style="margin-top: 15px; text-align: center; font-size: 10px; text-decoration: underline;">BACK_TO_HOME</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Wireframe - 02 Dashboard</title>
+    <style>
+        :root { --line: #000000; --bg: #ffffff; --fill: #f2f2f2; }
+        body { margin: 0; background: #cccccc; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: "Courier New", Courier, monospace; }
+        .canvas { background: var(--bg); width: 1024px; height: 768px; border: 2px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+        
+        header { height: 50px; border-bottom: 2px solid var(--line); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; font-weight: bold; }
+        .layout-main { display: flex; flex: 1; }
+        aside { width: 200px; border-right: 2px solid var(--line); padding: 20px; }
+        .content { flex: 1; padding: 30px; background: #fafafa; }
+
+        .nav-link { border: 1px solid var(--line); padding: 8px; margin-bottom: 10px; font-size: 11px; text-align: center; background: white; }
+        .nav-link.active { background: #000; color: #fff; }
+
+        .kpi-row { display: flex; gap: 20px; margin-bottom: 30px; }
+        .kpi-box { flex: 1; border: 2px solid var(--line); height: 80px; padding: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; }
+        .kpi-box span { font-size: 10px; font-weight: bold; margin-bottom: 5px; }
+        .kpi-box b { font-size: 20px; }
+
+        .main-card { border: 2px solid var(--line); padding: 40px; text-align: center; background: white; height: 350px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .image-placeholder { width: 100px; height: 100px; border: 1px solid var(--line); position: relative; margin-bottom: 20px; }
+        .image-placeholder::before, .image-placeholder::after { content: ''; position: absolute; width: 100%; height: 1px; background: var(--line); top: 50%; left: 0; }
+        .image-placeholder::before { transform: rotate(45deg); }
+        .image-placeholder::after { transform: rotate(-45deg); }
+
+        .button { border: 2px solid var(--line); padding: 10px 20px; font-weight: bold; background: white; }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        <header>
+            <div>RAIL FACTORY :: [DASHBOARD]</div>
+            <div style="border: 1px solid #000; padding: 4px 8px; font-size: 10px;">USER_ID: OPERATOR_01</div>
+        </header>
+        <div class="layout-main">
+            <aside>
+                <div class="nav-link active">DASHBOARD</div>
+                <div class="nav-link">INVENTORY</div>
+                <div class="nav-link">WORKBENCH</div>
+                <div class="nav-link">RECEIPTS</div>
+                <div style="margin-top: 350px;" class="nav-link">[EXIT]</div>
+            </aside>
+            <div class="content">
+                <div class="kpi-row">
+                    <div class="kpi-box"><span>ACTIVE_ORDERS</span><b>[12]</b></div>
+                    <div class="kpi-box"><span>STOCK_BALANCES</span><b>[450]</b></div>
+                    <div class="kpi-box"><span>SYSTEM_STATUS</span><b>[OK]</b></div>
+                </div>
+                <div class="main-card">
+                    <div class="image-placeholder"></div>
+                    <div style="font-size: 22px; font-weight: bold; margin-bottom: 15px;">WELCOME_SCREEN_HEADER</div>
+                    <div style="font-size: 12px; max-width: 400px; line-height: 1.5; margin-bottom: 30px;">[THIS_IS_THE_MAIN_WORKSPACE_FOR_TENANT_ID_XXXXXXXX]</div>
+                    <div class="button">EXECUTE_PROCESS_START</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

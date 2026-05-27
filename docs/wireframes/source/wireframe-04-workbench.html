@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Wireframe - 04 Workbench</title>
+    <style>
+        :root { --line: #000000; --bg: #ffffff; }
+        body { margin: 0; background: #cccccc; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: "Courier New", Courier, monospace; }
+        .canvas { background: var(--bg); width: 1024px; height: 768px; border: 2px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+        
+        header { height: 50px; border-bottom: 2px solid var(--line); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; font-weight: bold; }
+        .workbench-layout { display: flex; flex: 1; border-top: 1px solid #000; }
+        .col { border-right: 2px solid var(--line); display: flex; flex-direction: column; }
+        .col-last { border-right: none; }
+
+        .col-queue { width: 25%; }
+        .col-main { flex: 1; }
+        .col-form { width: 30%; }
+
+        .title-h { padding: 10px; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; background: #eee; }
+        
+        .list-item { padding: 12px; border-bottom: 1px solid #000; font-size: 10px; }
+        .list-item.selected { background: #333; color: #fff; }
+
+        .table-area { padding: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+        
+        .decision-panel { padding: 20px; }
+        .image-placeholder { width: 100%; height: 120px; border: 1px solid var(--line); position: relative; margin: 15px 0; }
+        .image-placeholder::before, .image-placeholder::after { content: ''; position: absolute; width: 100%; height: 1px; background: var(--line); top: 50%; left: 0; }
+        .image-placeholder::before { transform: rotate(15deg); }
+        .image-placeholder::after { transform: rotate(-15deg); }
+
+        .input-mock { height: 30px; border: 1px solid #000; margin-bottom: 10px; width: 100%; }
+        .btn { border: 2px solid #000; padding: 8px; text-align: center; font-weight: bold; font-size: 11px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        <header>
+            <div>RAIL FACTORY :: [ASSOCIATION_WORKBENCH]</div>
+            <div style="font-size: 10px;">[OPERATIONAL_MODE: ACTIVE]</div>
+        </header>
+        <div class="workbench-layout">
+            <div class="col col-queue">
+                <div class="title-h">PENDING_QUEUE (5)</div>
+                <div class="list-item selected">NF-E: 12345 / SUPP_A</div>
+                <div class="list-item">NF-E: 54321 / SUPP_B</div>
+                <div class="list-item">NF-E: 99887 / SUPP_C</div>
+            </div>
+            <div class="col col-main">
+                <div class="title-h" style="display: flex; justify-content: space-between;">
+                    <span>INVOICE_ITEMS: 12345</span>
+                    <span style="text-decoration: underline;">[RELEASE_TO_CONFERENCE]</span>
+                </div>
+                <div class="table-area">
+                    <table>
+                        <thead>
+                            <tr><th>STS</th><th>SUPP_SKU</th><th>DESC</th><th>QTY</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: #eee;"><td>[!]</td><td>P-001</td><td>PARAFUSO_X</td><td>100</td></tr>
+                            <tr><td>[V]</td><td>A-099</td><td>ARRUELA_Y</td><td>500</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col col-form col-last">
+                <div class="title-h">RESOLVE_ASSOCIATION</div>
+                <div class="decision-panel">
+                    <div style="font-weight: bold; font-size: 12px;">ITEM: PARAFUSO_X</div>
+                    <div class="image-placeholder"></div>
+                    <div style="font-size: 10px;">MATCH_EXISTING:</div>
+                    <div class="input-mock"></div>
+                    <div class="btn" style="background: #000; color: #fff;">SAVE_MAPPING</div>
+                    <div class="btn">CREATE_NEW_ITEM</div>
+                    <div style="margin-top: 30px; font-size: 9px; border: 1px dashed #000; padding: 10px;">
+                        [AI_SUGGESTION: SKU_992 (90% CONFIDENCE)]
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

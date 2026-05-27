@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Wireframe - 05 Material Details</title>
+    <style>
+        :root { --line: #000000; --bg: #ffffff; --fill: #f2f2f2; }
+        body { margin: 0; background: #cccccc; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: "Courier New", Courier, monospace; }
+        .canvas { background: var(--bg); width: 1024px; height: 768px; border: 2px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+        header { height: 50px; border-bottom: 2px solid var(--line); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; font-weight: bold; }
+        .layout-main { display: flex; flex: 1; }
+        aside { width: 180px; border-right: 2px solid var(--line); padding: 20px; }
+        .content { flex: 1; padding: 25px; overflow-y: auto; }
+        .nav-link { border: 1px solid var(--line); padding: 8px; margin-bottom: 10px; font-size: 10px; text-align: center; }
+        .back-btn { font-size: 10px; text-decoration: underline; margin-bottom: 20px; cursor: pointer; }
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .info-box { border: 2px solid var(--line); padding: 20px; background: white; }
+        .field { margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+        .field label { font-size: 9px; font-weight: bold; display: block; }
+        .field span { font-size: 12px; }
+        .image-placeholder { width: 150px; height: 150px; border: 1px solid var(--line); position: relative; margin-bottom: 20px; }
+        .image-placeholder::before, .image-placeholder::after { content: ''; position: absolute; width: 100%; height: 1px; background: var(--line); top: 50%; left: 0; }
+        .image-placeholder::before { transform: rotate(45deg); }
+        .image-placeholder::after { transform: rotate(-45deg); }
+        .section-title { font-size: 14px; font-weight: bold; margin-bottom: 15px; border-left: 4px solid #000; padding-left: 8px; }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        <header><div>RAIL FACTORY :: [MATERIAL_DETAILS]</div><div style="font-size: 10px;">[SKU: SKU-001]</div></header>
+        <div class="layout-main">
+            <aside><div class="nav-link">DASHBOARD</div><div class="nav-link" style="background: #000; color: #fff;">INVENTORY</div></aside>
+            <div class="content">
+                <div class="back-btn">[<- BACK_TO_LIST]</div>
+                <div class="details-grid">
+                    <div>
+                        <div class="section-title">CORE_IDENTITIES</div>
+                        <div class="info-box">
+                            <div class="field"><label>MATERIAL_CODE</label><span>SKU-001</span></div>
+                            <div class="field"><label>OFFICIAL_NAME</label><span>STEEL_SHEET_GALVANIZED_2MM</span></div>
+                            <div class="field"><label>CATEGORY</label><span>RAW_MATERIAL</span></div>
+                            <div class="field"><label>BASE_UNIT</label><span>KG</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="section-title">VISUAL_REPRESENTATION</div>
+                        <div class="image-placeholder"></div>
+                        <div class="section-title">STOCK_SUMMARY</div>
+                        <div class="info-box" style="background: #eee;">
+                            <div style="font-size: 24px; font-weight: bold;">1,240.00 KG</div>
+                            <div style="font-size: 10px;">[AVAILABLE_FOR_PRODUCTION]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Mockup - 01 Portal de Acesso</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #001a41;
+            --bg: #f3f2f1;
+            --white: #ffffff;
+            --text-main: #1a1a1a;
+            --text-sec: #595959;
+            --shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); display: flex; align-items: center; justify-content: center; height: 100vh; color: var(--text-main); }
+        
+        .login-card {
+            background: var(--white);
+            width: 440px;
+            padding: 56px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border: 1px solid #edebe9;
+        }
+
+        .brand-logo {
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-sec);
+            margin-bottom: 40px;
+            font-weight: 500;
+        }
+
+        .tenant-selector {
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-sec);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .select-mock {
+            width: 100%;
+            height: 44px;
+            border: 1.5px solid #d1d1d1;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 14px;
+            font-weight: 600;
+            background: #fafafa;
+            cursor: pointer;
+            justify-content: space-between;
+        }
+
+        .btn-google {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+            height: 52px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 800;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 32px;
+        }
+
+        .google-icon {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 2px;
+            padding: 2px;
+        }
+
+        .footer-link {
+            margin-top: 24px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="brand-logo">RAIL FACTORY</div>
+        <div class="subtitle">Selecione sua organização para acessar o painel.</div>
+        
+        <div class="tenant-selector">
+            <span class="label">Organização / Tenant</span>
+            <div class="select-mock">
+                <span>RF-MATRIZ-SAO-PAULO</span>
+                <span style="font-size: 10px; opacity: 0.5;">▼</span>
+            </div>
+        </div>
+
+        <button class="btn-google">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Refreshed_Icon.svg" class="google-icon" alt="">
+            Entrar com Google
+        </button>
+
+        <a href="#" class="footer-link">Voltar para o início</a>
+    </div>
+</body>
+</html>
