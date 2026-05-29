@@ -31,6 +31,15 @@ public static class IntegrationConstants
         public const string StockReservationRequested = "production.stock_reservation_requested";
     }
 
+    public static class LogisticsEvents
+    {
+        /// <summary>
+        /// Published per shipment item when a dispatch is marked as shipped.
+        /// Inventory consumes this to debit available stock.
+        /// </summary>
+        public const string ShipmentDispatched = "logistics.shipment_dispatched";
+    }
+
     /// <summary>
     /// RabbitMQ exchange names used by publishers and the topology declarator.
     /// </summary>
@@ -38,6 +47,7 @@ public static class IntegrationConstants
     {
         public const string SupplyChain = "railfactory.supply-chain";
         public const string Production = "railfactory.production";
+        public const string Logistics = "railfactory.logistics";
         public const string DeadLetter = "railfactory.dlx";
     }
 
@@ -48,6 +58,7 @@ public static class IntegrationConstants
     {
         public const string InventorySupplyIntegration = "inventory.supply.integration";
         public const string InventoryProductionIntegration = "inventory.production.integration";
+        public const string InventoryLogisticsIntegration = "inventory.logistics.integration";
         public const string DeadLetters = "railfactory.dead-letters";
     }
 }

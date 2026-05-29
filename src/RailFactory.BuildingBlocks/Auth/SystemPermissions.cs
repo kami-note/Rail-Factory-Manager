@@ -32,6 +32,24 @@ public static class SystemPermissions
         public const string RolesManage = "iam.roles.manage";
     }
 
+    public static class Hr
+    {
+        public const string Read = "hr.read";
+        public const string Write = "hr.write";
+    }
+
+    public static class Fleet
+    {
+        public const string Read = "fleet.read";
+        public const string Write = "fleet.write";
+    }
+
+    public static class Logistics
+    {
+        public const string Read = "logistics.read";
+        public const string Write = "logistics.write";
+    }
+
     /// <summary>
     /// Returns all available permission codes for validation or UI selection.
     /// </summary>
@@ -48,5 +66,11 @@ public static class SystemPermissions
         yield return Iam.Read;
         yield return Iam.Write;
         yield return Iam.RolesManage;
+        yield return Hr.Read;
+        yield return Hr.Write;
+        yield return Fleet.Read;
+        yield return Fleet.Write;
+        yield return Logistics.Read;
+        yield return Logistics.Write;
     }
 }

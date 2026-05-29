@@ -168,13 +168,16 @@ public sealed class IamLocalUsersSchemaInitializer(
             Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
             TenantCode = tenantCode,
             Name = "Operador de Logística",
-            Description = "Acesso para leitura e escrita em estoque e recebimentos.",
-            Permissions = 
+            Description = "Acesso para leitura e escrita em estoque, recebimentos e frota.",
+            Permissions =
             [
-                SystemPermissions.Inventory.Read, 
+                SystemPermissions.Inventory.Read,
                 SystemPermissions.Inventory.Write,
                 SystemPermissions.SupplyChain.Read,
-                SystemPermissions.SupplyChain.Write
+                SystemPermissions.SupplyChain.Write,
+                SystemPermissions.Hr.Read,
+                SystemPermissions.Fleet.Read,
+                SystemPermissions.Fleet.Write,
             ],
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
@@ -185,19 +188,55 @@ public sealed class IamLocalUsersSchemaInitializer(
             Id = Guid.Parse("00000000-0000-0000-0000-000000000003"),
             TenantCode = tenantCode,
             Name = "Consulta (Apenas Leitura)",
-            Description = "Acesso de visualização para dashboards e relatórios.",
-            Permissions = 
+            Description = "Acesso de visualização para todos os módulos.",
+            Permissions =
             [
-                SystemPermissions.Inventory.Read, 
+                SystemPermissions.Inventory.Read,
                 SystemPermissions.SupplyChain.Read,
                 SystemPermissions.Production.Read,
-                SystemPermissions.Iam.Read
+                SystemPermissions.Iam.Read,
+                SystemPermissions.Hr.Read,
+                SystemPermissions.Fleet.Read,
             ],
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        dbContext.Roles.AddRange(adminRole, operatorRole, viewerRole);
+        var hrFleetRole = new IamTenantRoleRecord
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000004"),
+            TenantCode = tenantCode,
+            Name = "Supervisor de RH e Frota",
+            Description = "Gerencia cadastro de pessoas, apontamentos de horas, veículos e alocações de motoristas.",
+            Permissions =
+            [
+                SystemPermissions.Hr.Read,
+                SystemPermissions.Hr.Write,
+                SystemPermissions.Fleet.Read,
+                SystemPermissions.Fleet.Write,
+            ],
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        var productionRole = new IamTenantRoleRecord
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000005"),
+            TenantCode = tenantCode,
+            Name = "Operador de Produção",
+            Description = "Gerencia ordens de produção, BOMs, centros de trabalho e consulta estoque.",
+            Permissions =
+            [
+                SystemPermissions.Production.Read,
+                SystemPermissions.Production.Write,
+                SystemPermissions.Inventory.Read,
+                SystemPermissions.Hr.Read,
+            ],
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        dbContext.Roles.AddRange(adminRole, operatorRole, viewerRole, hrFleetRole, productionRole);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
