@@ -6,94 +6,76 @@ import {
   CircularProgress,
   IconButton,
   Paper,
-  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Tooltip,
-  Typography
 } from '@mui/material';
 import { Factory, Plus, PowerOff, Zap } from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { StatusChip } from '../../../shared/components/common/StatusChip';
-import { InlineError } from '../../../shared/components/common/InlineError';
 import { PageError } from '../../../shared/components/common/PageError';
+import { ConfirmDialog } from '../../../shared/components/common/ConfirmDialog';
 import { Authorized } from '../../auth';
-import { activateWorkCenter, createWorkCenter, deactivateWorkCenter } from '../api/production';
+import { activateWorkCenter, deactivateWorkCenter } from '../api/production';
 import { useWorkCenters } from '../hooks/useWorkCenters';
+import { CreateWorkCenterModal } from './CreateWorkCenterModal';
 import type { WorkCenter } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 
-type WorkCentersPageProps = {
-  tenantCode: string;
-};
+type WorkCentersPageProps = { tenantCode: string };
+
+type ConfirmAction = { type: 'deactivate' | 'activate'; id: string; name: string };
 
 /**
  * Management page for production work centers.
  * Lists active/inactive centers and allows creating or deactivating them.
- *
- * @remarks
- * Uses `useWorkCenters` hook for data fetching. Mutations apply optimistic updates
- * to the local list to avoid unnecessary reloads.
  */
 export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
-  const { data, loading, error: fetchError, reload } = useWorkCenters(tenantCode);
+  const { data, loading, error: fetchError } = useWorkCenters(tenantCode);
   const [centers, setCenters] = useState<WorkCenter[]>([]);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
-  const [activatingId, setActivatingId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
-  // Sync fetched data into local state for optimistic mutations
-  useEffect(() => {
-    if (data) setCenters(data);
-  }, [data]);
-
-  const error = fetchError ?? mutationError;
+  useEffect(() => { if (data) setCenters(data); }, [data]);
 
   const handleCreated = (wc: WorkCenter) => {
     setCenters(prev => [wc, ...prev]);
-    setShowForm(false);
+    setCreateOpen(false);
     setMutationError(null);
     setSuccess(`Centro "${wc.name}" criado com sucesso.`);
   };
 
-  const handleDeactivate = async (id: string) => {
-    setDeactivatingId(id);
-    setSuccess(null);
+  const handleConfirm = async () => {
+    if (!confirm) return;
+    setConfirming(true);
     setMutationError(null);
-    try {
-      await deactivateWorkCenter(tenantCode, id);
-      setCenters(prev => prev.map(c => c.id === id
-        ? { ...c, status: { key: 'Inactive', label: 'Inativo', color: 'default' } }
-        : c));
-      setSuccess('Centro de trabalho desativado.');
-    } catch (err) {
-      setMutationError(toUiErrorMessage(err, 'Não foi possível desativar o centro de trabalho.'));
-    } finally {
-      setDeactivatingId(null);
-    }
-  };
-
-  const handleActivate = async (id: string) => {
-    setActivatingId(id);
     setSuccess(null);
-    setMutationError(null);
     try {
-      await activateWorkCenter(tenantCode, id);
-      setCenters(prev => prev.map(c => c.id === id
-        ? { ...c, status: { key: 'Active', label: 'Ativo', color: 'success' } }
-        : c));
-      setSuccess('Centro de trabalho ativado.');
+      if (confirm.type === 'deactivate') {
+        await deactivateWorkCenter(tenantCode, confirm.id);
+        setCenters(prev => prev.map(c => c.id === confirm.id
+          ? { ...c, status: { key: 'Inactive', label: 'Inativo', color: 'default' } }
+          : c));
+        setSuccess('Centro de trabalho desativado.');
+      } else {
+        await activateWorkCenter(tenantCode, confirm.id);
+        setCenters(prev => prev.map(c => c.id === confirm.id
+          ? { ...c, status: { key: 'Active', label: 'Ativo', color: 'success' } }
+          : c));
+        setSuccess('Centro de trabalho ativado.');
+      }
+      setConfirm(null);
     } catch (err) {
-      setMutationError(toUiErrorMessage(err, 'Não foi possível ativar o centro de trabalho.'));
+      setMutationError(toUiErrorMessage(err, 'Não foi possível realizar a operação.'));
     } finally {
-      setActivatingId(null);
+      setConfirming(false);
     }
   };
 
@@ -107,7 +89,7 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
         icon={<Factory size={20} />}
         action={
           <Authorized permission="production.write">
-            <Button variant="contained" size="small" startIcon={<Plus size={16} />} onClick={() => setShowForm(v => !v)}>
+            <Button variant="contained" size="small" startIcon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>
               Novo Centro
             </Button>
           </Authorized>
@@ -115,15 +97,7 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
       />
 
       {success && <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2 }}>{success}</Alert>}
-      {error && <InlineError message={error} marginBottom={2} />}
-
-      {showForm && (
-        <CreateWorkCenterForm
-          tenantCode={tenantCode}
-          onCreated={handleCreated}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
+      {mutationError && <Alert severity="error" onClose={() => setMutationError(null)} sx={{ mb: 2 }}>{mutationError}</Alert>}
 
       <TableContainer component={Paper} variant="outlined" sx={{ mt: 3 }}>
         <Table size="small">
@@ -147,9 +121,7 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
               <TableRow key={wc.id} hover>
                 <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{wc.code}</TableCell>
                 <TableCell>{wc.name}</TableCell>
-                <TableCell>
-                  <StatusChip status={wc.status} />
-                </TableCell>
+                <TableCell><StatusChip status={wc.status} /></TableCell>
                 <TableCell sx={{ color: 'text.secondary' }}>
                   {new Date(wc.createdAt).toLocaleDateString('pt-BR')}
                 </TableCell>
@@ -157,29 +129,15 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
                   <Authorized permission="production.write">
                     {wc.status.key === 'Active' && (
                       <Tooltip title="Desativar">
-                        <IconButton
-                          size="small"
-                          color="warning"
-                          onClick={() => void handleDeactivate(wc.id)}
-                          disabled={deactivatingId === wc.id}
-                        >
-                          {deactivatingId === wc.id
-                            ? <CircularProgress size={16} color="inherit" />
-                            : <PowerOff size={16} />}
+                        <IconButton size="small" color="warning" onClick={() => setConfirm({ type: 'deactivate', id: wc.id, name: wc.name })}>
+                          <PowerOff size={16} />
                         </IconButton>
                       </Tooltip>
                     )}
                     {wc.status.key === 'Inactive' && (
                       <Tooltip title="Ativar">
-                        <IconButton
-                          size="small"
-                          color="success"
-                          onClick={() => void handleActivate(wc.id)}
-                          disabled={activatingId === wc.id}
-                        >
-                          {activatingId === wc.id
-                            ? <CircularProgress size={16} color="inherit" />
-                            : <Zap size={16} />}
+                        <IconButton size="small" color="success" onClick={() => setConfirm({ type: 'activate', id: wc.id, name: wc.name })}>
+                          <Zap size={16} />
                         </IconButton>
                       </Tooltip>
                     )}
@@ -190,69 +148,30 @@ export function WorkCentersPage({ tenantCode }: WorkCentersPageProps) {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Modal de criação */}
+      <CreateWorkCenterModal
+        open={createOpen}
+        tenantCode={tenantCode}
+        onCreated={handleCreated}
+        onClose={() => setCreateOpen(false)}
+      />
+
+      {/* Modal de confirmação */}
+      <ConfirmDialog
+        open={confirm !== null}
+        title={confirm?.type === 'deactivate' ? 'Desativar centro de trabalho?' : 'Ativar centro de trabalho?'}
+        message={
+          confirm?.type === 'deactivate'
+            ? `O centro "${confirm?.name}" não poderá receber novas ordens enquanto estiver inativo.`
+            : `O centro "${confirm?.name}" voltará a aceitar novas ordens de produção.`
+        }
+        severity={confirm?.type === 'deactivate' ? 'warning' : 'primary'}
+        confirmLabel={confirm?.type === 'deactivate' ? 'Desativar' : 'Ativar'}
+        loading={confirming}
+        onConfirm={() => void handleConfirm()}
+        onCancel={() => setConfirm(null)}
+      />
     </Box>
-  );
-}
-
-function CreateWorkCenterForm({ tenantCode, onCreated, onCancel }: {
-  tenantCode: string;
-  onCreated: (wc: WorkCenter) => void;
-  onCancel: () => void;
-}) {
-  const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async () => {
-    if (!code.trim() || !name.trim()) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const wc = await createWorkCenter(tenantCode, { code: code.trim(), name: name.trim() });
-      onCreated(wc);
-    } catch (err) {
-      setError(toUiErrorMessage(err, 'Não foi possível criar o centro de trabalho.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Paper variant="outlined" sx={{ p: 3, mt: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2 }}>NOVO CENTRO DE TRABALHO</Typography>
-      {error && <InlineError message={error} marginBottom={2} />}
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
-        <TextField
-          label="Código"
-          size="small"
-          sx={{ width: 160 }}
-          value={code}
-          onChange={e => setCode(e.target.value.toUpperCase())}
-          placeholder="SOLDA-01"
-          slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontWeight: 700 } } }}
-        />
-        <TextField
-          label="Nome"
-          size="small"
-          sx={{ flexGrow: 1 }}
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Linha de Soldagem 01"
-        />
-        <Button
-          variant="contained"
-          onClick={() => void handleSubmit()}
-          disabled={saving || !code.trim() || !name.trim()}
-          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
-          sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}
-        >
-          Criar
-        </Button>
-        <Button variant="outlined" onClick={onCancel} disabled={saving}>
-          Cancelar
-        </Button>
-      </Stack>
-    </Paper>
   );
 }

@@ -185,12 +185,125 @@ Objetivo: KPIs reais de produção e inventário visíveis no painel principal.
 
 ---
 
-## P7 a P10: Visão de Longo Prazo
+## P7 - Pessoas & Frota ✅
 
-- **P7 - Pessoas & Frota**: Gestão de operadores e veículos.
-- **P8 - Expedição**: Picking, Packing e Despacho de Produto Acabado.
-- **P9 - Integrações**: Sefaz real, Webhooks e APIs B2B.
-- **P10 - Hardening**: Auditoria imutável, performance e segurança avançada.
+Objetivo: Cadastrar pessoas (operadores, motoristas, terceirizados) e a frota de veículos — pré-requisito para Logistics (P8).
+
+### P7.1 — HR (RailFactory.HumanResources.Api)
+
+- [x] Domínio `Person` (RF-31): Id, Name, DocumentNumber, Type (Employee/Driver/Contractor), Status, Email
+- [x] Domínio `HourLog` (RD-HR-01): apontamento de horas por pessoa/data
+- [x] API: `POST /people`, `GET /people`, `GET /people/{id}`, `PUT /{id}/activate`, `PUT /{id}/deactivate`
+- [x] API: `POST /people/{id}/hour-logs`, `GET /people/{id}/hour-logs`
+- [x] `HrDbContext` com tabelas `people`, `hour_logs` + migrations EF Core
+- [x] `HrSchemaInitializer` (inicialização multitenant)
+- [x] Permissions: `hr.read`, `hr.write` em `SystemPermissions`
+
+### P7.2 — Fleet (RailFactory.Fleet.Api)
+
+- [x] Domínio `Vehicle` (RF-25, RD-FLE-01): placa, chassi, RENAVAM, tipo, capacidade de carga (kg/m³), vencimento CRLV
+- [x] Domínio `DriverAssignment` (RF-28): vínculo motorista-veículo por janela de tempo
+- [x] API: `POST /vehicles`, `GET /vehicles`, `GET /vehicles/{id}`, `PUT /{id}/activate`, `PUT /{id}/deactivate`
+- [x] API: `POST /vehicles/{id}/driver-assignments`, `GET /vehicles/{id}/driver-assignments`
+- [x] `FleetDbContext` com tabelas `vehicles`, `driver_assignments` + migrations EF Core
+- [x] `FleetSchemaInitializer` (inicialização multitenant)
+- [x] Permissions: `fleet.read`, `fleet.write` em `SystemPermissions`
+
+### P7 — Infraestrutura
+
+| Item | Ação |
+|---|---|
+| `AppHost` | `tenant-dev-hrdb`, `tenant-dev-fleetdb` + acme. ✅ |
+| `Gateway` | Rotas `/api/hr/*` e `/api/fleet/*`. ✅ |
+| `Tenancy` | `SetConnectionString("hrdb")` e `("fleetdb")` para dev e acme. ✅ |
+| `Frontend` | `PeoplePage`, `VehiclesPage`, rotas e sidebar. ✅ |
+
+**Aceite:** Criar pessoa via frontend (PeoplePage), criar veículo (VehiclesPage), atribuir motorista, registrar horas.
+
+### P7 — Extras (entregues junto)
+
+- [x] Modais MUI Dialog para criação: `CreatePersonModal`, `CreateVehicleModal`, `CreateWorkCenterModal` (formulários inline → Dialog)
+- [x] Componente `ConfirmDialog` reutilizável para ações destrutivas (inativar/ativar) — usado em WorkCenters, People, Vehicles
+- [x] Testes e2e Playwright: 29 testes cobrindo navegação, modais, validações, criação real e ConfirmDialog
+
+---
+
+## P8 - Expedição (Logistics) + Fleet Extensions ✅
+
+Objetivo: Fechar o ciclo produção→saída com o bounded context de Expedição e estender a Frota.
+
+### P8.1 — Fleet Extensions
+
+- [x] Domínio `VehicleMaintenancePlan` (RF-26): agendamento e conclusão de manutenções preventivas/corretivas
+- [x] Domínio `FuelingRecord` (RF-27): registro de abastecimentos com litros, preço, odômetro
+- [x] Migration EF Core `AddMaintenanceAndFueling` — tabelas `maintenance_plans`, `fueling_records`
+- [x] Use cases: `ScheduleMaintenance`, `CompleteMaintenance`, `CancelMaintenance`, `ListMaintenancePlans`, `RecordFueling`, `ListFuelingRecords`
+- [x] 6 novos endpoints em `FleetEndpoints.cs`
+- [x] Frontend: `MaintenancePage`, `FuelingPage` + sidebar seção FROTA extendida
+
+### P8.2 — RailFactory.Logistics.Api (novo microserviço)
+
+- [x] Domínio `Carrier` (RF-20): CNPJ, tarifas/kg e/m³, status Active/Inactive
+- [x] Domínio `ShipmentOrder` (RF-19): numeração `EXP-{YYYYMMDD}-{4chars}`, ciclo Draft→Shipped
+- [x] Domínio `Dispatch` (RF-21/23/24): tracking code único `RF-{8chars}`, ciclo Pending→Delivered
+- [x] Freight calculado como `max(totalKg × RatePerKg, totalCbm × RatePerCbm)`
+- [x] Endpoint B2B público `GET /api/logistics/public/dispatches/{trackingCode}` (AllowAnonymous — RD-LOG-01)
+- [x] Migration EF Core `InitialLogisticsP8`
+- [x] `LogisticsSchemaInitializer` multitenant
+- [x] Frontend: `CarriersPage`, `ShipmentOrdersPage`, `DispatchPage` + sidebar seção EXPEDIÇÃO
+
+**Nota técnica:** `AddShipmentItem` usa raw SQL (`AddItemDirectAsync`) para contornar o quirk de `ValueGeneratedOnAdd` no EF Core 10 + Npgsql 10. Mesmo fix aplicado ao `AddBomItem`.
+
+### P8 — Infraestrutura
+
+| Item | Ação |
+|---|---|
+| `AppHost` | `tenant-dev-logisticsdb`, `tenant-acme-logisticsdb` + serviço `logistics`. ✅ |
+| `Gateway` | Rotas `/api/logistics/{**catch-all}` + cluster `logistics`. ✅ |
+| `Tenancy` | `SetConnectionString("logisticsdb")` para dev e acme. ✅ |
+| `SystemPermissions` | `Logistics` (`logistics.read`, `logistics.write`). ✅ |
+
+**Aceite:** Criar transportadora, criar ordem EXP-→Picking→Packing→ReadyToShip, criar despacho→conferir→expedir→entregar. Tracking público sem token. Testes e2e Playwright: 25/25 ✅ (P7: 29/29 ✅ sem regressões).
+
+---
+
+## P9 - Integração RabbitMQ: Dedução de Estoque ao Expedir ✅
+
+Objetivo: Ao expedir um despacho (`Ship`), publicar eventos `logistics.shipment_dispatched` por item via Outbox para o Inventory Consumer debitar o saldo disponível.
+
+### P9.1 — Logistics (Publisher)
+
+- [x] Entidade `LogisticsOutboxMessage` com ciclo Pending → Dispatched | DeadLettered
+- [x] `LogisticsDbContext` + tabela `logistics_outbox` + migration `AddLogisticsOutbox`
+- [x] `ILogisticsOutboxRepository` + `PostgresLogisticsOutboxRepository`
+- [x] `ShipDispatch` modificado: carrega itens da ordem e cria outbox message com payload completo (inclui `itemId` para hash determinístico)
+- [x] `LogisticsInventoryDispatcher` (BackgroundService): polling `SKIP LOCKED`, publica um evento por item com `EventId` determinístico (MD5 de outboxId + itemId)
+- [x] `Aspire.RabbitMQ.Client` adicionado ao csproj
+- [x] `LogisticsHostingExtensions`: `builder.AddRabbitMQClient("rabbitmq")`
+- [x] `LogisticsModule`: registra dispatcher, `RabbitMqPublisher` (exchange `railfactory.logistics`), `ILogisticsOutboxRepository`
+- [x] `AppHost`: `.WithReference(infra.RabbitMq).WaitFor(infra.RabbitMq)` para `logistics`
+
+### P9.2 — Inventory (Consumer)
+
+- [x] `InventoryBalance.Debit(qty)` — debita saldo `Available`
+- [x] `DebitInventoryForDispatch` use case — FIFO, idempotente via `IntegrationMessage`, ledger entry `stock_dispatched`
+- [x] `TopologyDeclarator`: exchange `railfactory.logistics` (Direct) + fila `inventory.logistics.integration` + binding para `logistics.shipment_dispatched`
+- [x] `InventoryIntegrationConsumer`: terceiro canal para fila de logistics + handler `HandleShipmentDispatchedAsync`
+- [x] `InventoryModule`: registra `DebitInventoryForDispatch`
+
+### P9 — IntegrationConstants
+
+- [x] `LogisticsEvents.ShipmentDispatched = "logistics.shipment_dispatched"`
+- [x] `Exchanges.Logistics = "railfactory.logistics"`
+- [x] `Queues.InventoryLogisticsIntegration = "inventory.logistics.integration"`
+
+**Aceite:** Expedir despacho → Outbox persistida → Dispatcher publica evento por item → Inventory Consumer debita saldo `Available` → Ledger entry `stock_dispatched` registrada. Idempotente (retry com mesmo EventId é ignorado).
+
+---
+
+## P10: Visão de Longo Prazo
+
+- **P10 - Hardening**: Auditoria imutável, performance, segurança avançada e integrações B2B (Sefaz, Webhooks).
 
 ---
 *Nota: Este plano é atualizado dinamicamente conforme a evolução dos domínios.*

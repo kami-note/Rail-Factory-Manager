@@ -9,7 +9,7 @@ using RailFactory.Inventory.Api.Application.Materials;
 namespace RailFactory.Inventory.Api.Infrastructure.Messaging;
 
 /// <summary>
-/// BackgroundService that consumes integration events published by SupplyChain and Production
+/// BackgroundService that consumes integration events published by SupplyChain, Production and Logistics
 /// to the Inventory RabbitMQ queues and routes them to the appropriate use-cases.
 /// </summary>
 /// <remarks>
@@ -29,14 +29,16 @@ public sealed class InventoryIntegrationConsumer(
     {
         logger.LogInformation("Inventory integration consumer starting.");
 
-        // Two channels — one per queue — so supply and production messages are processed independently.
+        // One channel per queue — supply, production and logistics are processed independently.
         var supplyChannel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
         var productionChannel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
+        var logisticsChannel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
         try
         {
             await supplyChannel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false, cancellationToken: stoppingToken);
             await productionChannel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false, cancellationToken: stoppingToken);
+            await logisticsChannel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false, cancellationToken: stoppingToken);
 
             var supplyConsumer = new AsyncEventingBasicConsumer(supplyChannel);
             supplyConsumer.ReceivedAsync += (_, ea) => HandleMessageAsync(ea, supplyChannel, stoppingToken);
@@ -54,7 +56,15 @@ public sealed class InventoryIntegrationConsumer(
                 consumer: productionConsumer,
                 cancellationToken: stoppingToken);
 
-            logger.LogInformation("Inventory integration consumer listening on supply and production queues.");
+            var logisticsConsumer = new AsyncEventingBasicConsumer(logisticsChannel);
+            logisticsConsumer.ReceivedAsync += (_, ea) => HandleMessageAsync(ea, logisticsChannel, stoppingToken);
+            await logisticsChannel.BasicConsumeAsync(
+                IntegrationConstants.Queues.InventoryLogisticsIntegration,
+                autoAck: false,
+                consumer: logisticsConsumer,
+                cancellationToken: stoppingToken);
+
+            logger.LogInformation("Inventory integration consumer listening on supply, production and logistics queues.");
 
             // Block until shutdown is requested.
             await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -67,6 +77,7 @@ public sealed class InventoryIntegrationConsumer(
         {
             await supplyChannel.DisposeAsync();
             await productionChannel.DisposeAsync();
+            await logisticsChannel.DisposeAsync();
         }
     }
 
@@ -137,6 +148,8 @@ public sealed class InventoryIntegrationConsumer(
                 => await HandleSupplierMappingAsync(scope, envelope, cancellationToken),
             IntegrationConstants.ProductionEvents.StockReservationRequested
                 => await HandleStockReservationAsync(scope, envelope, cancellationToken),
+            IntegrationConstants.LogisticsEvents.ShipmentDispatched
+                => await HandleShipmentDispatchedAsync(scope, envelope, cancellationToken),
             _ => throw new InvalidOperationException($"Unknown event type: {envelope.EventType}")
         };
     }
@@ -220,6 +233,25 @@ public sealed class InventoryIntegrationConsumer(
             cancellationToken);
     }
 
+    private async Task<bool> HandleShipmentDispatchedAsync(IServiceScope scope, RabbitMqEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var payload = envelope.Payload.Deserialize<ShipmentDispatchedPayload>(JsonOptions)
+            ?? throw new ArgumentException("ShipmentDispatched payload is null.");
+
+        var useCase = scope.ServiceProvider.GetRequiredService<DebitInventoryForDispatch>();
+        return await useCase.ExecuteAsync(new DebitInventoryForDispatchInput(
+            EventId: envelope.EventId,
+            EventType: envelope.EventType,
+            CorrelationId: envelope.CorrelationId.ToString(),
+            DispatchId: payload.DispatchId,
+            TrackingCode: payload.TrackingCode,
+            OrderNumber: payload.OrderNumber,
+            MaterialCode: payload.MaterialCode,
+            Quantity: payload.Quantity,
+            UnitOfMeasure: payload.UnitOfMeasure),
+            cancellationToken);
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /// <summary>Domain/argument exceptions indicate bad data → dead-letter, do not requeue.</summary>
@@ -263,5 +295,14 @@ public sealed class InventoryIntegrationConsumer(
         string OrderNumber,
         string MaterialCode,
         decimal RequiredQuantity,
+        string UnitOfMeasure);
+
+    private sealed record ShipmentDispatchedPayload(
+        Guid DispatchId,
+        string TrackingCode,
+        Guid ShipmentOrderId,
+        string OrderNumber,
+        string MaterialCode,
+        decimal Quantity,
         string UnitOfMeasure);
 }

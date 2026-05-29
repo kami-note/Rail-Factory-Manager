@@ -51,10 +51,16 @@ static AppHostInfrastructure AddInfrastructure(
         TenantDevSupplyChainDb: postgres.AddDatabase("tenant-dev-supplychaindb"),
         TenantDevInventoryDb: postgres.AddDatabase("tenant-dev-inventorydb"),
         TenantDevProductionDb: postgres.AddDatabase("tenant-dev-productiondb"),
+        TenantDevHrDb: postgres.AddDatabase("tenant-dev-hrdb"),
+        TenantDevFleetDb: postgres.AddDatabase("tenant-dev-fleetdb"),
+        TenantDevLogisticsDb: postgres.AddDatabase("tenant-dev-logisticsdb"),
         TenantAcmeIamDb: postgres.AddDatabase("tenant-acme-iamdb"),
         TenantAcmeSupplyChainDb: postgres.AddDatabase("tenant-acme-supplychaindb"),
         TenantAcmeInventoryDb: postgres.AddDatabase("tenant-acme-inventorydb"),
         TenantAcmeProductionDb: postgres.AddDatabase("tenant-acme-productiondb"),
+        TenantAcmeHrDb: postgres.AddDatabase("tenant-acme-hrdb"),
+        TenantAcmeFleetDb: postgres.AddDatabase("tenant-acme-fleetdb"),
+        TenantAcmeLogisticsDb: postgres.AddDatabase("tenant-acme-logisticsdb"),
         Redis: redis,
         RabbitMq: builder.AddRabbitMQ("rabbitmq"));
 }
@@ -70,10 +76,16 @@ static AppHostDomainServices AddDomainServices(
         .WithReference(infra.TenantDevSupplyChainDb)
         .WithReference(infra.TenantDevInventoryDb)
         .WithReference(infra.TenantDevProductionDb)
+        .WithReference(infra.TenantDevHrDb)
+        .WithReference(infra.TenantDevFleetDb)
         .WithReference(infra.TenantAcmeIamDb)
         .WithReference(infra.TenantAcmeSupplyChainDb)
         .WithReference(infra.TenantAcmeInventoryDb)
         .WithReference(infra.TenantAcmeProductionDb)
+        .WithReference(infra.TenantAcmeHrDb)
+        .WithReference(infra.TenantAcmeFleetDb)
+        .WithReference(infra.TenantDevLogisticsDb)
+        .WithReference(infra.TenantAcmeLogisticsDb)
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("TenantRouting__CatalogCacheTtlSeconds", TenantCatalogCacheTtlSeconds)
         .WaitFor(infra.TenantCatalogDb);
@@ -143,7 +155,48 @@ static AppHostDomainServices AddDomainServices(
         .WaitFor(infra.RabbitMq)
         .WaitFor(tenantManagement);
 
-    return new AppHostDomainServices(tenantManagement, iam, supplyChain, inventory, production);
+    var humanResources = builder.AddProject<Projects.RailFactory_HumanResources_Api>("human-resources")
+        .WithReference(tenantManagement)
+        .WithReference(infra.TenantCatalogDb)
+        .WithReference(infra.TenantDevHrDb)
+        .WithReference(infra.TenantAcmeHrDb)
+        .WithEnvironment("TenantRouting__ServiceKey", "hrdb")
+        .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
+        .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
+        .WaitFor(infra.TenantCatalogDb)
+        .WaitFor(infra.TenantDevHrDb)
+        .WaitFor(tenantManagement);
+
+    var fleet = builder.AddProject<Projects.RailFactory_Fleet_Api>("fleet")
+        .WithReference(tenantManagement)
+        .WithReference(infra.TenantCatalogDb)
+        .WithReference(infra.TenantDevFleetDb)
+        .WithReference(infra.TenantAcmeFleetDb)
+        .WithEnvironment("TenantRouting__ServiceKey", "fleetdb")
+        .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
+        .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
+        .WaitFor(infra.TenantCatalogDb)
+        .WaitFor(infra.TenantDevFleetDb)
+        .WaitFor(tenantManagement);
+
+    var logistics = builder.AddProject<Projects.RailFactory_Logistics_Api>("logistics")
+        .WithReference(tenantManagement)
+        .WithReference(infra.TenantCatalogDb)
+        .WithReference(infra.TenantDevLogisticsDb)
+        .WithReference(infra.TenantAcmeLogisticsDb)
+        .WithReference(infra.RabbitMq)
+        .WithEnvironment("TenantRouting__ServiceKey", "logisticsdb")
+        .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
+        .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
+        .WaitFor(infra.TenantCatalogDb)
+        .WaitFor(infra.TenantDevLogisticsDb)
+        .WaitFor(infra.RabbitMq)
+        .WaitFor(tenantManagement);
+
+    return new AppHostDomainServices(tenantManagement, iam, supplyChain, inventory, production, humanResources, fleet, logistics);
 }
 
 static IResourceBuilder<ProjectResource> AddEdgeServices(
@@ -157,11 +210,17 @@ static IResourceBuilder<ProjectResource> AddEdgeServices(
         .WithReference(services.SupplyChain)
         .WithReference(services.Inventory)
         .WithReference(services.Production)
+        .WithReference(services.HumanResources)
+        .WithReference(services.Fleet)
+        .WithReference(services.Logistics)
         .WaitFor(services.TenantManagement)
         .WaitFor(services.Iam)
         .WaitFor(services.SupplyChain)
         .WaitFor(services.Inventory)
-        .WaitFor(services.Production);
+        .WaitFor(services.Production)
+        .WaitFor(services.HumanResources)
+        .WaitFor(services.Fleet)
+        .WaitFor(services.Logistics);
 
     return builder.AddProject<Projects.RailFactory_Frontend>("frontend")
         .WithReference(gateway)
@@ -221,10 +280,16 @@ file sealed record AppHostInfrastructure(
     IResourceBuilder<PostgresDatabaseResource> TenantDevSupplyChainDb,
     IResourceBuilder<PostgresDatabaseResource> TenantDevInventoryDb,
     IResourceBuilder<PostgresDatabaseResource> TenantDevProductionDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantDevHrDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantDevFleetDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantDevLogisticsDb,
     IResourceBuilder<PostgresDatabaseResource> TenantAcmeIamDb,
     IResourceBuilder<PostgresDatabaseResource> TenantAcmeSupplyChainDb,
     IResourceBuilder<PostgresDatabaseResource> TenantAcmeInventoryDb,
     IResourceBuilder<PostgresDatabaseResource> TenantAcmeProductionDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantAcmeHrDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantAcmeFleetDb,
+    IResourceBuilder<PostgresDatabaseResource> TenantAcmeLogisticsDb,
     IResourceBuilder<RedisResource> Redis,
     IResourceBuilder<RabbitMQServerResource> RabbitMq);
 
@@ -233,4 +298,7 @@ file sealed record AppHostDomainServices(
     IResourceBuilder<ProjectResource> Iam,
     IResourceBuilder<ProjectResource> SupplyChain,
     IResourceBuilder<ProjectResource> Inventory,
-    IResourceBuilder<ProjectResource> Production);
+    IResourceBuilder<ProjectResource> Production,
+    IResourceBuilder<ProjectResource> HumanResources,
+    IResourceBuilder<ProjectResource> Fleet,
+    IResourceBuilder<ProjectResource> Logistics);

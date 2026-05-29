@@ -18,7 +18,7 @@ import {
   Avatar,
   IconButton
 } from '@mui/material';
-import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, Wrench, Fuel, PackageCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { usePermissions } from '../../features/auth';
 import { SystemPermissions } from '../types/permissions';
@@ -42,6 +42,12 @@ const navItems: NavItem[] = [
   { href: '/app/production/work-centers', label: 'CENTROS DE TRABALHO', icon: <Factory size={18} />, permission: SystemPermissions.Production.Read },
   { href: '/app/production/boms', label: 'LISTAS DE MATERIAIS', icon: <BookOpen size={18} />, permission: SystemPermissions.Production.Read },
   { href: '/app/production/orders', label: 'ORDENS DE PRODUÇÃO', icon: <ClipboardList size={18} />, permission: SystemPermissions.Production.Read },
+  { href: '/app/hr/people', label: 'PESSOAS', icon: <UserCheck size={18} />, permission: SystemPermissions.Hr.Read },
+  { href: '/app/fleet/vehicles', label: 'FROTA', icon: <Truck size={18} />, permission: SystemPermissions.Fleet.Read },
+  { href: '/app/fleet/maintenance', label: 'MANUTENÇÃO', icon: <Wrench size={18} />, permission: SystemPermissions.Fleet.Read },
+  { href: '/app/fleet/fueling', label: 'ABASTECIMENTO', icon: <Fuel size={18} />, permission: SystemPermissions.Fleet.Read },
+  { href: '/app/logistics/carriers', label: 'TRANSPORTADORAS', icon: <Truck size={18} />, permission: SystemPermissions.Logistics.Read },
+  { href: '/app/logistics/shipment-orders', label: 'EXPEDIÇÃO', icon: <PackageCheck size={18} />, permission: SystemPermissions.Logistics.Read },
 ];
 
 type ProtectedDashboardLayoutProps = {

@@ -24,6 +24,9 @@
     <ProjectReference Include="..\RailFactory.Production.Api\RailFactory.Production.Api.csproj" />
     <ProjectReference Include="..\RailFactory.SupplyChain.Api\RailFactory.SupplyChain.Api.csproj" />
     <ProjectReference Include="..\RailFactory.Tenancy.Api\RailFactory.Tenancy.Api.csproj" />
+    <ProjectReference Include="..\RailFactory.HumanResources.Api\RailFactory.HumanResources.Api.csproj" />
+    <ProjectReference Include="..\RailFactory.Fleet.Api\RailFactory.Fleet.Api.csproj" />
+    <ProjectReference Include="..\RailFactory.Logistics.Api\RailFactory.Logistics.Api.csproj" />
   </ItemGroup>
 
 </Project>

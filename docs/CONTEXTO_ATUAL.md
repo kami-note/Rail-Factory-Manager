@@ -1,7 +1,7 @@
 # Contexto Atual de Implementação
 
-**Última Atualização:** 2026-05-27
-**Marco Atual:** P6 — Dashboards & KPIs (parcialmente implementado; fluxo completo de produção validado end-to-end)
+**Última Atualização:** 2026-05-28
+**Marco Atual:** P9 — Integração RabbitMQ: Dedução de Estoque ao Expedir ✅ concluído
 
 Este documento é a fonte da verdade sobre o estado real do código. Ele descreve o que está "de pé", validado e funcional no monorepo.
 
@@ -18,12 +18,15 @@ Este documento é a fonte da verdade sobre o estado real do código. Ele descrev
 | **P4 - Produção Inicial** | ✅ Concluído | Work Centers, BOMs versionadas, Ordens de Produção com máquina de estado completa. |
 | **P5 - Execução de OP** | ✅ Concluído | Reserva de Estoque → Consumo → Scrap → Inspeção → Conclusão. Fluxo validado end-to-end via frontend. |
 | **P6 - Dashboards & Infra** | ✅ Concluído | Todos os KPIs do dashboard implementados: Lead Time, Acuracidade, Scrap, Inspeção, Work Centers. |
+| **P7 - Pessoas & Frota** | ✅ Concluído | HR (RF-31, RD-HR-01): Cadastro de pessoas, apontamento de horas. Fleet (RF-25, RF-28, RD-FLE-01): Veículos, capacidade de carga, alocação de motoristas. Modais MUI + ConfirmDialog + 29 testes Playwright. |
+| **P8 - Expedição + Fleet Ext.** | ✅ Concluído | Fleet: Manutenção de Veículos (RF-26), Controle de Abastecimento (RF-27). Logistics: Transportadoras (RF-20), Ordens de Expedição (RF-19), Despachos + rastreamento B2B público (RF-21/23/24/RD-LOG-01). Novo microserviço `RailFactory.Logistics.Api`. |
+| **P9 - RabbitMQ Logistics** | ✅ Concluído | `logistics.shipment_dispatched` publicado por item via Outbox ao expedir despacho. Inventory Consumer debita saldo `Available` (FIFO, idempotente). Fix `AddShipmentItem` (EF Core 10 + Npgsql bug, raw SQL). |
 
 ---
 
 ## ✅ Validado End-to-End (2026-05-27)
 
-O fluxo completo de produção foi testado via frontend (`https://apparent-driving-horse.ngrok-free.app`):
+O fluxo completo de produção foi testado via frontend:
 
 1. Criar BOM → adicionar componente → ativar versão
 2. Criar Ordem de Produção (Rascunho)
@@ -46,6 +49,9 @@ O fluxo completo de produção foi testado via frontend (`https://apparent-drivi
 - **`RailFactory.SupplyChain.Api`**: Recebimento, Importação de XML, Associação de Itens e Conferência.
 - **`RailFactory.Inventory.Api`**: Gestão de Saldo (Disponível/Bloqueado), Lotes, Validades e Catálogo de Materiais.
 - **`RailFactory.Production.Api`**: Work Centers, BOM (versionada), Ordens de Produção, Execução (Consumo, Scrap, Inspeção) e Outbox para reserva de estoque.
+- **`RailFactory.HumanResources.Api`**: Cadastro de Pessoas (RF-31), Apontamento de Horas (RD-HR-01).
+- **`RailFactory.Fleet.Api`**: Gestão de Veículos (RF-25, RF-28), Alocação de Motoristas (RD-FLE-01), Manutenção (RF-26), Abastecimento (RF-27).
+- **`RailFactory.Logistics.Api`**: Transportadoras (RF-20), Ordens de Expedição Draft→Shipped (RF-19), Despachos com rastreamento B2B público (RF-21/23/24/RD-LOG-01).
 
 ---
 
@@ -59,6 +65,7 @@ Toda comunicação cross-service Outbox → Inventory passa por RabbitMQ.
 | SupplyChain Dispatcher | `railfactory.supply-chain` | `supply.receipt_item_conferred` | Inventory Consumer |
 | SupplyChain Dispatcher | `railfactory.supply-chain` | `supply.supplier_material_mapping_created` | Inventory Consumer |
 | Production Dispatcher | `railfactory.production` | `production.stock_reservation_requested` | Inventory Consumer |
+| Logistics Dispatcher | `railfactory.logistics` | `logistics.shipment_dispatched` | Inventory Consumer |
 
 - **TopologyDeclarator** (Inventory startup): declara exchanges, filas e bindings idempotentemente.
 - **DLX**: mensagens com nack sem requeue vão para `railfactory.dead-letters`.
@@ -107,25 +114,61 @@ Helper base: `src/shared/lib/useQuery.ts` — AbortController para cleanup, revi
 
 ---
 
-## 🚀 Próximos Passos (Milestone P6)
+## ✅ Validado End-to-End P7 (2026-05-27)
 
-**P6 — Dashboards & KPIs (estado atual):**
+Testes Playwright (29/29 ✅) cobrem:
+- Navegação sidebar PESSOAS / FROTA
+- Modais de criação: Centro de Trabalho, Pessoa, Veículo
+- ConfirmDialog para inativar/ativar nos três módulos
+- Criação real via API e verificação na tabela
+- Validação de campos obrigatórios e conversão automática para maiúsculo
 
-| Indicador | Backend | Frontend |
-|---|---|---|
-| Ordens ativas / concluídas | ✅ `GetProductionDashboard` | ✅ Conectado em OverviewPanel |
-| Totais de saldo (materiais, disponível, reservado) | ✅ `GetInventoryDashboard` | ✅ Conectado em OverviewPanel |
-| Top scrap por material | ✅ `GetProductionDashboard` | ✅ Exibido em tabela no OverviewPanel |
-| Taxa de aprovação em inspeção | ✅ `GetProductionDashboard` | ✅ Card KPI + painel de inspeções no OverviewPanel |
-| Desempenho por Work Center (taxa de conclusão) | ✅ `GetProductionDashboard` | ✅ Painel de barras no OverviewPanel |
-| Lead Time médio de OPs | ✅ `GetProductionDashboard` | ✅ Card KPI no OverviewPanel |
-| Acuracidade de Estoque | ✅ `GetInventoryDashboard` | ✅ Barra de progresso + métricas no OverviewPanel |
+Requisitos atendidos em P7: RF-25, RF-28, RF-31, RD-HR-01, RD-FLE-01
 
-**Próximas tasks P6:**
-1. ~~Exibir taxa de aprovação em inspeção e top scrap no OverviewPanel.~~ ✅ Concluído.
-2. ~~Implementar OEE por Work Center no `GetProductionDashboard`.~~ ✅ Implementado como taxa de conclusão por Work Center.
-3. ~~Implementar Lead Time médio de OPs.~~ ✅ Concluído.
-4. ~~Implementar Acuracidade de Estoque no `GetInventoryDashboard`.~~ ✅ Concluído.
+---
+
+## ✅ P8 — Expedição + Fleet Extensions (2026-05-28)
+
+**Backend:**
+- `RailFactory.Fleet.Api` estendido: `VehicleMaintenancePlan`, `FuelingRecord` + migration `AddMaintenanceAndFueling` + 8 novos endpoints
+- `RailFactory.Logistics.Api` criado do zero: `Carrier`, `ShipmentOrder` (Draft→Shipped), `Dispatch` (Pending→Delivered) + B2B público `GET /api/logistics/public/dispatches/{trackingCode}` sem auth
+- Freight calculado como `max(totalKg × RatePerKg, totalCbm × RatePerCbm)`
+- Migration EF Core `InitialLogisticsP8` gerada
+
+**Infra:**
+- AppHost: 2 novos bancos (`tenant-dev-logisticsdb`, `tenant-acme-logisticsdb`) + serviço `logistics`
+- Gateway: rota `/api/logistics/{**catch-all}` + cluster `logistics`
+- Tenancy: seeds de connection string `logisticsdb` para ambos os tenants
+- `SystemPermissions.Logistics` (`logistics.read`, `logistics.write`) + permissões no frontend
+
+**Frontend:**
+- Fleet: `MaintenancePage`, `FuelingPage` (selector de veículo + tabela + modal inline)
+- Logistics: `CarriersPage`, `ShipmentOrdersPage`, `DispatchPage` (ciclo completo)
+- Sidebar: seção EXPEDIÇÃO (Transportadoras, Ordens, Despachos) + extensões FROTA (Manutenção, Abastecimento)
+- TypeScript: 0 erros nos arquivos P8 (erros pré-existentes em testes não alterados)
+
+Requisitos atendidos em P8: RF-19, RF-20, RF-21, RF-23, RF-24, RF-26, RF-27, RD-LOG-01
+
+---
+
+## ✅ P9 — RabbitMQ Logistics (2026-05-28)
+
+**Logistics (publisher):**
+- `LogisticsOutboxMessage` domain entity + migration `AddLogisticsOutbox`
+- `ShipDispatch` persiste outbox com payload completo (dispatchId, trackingCode, items com itemId)
+- `LogisticsInventoryDispatcher` (BackgroundService): SKIP LOCKED, EventId determinístico (MD5 de outboxId+itemId), max 10 tentativas antes de dead-letter
+
+**Inventory (consumer):**
+- `InventoryBalance.Debit(qty)` — novo método para debitar saldo `Available`
+- `DebitInventoryForDispatch` use case — FIFO, idempotente via `IntegrationMessage`, ledger `stock_dispatched`
+- `TopologyDeclarator` + `InventoryIntegrationConsumer` extendidos com canal de logistics
+
+**Bug fix:**
+- `AddShipmentItem` corrigido com `AddItemDirectAsync` (raw SQL) — mesmo quirk EF Core 10 + Npgsql 10 já corrigido no `AddBomItem`
+
+## 🚀 Próximos Passos (P10)
+
+P10 candidate: Hardening — auditoria imutável, integrações Sefaz, Webhooks, segurança avançada.
 
 ---
 

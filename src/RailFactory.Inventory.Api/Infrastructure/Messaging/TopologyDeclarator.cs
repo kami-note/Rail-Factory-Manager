@@ -93,6 +93,28 @@ public sealed class TopologyDeclarator(
             IntegrationConstants.ProductionEvents.StockReservationRequested,
             cancellationToken: cancellationToken);
 
+        // Logistics exchange and inventory queue.
+        await channel.ExchangeDeclareAsync(
+            IntegrationConstants.Exchanges.Logistics,
+            ExchangeType.Direct,
+            durable: true,
+            autoDelete: false,
+            cancellationToken: cancellationToken);
+
+        await channel.QueueDeclareAsync(
+            IntegrationConstants.Queues.InventoryLogisticsIntegration,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: deadLetterArgs,
+            cancellationToken: cancellationToken);
+
+        await channel.QueueBindAsync(
+            IntegrationConstants.Queues.InventoryLogisticsIntegration,
+            IntegrationConstants.Exchanges.Logistics,
+            IntegrationConstants.LogisticsEvents.ShipmentDispatched,
+            cancellationToken: cancellationToken);
+
         logger.LogInformation("RabbitMQ topology declared successfully.");
     }
 

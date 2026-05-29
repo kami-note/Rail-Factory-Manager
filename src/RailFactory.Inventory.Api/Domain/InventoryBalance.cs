@@ -189,6 +189,25 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Debits (reduces) this Available balance by the dispatched quantity.
+    /// Used when a logistics dispatch ships stock out of the warehouse.
+    /// </summary>
+    public void Debit(decimal quantity)
+    {
+        if (Status != InventoryBalanceStatus.Available)
+            throw new InvalidOperationException($"Cannot debit balance in status '{Status}'. Only 'Available' balances can be debited.");
+
+        if (quantity <= 0)
+            throw new ArgumentException("Debit quantity must be positive.", nameof(quantity));
+
+        if (quantity > Quantity)
+            throw new InvalidOperationException($"Cannot debit {quantity} from balance with only {Quantity} available.");
+
+        Quantity -= quantity;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
     /// Confirms the physical count for a pending balance, making it available or blocked.
     /// </summary>
     public void Confirm(decimal quantity, string? lotNumber, DateTimeOffset? expirationDate, bool isApproved)
