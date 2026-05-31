@@ -86,6 +86,7 @@ public sealed class ProductionDbContext(DbContextOptions<ProductionDbContext> op
 
             entity.HasIndex(x => x.OrderNumber).IsUnique();
             entity.HasIndex(x => new { x.WorkCenterId, x.Status });
+            entity.HasIndex(x => x.Status).HasDatabaseName("ix_production_orders_status");
         });
 
         modelBuilder.Entity<ProductionOutboxMessage>(entity =>
@@ -100,8 +101,9 @@ public sealed class ProductionDbContext(DbContextOptions<ProductionDbContext> op
             entity.Property(x => x.AttemptCount).IsRequired();
             entity.Property(x => x.LastError).HasMaxLength(2000);
 
-            // Covering index for the dispatcher poll query: pending rows only.
-            entity.HasIndex(x => new { x.DispatchedAt, x.DeadLetteredAt });
+            // Covering index for the dispatcher poll: WHERE DispatchedAt IS NULL AND DeadLetteredAt IS NULL ORDER BY OccurredAt.
+            entity.HasIndex(x => new { x.DispatchedAt, x.DeadLetteredAt, x.OccurredAt })
+                  .HasDatabaseName("ix_production_outbox_dispatch_poll");
         });
 
         modelBuilder.Entity<QualityInspection>(entity =>
