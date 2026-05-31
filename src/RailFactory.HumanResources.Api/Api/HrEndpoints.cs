@@ -15,7 +15,7 @@ public static class HrEndpoints
     {
         app.MapGet("/", () => Results.Redirect($"{ApiGroup}/info"));
 
-        var group = app.MapGroup(ApiGroup);
+        var group = app.MapGroup(ApiGroup).WithTags("HumanResources");
 
         group.MapGet("/info", (IHostEnvironment env) =>
             Results.Ok(new { Service = "human-resources", Environment = env.EnvironmentName })

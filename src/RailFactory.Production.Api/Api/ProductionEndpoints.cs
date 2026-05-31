@@ -22,7 +22,7 @@ public static class ProductionEndpoints
     {
         app.MapGet("/", () => Results.Redirect($"{ApiGroup}/info"));
 
-        var group = app.MapGroup(ApiGroup);
+        var group = app.MapGroup(ApiGroup).WithTags("Production");
 
         group.MapGet("/info", (HttpContext ctx, IHostEnvironment env, GetProductionInfo info) =>
         {

@@ -40,7 +40,7 @@ public static class InventoryEndpoints
         // Root redirect
         app.MapGet("/", () => Results.Redirect($"{ApiGroup}{InfoPath}"));
 
-        var group = app.MapGroup(ApiGroup);
+        var group = app.MapGroup(ApiGroup).WithTags("Inventory");
 
         group.MapGet(InfoPath, HandleGetInventoryInfo).AllowAnonymous();
 
