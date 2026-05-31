@@ -17,7 +17,7 @@ public static class FleetEndpoints
     {
         app.MapGet("/", () => Results.Redirect($"{ApiGroup}/info"));
 
-        var group = app.MapGroup(ApiGroup);
+        var group = app.MapGroup(ApiGroup).WithTags("Fleet");
 
         group.MapGet("/info", (IHostEnvironment env) =>
             Results.Ok(new { Service = "fleet", Environment = env.EnvironmentName })

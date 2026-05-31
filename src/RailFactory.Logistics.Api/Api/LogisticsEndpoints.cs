@@ -16,7 +16,7 @@ public static class LogisticsEndpoints
     {
         app.MapGet("/", () => Results.Redirect($"{ApiGroup}/info"));
 
-        var group = app.MapGroup(ApiGroup);
+        var group = app.MapGroup(ApiGroup).WithTags("Logistics");
 
         group.MapGet("/info", (IHostEnvironment env) =>
             Results.Ok(new { Service = "logistics", Environment = env.EnvironmentName })

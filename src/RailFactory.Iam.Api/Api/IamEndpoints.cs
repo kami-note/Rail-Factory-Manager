@@ -45,7 +45,7 @@ public static class IamEndpoints
         // Root redirect for health checks/discovery
         app.MapGet("/", () => Results.Redirect($"{ApiGroup}{InfoPath}"));
 
-        var group = app.MapGroup(ApiGroup);
+        var group = app.MapGroup(ApiGroup).WithTags("IAM");
 
         group.MapGet(InfoPath, HandleGetInfo).AllowAnonymous();
         
@@ -201,13 +201,22 @@ public static class IamEndpoints
 
         if (upsertResult.Success)
         {
+            // Audit policy: session_created is FAIL-OPEN — a DB blip must never block a successful login.
             if (!string.IsNullOrWhiteSpace(email))
             {
-                dbContext.AuditEntries.Add(IamAuditEntry.Create(
-                    "session_created", email, null,
-                    ExtractIpAddress(context),
-                    ExtractCorrelationId(context)));
-                await dbContext.SaveChangesAsync(cancellationToken);
+                try
+                {
+                    dbContext.AuditEntries.Add(IamAuditEntry.Create(
+                        "session_created", email, null,
+                        ExtractIpAddress(context),
+                        ExtractCorrelationId(context)));
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Iam.Login");
+                    logger.LogWarning(ex, "Failed to record session_created audit for {Email}. Login proceeds (fail-open).", email);
+                }
             }
             return Results.Redirect(redirects.BuildSuccessfulFrontendRedirect(result.ReturnUrl, result.TenantCode));
         }

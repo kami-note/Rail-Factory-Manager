@@ -35,6 +35,8 @@ public sealed class RemoveRoleFromUser(
 
         dbContext.UserRoles.Remove(assignment);
 
+        // Audit policy: role_revoked is FAIL-CLOSED — role removal and audit are saved in the same
+        // EF transaction via SaveChangesAsync. If the audit write fails, the role is not revoked.
         var ctx = httpContextAccessor.HttpContext;
         var actorEmail = ctx?.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
             ?? "system@railfactory.com";

@@ -13,6 +13,7 @@ public static class Extensions
         builder.ConfigureOpenTelemetry();
         builder.AddDefaultHealthChecks();
         builder.AddRailFactoryProblemDetails();
+        builder.Services.AddOpenApi();
 
         builder.Services.AddServiceDiscovery();
         builder.Services.AddPermissionAuthorization();
@@ -62,6 +63,7 @@ public static class Extensions
     {
         app.UseRailFactoryExceptionHandler();
         app.UseRailFactoryCorrelationScope();
+        app.MapOpenApi(); // /openapi/v1.json
         return app;
     }
 

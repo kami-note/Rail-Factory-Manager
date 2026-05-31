@@ -44,6 +44,8 @@ public sealed class AssignRoleToUser(
 
         dbContext.UserRoles.Add(assignment);
 
+        // Audit policy: role_assigned is FAIL-CLOSED — role change and audit are saved in the same
+        // EF transaction via SaveChangesAsync. If the audit write fails, the role is not granted.
         var ctx = httpContextAccessor.HttpContext;
         var actorEmail = ctx?.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
             ?? "system@railfactory.com";

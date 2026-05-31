@@ -45,7 +45,7 @@ public static class SupplyChainEndpoints
         // Root redirect
         app.MapGet("/", () => Results.Redirect($"{ApiGroup}{InfoPath}"));
 
-        var group = app.MapGroup(ApiGroup);
+        var group = app.MapGroup(ApiGroup).WithTags("SupplyChain");
 
         group.MapGet(InfoPath, HandleGetInfo).AllowAnonymous();
         
