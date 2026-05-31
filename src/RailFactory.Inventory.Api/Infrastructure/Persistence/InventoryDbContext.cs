@@ -52,6 +52,9 @@ public sealed class InventoryDbContext(
             entity.Property(x => x.ReservedForOrderId);
             entity.HasIndex(x => x.SourceReference).IsUnique();
             entity.HasIndex(x => x.ReservedForOrderId).HasFilter("\"ReservedForOrderId\" IS NOT NULL");
+            // Hot-path: GetAvailableBalancesByMaterialCodeAsync — WHERE MaterialCode = ? AND Status = 'Available' ORDER BY CreatedAt
+            entity.HasIndex(x => new { x.MaterialCode, x.Status, x.CreatedAt })
+                  .HasDatabaseName("ix_inventory_balances_material_status_created");
         });
 
         modelBuilder.Entity<Material>(entity =>

@@ -27,6 +27,7 @@ public static class OpenTelemetryExtensions
             .WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
+                    .AddSource("Npgsql")           // SQL queries via Npgsql (EF Core + raw ADO)
                     .AddAspNetCoreInstrumentation(options =>
                     {
                         options.Filter = context =>
