@@ -166,10 +166,8 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
         if (consumedQuantity < 0)
             throw new ArgumentException("Consumed quantity cannot be negative.", nameof(consumedQuantity));
 
-        Quantity = consumedQuantity;
+        Quantity -= consumedQuantity;
         ReservedForOrderId = null;
-
-        // Remaining stock (if any) returns to Available after actual consumption is recorded separately.
         Status = InventoryBalanceStatus.Available;
         UpdatedAt = DateTimeOffset.UtcNow;
     }

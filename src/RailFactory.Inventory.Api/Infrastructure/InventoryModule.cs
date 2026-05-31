@@ -36,6 +36,8 @@ public static class InventoryModule
         services.AddScoped<GetInventoryBalanceDetails>();
         services.AddScoped<ConfirmInventoryBalance>();
         services.AddScoped<ReserveInventoryBalance>();
+        services.AddScoped<ConsumeReservedStock>();
+        services.AddScoped<ReleaseOrderReservation>();
         services.AddScoped<DebitInventoryForDispatch>();
         services.AddScoped<ListInventoryBalances>();
         services.AddScoped<CreateMaterial>();
