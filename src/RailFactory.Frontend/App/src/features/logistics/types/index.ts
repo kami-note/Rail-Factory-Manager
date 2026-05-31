@@ -5,6 +5,7 @@ export interface Carrier {
   name: string;
   documentNumber: string;
   contactEmail?: string;
+  webhookUrl?: string;
   ratePerKg: number;
   ratePerCbm: number;
   status: CarrierStatus;

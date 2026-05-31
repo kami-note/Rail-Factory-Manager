@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
@@ -11,9 +12,11 @@ using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
 namespace RailFactory.Iam.Api.Infrastructure.Auth.Persistence.Migrations
 {
     [DbContext(typeof(IamAuthDbContext))]
-    partial class IamAuthDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260531191038_AddIamAuditEntries")]
+    partial class AddIamAuditEntries
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

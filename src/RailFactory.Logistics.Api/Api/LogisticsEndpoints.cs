@@ -88,7 +88,7 @@ public static class LogisticsEndpoints
         try
         {
             var carrier = await useCase.ExecuteAsync(
-                new CreateCarrierInput(req.Name, req.DocumentNumber, req.ContactEmail, req.RatePerKg, req.RatePerCbm), ct);
+                new CreateCarrierInput(req.Name, req.DocumentNumber, req.ContactEmail, req.RatePerKg, req.RatePerCbm, req.WebhookUrl), ct);
             return Results.Created($"{ApiGroup}/carriers/{carrier.Id}", MapCarrierResponse(carrier));
         }
         catch (ArgumentException ex) { return Results.BadRequest(new { Error = ex.Message }); }
@@ -207,7 +207,7 @@ public static class LogisticsEndpoints
 
     private static object MapCarrierResponse(Carrier c) => new
     {
-        c.Id, c.Name, c.DocumentNumber, c.ContactEmail,
+        c.Id, c.Name, c.DocumentNumber, c.ContactEmail, c.WebhookUrl,
         c.RatePerKg, c.RatePerCbm,
         Status = c.Status.ToString(),
         c.CreatedAt, c.UpdatedAt

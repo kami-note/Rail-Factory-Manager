@@ -1,7 +1,7 @@
 # Contexto Atual de Implementação
 
-**Última Atualização:** 2026-05-28
-**Marco Atual:** P9 — Integração RabbitMQ: Dedução de Estoque ao Expedir ✅ concluído
+**Última Atualização:** 2026-05-31
+**Marco Atual:** P10 — Webhooks (RF-22) + Auditoria Imutável (RF-05/RN-08) ✅ implementado
 
 Este documento é a fonte da verdade sobre o estado real do código. Ele descreve o que está "de pé", validado e funcional no monorepo.
 
@@ -21,6 +21,7 @@ Este documento é a fonte da verdade sobre o estado real do código. Ele descrev
 | **P7 - Pessoas & Frota** | ✅ Concluído | HR (RF-31, RD-HR-01): Cadastro de pessoas, apontamento de horas. Fleet (RF-25, RF-28, RD-FLE-01): Veículos, capacidade de carga, alocação de motoristas. Modais MUI + ConfirmDialog + 29 testes Playwright. |
 | **P8 - Expedição + Fleet Ext.** | ✅ Concluído | Fleet: Manutenção de Veículos (RF-26), Controle de Abastecimento (RF-27). Logistics: Transportadoras (RF-20), Ordens de Expedição (RF-19), Despachos + rastreamento B2B público (RF-21/23/24/RD-LOG-01). Novo microserviço `RailFactory.Logistics.Api`. |
 | **P9 - RabbitMQ Logistics** | ✅ Concluído | `logistics.shipment_dispatched` publicado por item via Outbox ao expedir despacho. Inventory Consumer debita saldo `Available` (FIFO, idempotente). Fix `AddShipmentItem` (EF Core 10 + Npgsql bug, raw SQL). |
+| **P10 - Webhooks + Auditoria** | ✅ Concluído | RF-22: Carrier ganha `WebhookUrl`, `LogisticsWebhookDispatcher` notifica por HTTP com retry/dead-letter. RF-05/RN-08: `IamAuditEntry` com IP, CorrelationId; trilha de `role_assigned`, `role_revoked`, `session_created`. Frontend: AuditPage + campo webhook no modal de transportadora. |
 
 ---
 
@@ -163,12 +164,41 @@ Requisitos atendidos em P8: RF-19, RF-20, RF-21, RF-23, RF-24, RF-26, RF-27, RD-
 - `DebitInventoryForDispatch` use case — FIFO, idempotente via `IntegrationMessage`, ledger `stock_dispatched`
 - `TopologyDeclarator` + `InventoryIntegrationConsumer` extendidos com canal de logistics
 
-**Bug fix:**
+**Bug fixes:**
 - `AddShipmentItem` corrigido com `AddItemDirectAsync` (raw SQL) — mesmo quirk EF Core 10 + Npgsql 10 já corrigido no `AddBomItem`
+- `CreateDispatch` chamava `order.MarkShipped()` incorretamente ao criar o despacho; removido — a transição de estado do pedido agora ocorre apenas em `ShipDispatch.ExecuteAsync` (quando o caminhão parte de facto)
 
-## 🚀 Próximos Passos (P10)
+---
 
-P10 candidate: Hardening — auditoria imutável, integrações Sefaz, Webhooks, segurança avançada.
+## ✅ P10 — Webhooks (RF-22) + Auditoria Imutável (RF-05/RN-08) (2026-05-31)
+
+**RF-22 Webhooks:**
+- `Carrier` ganha campo `WebhookUrl` (string?, max 2000) + migration `AddCarrierWebhookUrl`
+- `ShipDispatch` e `DeliverDispatch` criam outbox entry `"logistics.webhook_notification"` na mesma transação (se carrier tem webhook URL; URL capturada no payload — imutável)
+- `LogisticsWebhookDispatcher` (BackgroundService, poll 5s): lê entries do tipo `webhook_notification`, POST para URL externa com `X-Idempotency-Key`, retry até 10x, dead-letter em falha persistente
+- `IntegrationConstants.LogisticsEvents.WebhookNotification` adicionado
+- Frontend: campo "URL de Webhook (opcional)" no `CreateCarrierModal`
+
+**RF-05/RN-08 Auditoria:**
+- `IamAuditEntry` domain entity com: Action, ActorEmail, AffectedEmail, IpAddress (IPv6-safe, 45 chars), CorrelationId, MetadataJson (jsonb), OccurredAt
+- Migration `AddIamAuditEntries` → tabela `iam_audit_entries` com índice em `occurred_at DESC`
+- `AssignRoleToUser` registra `"role_assigned"` com IP extraído de X-Forwarded-For
+- `RemoveRoleFromUser` registra `"role_revoked"` com mesmo padrão
+- `HandleGetSession` registra `"session_created"` a cada login autenticado
+- `GET /api/iam/admin/audit` com filtros `action`, `actorEmail`, `from`, `to` + paginação (requer `iam.read`)
+- Frontend: `AuditPage` com tabela paginada + filtro de ação por ToggleButtonGroup; sidebar IAM item "TRILHA DE AUDITORIA"
+
+## 🚀 Próximos Passos (P11+)
+
+Candidatos restantes (todos ❌ P10 original):
+- RF-06: API Key management
+- RF-07: Recuperação de conta e MFA
+- RF-29: Roteirização inteligente (Intelipost/RoutEasy)
+- RF-30: Telemetria básica de frota (Cobli)
+- RF-35: Mapas de calor de entrega
+- RF-37: Exportação PDF/Excel/CSV
+- RF-38: Dashboard de custos
+- Integrações externas: PlugNotas (SEFAZ), Asaas (financeiro), Omie (contábil)
 
 ---
 

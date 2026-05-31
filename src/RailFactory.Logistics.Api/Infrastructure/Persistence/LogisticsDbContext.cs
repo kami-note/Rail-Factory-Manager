@@ -20,6 +20,7 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.DocumentNumber).HasMaxLength(20).IsRequired();
             entity.Property(x => x.ContactEmail).HasMaxLength(200);
+            entity.Property(x => x.WebhookUrl).HasMaxLength(2000);
             entity.Property(x => x.RatePerKg).HasColumnType("numeric(10,4)").IsRequired();
             entity.Property(x => x.RatePerCbm).HasColumnType("numeric(10,4)").IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();

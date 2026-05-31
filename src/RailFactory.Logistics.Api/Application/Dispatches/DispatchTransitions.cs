@@ -19,6 +19,7 @@ public sealed class ConferenceDispatch(IDispatchRepository dispatches)
 public sealed class ShipDispatch(
     IDispatchRepository dispatches,
     IShipmentOrderRepository orders,
+    ICarrierRepository carriers,
     ILogisticsOutboxRepository outbox)
 {
     public async Task ExecuteAsync(Guid id, CancellationToken ct)
@@ -28,6 +29,9 @@ public sealed class ShipDispatch(
 
         var order = await orders.GetByIdAsync(dispatch.ShipmentOrderId, ct)
             ?? throw new KeyNotFoundException($"ShipmentOrder {dispatch.ShipmentOrderId} not found.");
+
+        var carrier = await carriers.GetByIdAsync(dispatch.CarrierId, ct)
+            ?? throw new KeyNotFoundException($"Carrier {dispatch.CarrierId} not found.");
 
         dispatch.Ship();
         order.MarkShipped();
@@ -54,17 +58,64 @@ public sealed class ShipDispatch(
                 ct);
         }
 
+        if (carrier.WebhookUrl is not null)
+        {
+            var webhookPayload = JsonSerializer.Serialize(new
+            {
+                dispatchId = dispatch.Id,
+                trackingCode = dispatch.TrackingCode,
+                shipmentOrderId = order.Id,
+                orderNumber = order.OrderNumber,
+                newStatus = "InTransit",
+                webhookUrl = carrier.WebhookUrl,
+                carrierName = carrier.Name,
+                occurredAt = DateTimeOffset.UtcNow
+            });
+            await outbox.AddAsync(
+                LogisticsOutboxMessage.Create(IntegrationConstants.LogisticsEvents.WebhookNotification, webhookPayload),
+                ct);
+        }
+
         await dispatches.SaveAsync(dispatch, ct);
     }
 }
 
-public sealed class DeliverDispatch(IDispatchRepository dispatches)
+public sealed class DeliverDispatch(
+    IDispatchRepository dispatches,
+    ICarrierRepository carriers,
+    IShipmentOrderRepository orders,
+    ILogisticsOutboxRepository outbox)
 {
     public async Task ExecuteAsync(Guid id, CancellationToken ct)
     {
         var dispatch = await dispatches.GetByIdAsync(id, ct)
             ?? throw new KeyNotFoundException($"Dispatch {id} not found.");
+
+        var carrier = await carriers.GetByIdAsync(dispatch.CarrierId, ct)
+            ?? throw new KeyNotFoundException($"Carrier {dispatch.CarrierId} not found.");
+
+        var order = await orders.GetByIdAsync(dispatch.ShipmentOrderId, ct);
+
         dispatch.Deliver();
+
+        if (carrier.WebhookUrl is not null)
+        {
+            var webhookPayload = JsonSerializer.Serialize(new
+            {
+                dispatchId = dispatch.Id,
+                trackingCode = dispatch.TrackingCode,
+                shipmentOrderId = dispatch.ShipmentOrderId,
+                orderNumber = order?.OrderNumber,
+                newStatus = "Delivered",
+                webhookUrl = carrier.WebhookUrl,
+                carrierName = carrier.Name,
+                occurredAt = DateTimeOffset.UtcNow
+            });
+            await outbox.AddAsync(
+                LogisticsOutboxMessage.Create(IntegrationConstants.LogisticsEvents.WebhookNotification, webhookPayload),
+                ct);
+        }
+
         await dispatches.SaveAsync(dispatch, ct);
     }
 }

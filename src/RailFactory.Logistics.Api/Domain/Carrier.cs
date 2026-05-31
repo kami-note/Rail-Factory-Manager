@@ -8,6 +8,7 @@ public sealed class Carrier
     public string Name { get; private set; } = string.Empty;
     public string DocumentNumber { get; private set; } = string.Empty;
     public string? ContactEmail { get; private set; }
+    public string? WebhookUrl { get; private set; }
     public decimal RatePerKg { get; private set; }
     public decimal RatePerCbm { get; private set; }
     public CarrierStatus Status { get; private set; }
@@ -17,7 +18,7 @@ public sealed class Carrier
     private Carrier() { }
 
     public static Carrier Create(string name, string documentNumber, string? contactEmail,
-        decimal ratePerKg, decimal ratePerCbm)
+        decimal ratePerKg, decimal ratePerCbm, string? webhookUrl = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required.", nameof(name));
@@ -31,12 +32,19 @@ public sealed class Carrier
             Name = name.Trim(),
             DocumentNumber = documentNumber.Trim(),
             ContactEmail = contactEmail?.Trim(),
+            WebhookUrl = webhookUrl?.Trim(),
             RatePerKg = ratePerKg,
             RatePerCbm = ratePerCbm,
             Status = CarrierStatus.Active,
             CreatedAt = now,
             UpdatedAt = now
         };
+    }
+
+    public void SetWebhookUrl(string? url)
+    {
+        WebhookUrl = url?.Trim();
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     public void Activate()

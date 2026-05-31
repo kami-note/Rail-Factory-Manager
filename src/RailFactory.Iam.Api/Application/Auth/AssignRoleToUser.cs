@@ -1,48 +1,37 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using RailFactory.Iam.Api.Domain;
 using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
 
 namespace RailFactory.Iam.Api.Application.Auth;
 
-/// <summary>
-/// Assigns a role to a user identified by their email.
-/// </summary>
 public sealed class AssignRoleToUser(
-    IamAuthDbContext dbContext, 
+    IamAuthDbContext dbContext,
     ITenantContextAccessor tenantAccessor,
-    IDistributedCache cache)
+    IDistributedCache cache,
+    IHttpContextAccessor httpContextAccessor)
 {
     public async Task<bool> ExecuteAsync(string email, Guid roleId, CancellationToken cancellationToken)
     {
         var tenantCode = tenantAccessor.Current!.TenantCode;
 
-        // Find the user by email.
         var user = await dbContext.LocalUsers
             .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
 
-        if (user == null)
-        {
-            return false; // User not found
-        }
+        if (user == null) return false;
 
-        // Verify role exists for this tenant (QueryFilter takes care of tenant)
-        var roleExists = await dbContext.Roles.AnyAsync(r => r.Id == roleId, cancellationToken);
-        if (!roleExists)
-        {
-            return false;
-        }
+        var role = await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+        if (role == null) return false;
 
-        // Check if already assigned
         var alreadyAssigned = await dbContext.UserRoles.AnyAsync(
-            ur => ur.ExternalProvider == user.ExternalProvider && 
-                  ur.ExternalSubject == user.ExternalSubject && 
-                  ur.RoleId == roleId, 
+            ur => ur.ExternalProvider == user.ExternalProvider &&
+                  ur.ExternalSubject == user.ExternalSubject &&
+                  ur.RoleId == roleId,
             cancellationToken);
 
-        if (alreadyAssigned)
-        {
-            return true;
-        }
+        if (alreadyAssigned) return true;
 
         var assignment = new IamTenantUserRoleRecord
         {
@@ -54,12 +43,22 @@ public sealed class AssignRoleToUser(
         };
 
         dbContext.UserRoles.Add(assignment);
+
+        var ctx = httpContextAccessor.HttpContext;
+        var actorEmail = ctx?.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+            ?? "system@railfactory.com";
+        var metadata = JsonSerializer.Serialize(new { roleId = role.Id, roleName = role.Name, tenantCode });
+        dbContext.AuditEntries.Add(IamAuditEntry.Create(
+            "role_assigned", actorEmail, email,
+            IamRequestContext.ExtractIpAddress(ctx),
+            IamRequestContext.ExtractCorrelationId(ctx),
+            metadata));
+
         await dbContext.SaveChangesAsync(cancellationToken);
-        
-        // Invalidate Cache
+
         var cacheKey = $"permissions:{tenantCode}:{user.ExternalProvider}:{user.ExternalSubject}";
         await cache.RemoveAsync(cacheKey, cancellationToken);
-        
+
         return true;
     }
 }
