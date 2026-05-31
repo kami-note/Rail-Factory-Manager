@@ -148,6 +148,10 @@ public sealed class InventoryIntegrationConsumer(
                 => await HandleSupplierMappingAsync(scope, envelope, cancellationToken),
             IntegrationConstants.ProductionEvents.StockReservationRequested
                 => await HandleStockReservationAsync(scope, envelope, cancellationToken),
+            IntegrationConstants.ProductionEvents.OrderCompleted
+                => await HandleOrderCompletedAsync(scope, envelope, cancellationToken),
+            IntegrationConstants.ProductionEvents.OrderCancelled
+                => await HandleOrderCancelledAsync(scope, envelope, cancellationToken),
             IntegrationConstants.LogisticsEvents.ShipmentDispatched
                 => await HandleShipmentDispatchedAsync(scope, envelope, cancellationToken),
             _ => throw new InvalidOperationException($"Unknown event type: {envelope.EventType}")
@@ -233,6 +237,36 @@ public sealed class InventoryIntegrationConsumer(
             cancellationToken);
     }
 
+    private async Task<bool> HandleOrderCompletedAsync(IServiceScope scope, RabbitMqEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var payload = DeserializeOrderStatus(envelope);
+        var useCase = scope.ServiceProvider.GetRequiredService<ConsumeReservedStock>();
+        return await useCase.ExecuteAsync(new ConsumeReservedStockInput(
+            EventId: envelope.EventId,
+            EventType: envelope.EventType,
+            CorrelationId: envelope.CorrelationId,
+            ProductionOrderId: payload.ProductionOrderId,
+            OrderNumber: payload.OrderNumber),
+            cancellationToken);
+    }
+
+    private async Task<bool> HandleOrderCancelledAsync(IServiceScope scope, RabbitMqEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var payload = DeserializeOrderStatus(envelope);
+        var useCase = scope.ServiceProvider.GetRequiredService<ReleaseOrderReservation>();
+        return await useCase.ExecuteAsync(new ReleaseOrderReservationInput(
+            EventId: envelope.EventId,
+            EventType: envelope.EventType,
+            CorrelationId: envelope.CorrelationId,
+            ProductionOrderId: payload.ProductionOrderId,
+            OrderNumber: payload.OrderNumber),
+            cancellationToken);
+    }
+
+    private OrderStatusPayload DeserializeOrderStatus(RabbitMqEnvelope envelope) =>
+        envelope.Payload.Deserialize<OrderStatusPayload>(JsonOptions)
+            ?? throw new ArgumentException($"Null payload for event {envelope.EventType}.");
+
     private async Task<bool> HandleShipmentDispatchedAsync(IServiceScope scope, RabbitMqEnvelope envelope, CancellationToken cancellationToken)
     {
         var payload = envelope.Payload.Deserialize<ShipmentDispatchedPayload>(JsonOptions)
@@ -289,6 +323,10 @@ public sealed class InventoryIntegrationConsumer(
         string SupplierFiscalId,
         string SupplierProductCode,
         string MaterialCode);
+
+    private sealed record OrderStatusPayload(
+        Guid ProductionOrderId,
+        string OrderNumber);
 
     private sealed record StockReservationPayload(
         Guid ProductionOrderId,

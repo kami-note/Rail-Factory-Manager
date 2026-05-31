@@ -87,6 +87,10 @@ public sealed class ProductionInventoryDispatcher(
         {
             if (message.EventType == IntegrationConstants.ProductionEvents.ProductionOrderReleased)
                 await HandleOrderReleasedAsync(message, tenant, dbContext, cancellationToken);
+            else if (message.EventType == IntegrationConstants.ProductionEvents.ProductionOrderCompleted)
+                await HandleOrderStatusChangedAsync(message, tenant, IntegrationConstants.ProductionEvents.OrderCompleted, cancellationToken);
+            else if (message.EventType == IntegrationConstants.ProductionEvents.ProductionOrderCancelled)
+                await HandleOrderStatusChangedAsync(message, tenant, IntegrationConstants.ProductionEvents.OrderCancelled, cancellationToken);
             else
                 logger.LogWarning("Unknown production outbox event type {EventType}.", message.EventType);
         }
@@ -193,6 +197,66 @@ public sealed class ProductionInventoryDispatcher(
     }
 
     /// <summary>
+    /// Publishes a single-message event for order completion or cancellation.
+    /// The Inventory consumer routes these to ConsumeReservedStock / ReleaseOrderReservation.
+    /// </summary>
+    private async Task HandleOrderStatusChangedAsync(
+        ProductionOutboxMessage message,
+        TenantResolutionResult tenant,
+        string integrationEventType,
+        CancellationToken cancellationToken)
+    {
+        OrderStatusChangedPayload? payload;
+        try
+        {
+            payload = JsonSerializer.Deserialize<OrderStatusChangedPayload>(message.Payload, CaseInsensitiveOptions);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Failed to deserialize production outbox message {MessageId}.", message.Id);
+            message.MarkDeadLetter($"Invalid JSON: {ex.Message}");
+            return;
+        }
+
+        if (payload is null)
+        {
+            message.MarkDeadLetter("Payload deserialized to null.");
+            return;
+        }
+
+        var itemPayload = JsonSerializer.SerializeToElement(new
+        {
+            productionOrderId = payload.OrderId,
+            orderNumber = payload.OrderNumber
+        });
+
+        var envelope = new RabbitMqEnvelope(
+            EventId: message.Id,
+            EventType: integrationEventType,
+            CorrelationId: message.Id.ToString(),
+            TenantCode: tenant.Code,
+            Payload: itemPayload,
+            OccurredAt: message.OccurredAt);
+
+        try
+        {
+            await publisher.PublishAsync(integrationEventType, envelope, cancellationToken);
+            message.MarkDispatched();
+            logger.LogInformation(
+                "Dispatched {EventType} for order {OrderNumber}.",
+                integrationEventType, payload.OrderNumber);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to publish {EventType} for outbox message {MessageId}.", integrationEventType, message.Id);
+            if (message.AttemptCount + 1 >= MaxTransientAttempts)
+                message.MarkDeadLetter("Max transient retry attempts exceeded.");
+            else
+                message.MarkTransientFailure("RabbitMQ publish failed. Will retry.");
+        }
+    }
+
+    /// <summary>
     /// Creates a deterministic <see cref="Guid"/> from two source GUIDs using MD5.
     /// Guarantees the same EventId is produced on retry — required for Inventory idempotency.
     /// </summary>
@@ -213,4 +277,8 @@ public sealed class ProductionInventoryDispatcher(
         Guid WorkCenterId,
         decimal PlannedQuantity,
         DateTimeOffset OccurredAt);
+
+    private sealed record OrderStatusChangedPayload(
+        Guid OrderId,
+        string OrderNumber);
 }

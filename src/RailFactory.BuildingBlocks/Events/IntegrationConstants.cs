@@ -22,13 +22,21 @@ public static class IntegrationConstants
 
     public static class ProductionEvents
     {
+        // ── Outbox event types (written by use-cases, read by ProductionInventoryDispatcher) ──
         public const string ProductionOrderReleased = "production_order_released";
+        public const string ProductionOrderCompleted = "production_order_completed";
+        public const string ProductionOrderCancelled = "production_order_cancelled";
 
-        /// <summary>
-        /// Published per BOM item when a production order is released.
-        /// Replaces the HTTP fan-out; Inventory consumes this to create a stock reservation.
-        /// </summary>
+        // ── Integration event types (published to RabbitMQ, consumed by Inventory) ──
+
+        /// <summary>Published per BOM item when a production order is released. Inventory reserves stock.</summary>
         public const string StockReservationRequested = "production.stock_reservation_requested";
+
+        /// <summary>Published once per completed order. Inventory converts reserved stock to consumed.</summary>
+        public const string OrderCompleted = "production.order_completed";
+
+        /// <summary>Published once per cancelled order that had reservations. Inventory releases reserved stock.</summary>
+        public const string OrderCancelled = "production.order_cancelled";
     }
 
     public static class LogisticsEvents
