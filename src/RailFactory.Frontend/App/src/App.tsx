@@ -5,7 +5,7 @@ import { ProtectedDashboardLayout } from './shared/layouts/ProtectedDashboardLay
 import { OverviewPanel, Status } from './features/dashboard';
 import { ReceiptsWorkspace, AssociationWorkbenchPage } from './features/supply-chain';
 import { InventoryStocksPage, MaterialDetailsPage } from './features/inventory';
-import { RolesManagementPage, UsersManagementPage } from './features/iam';
+import { RolesManagementPage, UsersManagementPage, AuditPage } from './features/iam';
 import { WorkCentersPage, BomsPage, ProductionOrdersPage } from './features/production';
 import { PeoplePage } from './features/hr';
 import { VehiclesPage, MaintenancePage, FuelingPage } from './features/fleet';
@@ -221,6 +221,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
             <Route path="inventory/materials/:materialCode" element={<MaterialDetailsPage tenantCode={tenantCode} />} />
             <Route path="iam/users" element={<UsersManagementPage tenantCode={tenantCode} />} />
             <Route path="iam/roles" element={<RolesManagementPage tenantCode={tenantCode} />} />
+            <Route path="iam/audit" element={<AuditPage tenantCode={tenantCode} />} />
             <Route path="production/work-centers" element={<WorkCentersPage tenantCode={tenantCode} />} />
             <Route path="production/boms" element={<BomsPage tenantCode={tenantCode} />} />
             <Route path="production/orders" element={<ProductionOrdersPage tenantCode={tenantCode} />} />

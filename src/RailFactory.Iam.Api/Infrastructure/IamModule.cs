@@ -10,6 +10,7 @@ public static class IamModule
 {
     public static IServiceCollection AddIamModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHttpContextAccessor();
         services.AddDbContext<IamAuthDbContext>((sp, options) =>
         {
             var resolver = sp.GetRequiredService<ITenantConnectionResolver>();

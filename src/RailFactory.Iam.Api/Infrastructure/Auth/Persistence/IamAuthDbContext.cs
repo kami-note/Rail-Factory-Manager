@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RailFactory.BuildingBlocks.Tenancy;
+using RailFactory.Iam.Api.Domain;
 
 namespace RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
 
@@ -12,12 +13,14 @@ public sealed class IamAuthDbContext(
     public DbSet<IamLocalUserRecord> LocalUsers => Set<IamLocalUserRecord>();
     public DbSet<IamTenantRoleRecord> Roles => Set<IamTenantRoleRecord>();
     public DbSet<IamTenantUserRoleRecord> UserRoles => Set<IamTenantUserRoleRecord>();
+    public DbSet<IamAuditEntry> AuditEntries => Set<IamAuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ConfigureLocalUsers(modelBuilder);
         ConfigureRoles(modelBuilder);
         ConfigureUserRoles(modelBuilder);
+        ConfigureAuditEntries(modelBuilder);
     }
 
     private static void ConfigureLocalUsers(ModelBuilder modelBuilder)
@@ -90,5 +93,24 @@ public sealed class IamAuthDbContext(
 
         // Multi-tenancy filter
         entity.HasQueryFilter(x => x.TenantCode == _tenantCode);
+    }
+
+    private static void ConfigureAuditEntries(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<IamAuditEntry>();
+        entity.ToTable("iam_audit_entries");
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Id).HasColumnName("id");
+        entity.Property(x => x.Action).HasColumnName("action").HasMaxLength(50).IsRequired();
+        entity.Property(x => x.ActorEmail).HasColumnName("actor_email").HasMaxLength(200).IsRequired();
+        entity.Property(x => x.AffectedEmail).HasColumnName("affected_email").HasMaxLength(200);
+        entity.Property(x => x.IpAddress).HasColumnName("ip_address").HasMaxLength(45);
+        entity.Property(x => x.CorrelationId).HasColumnName("correlation_id").HasMaxLength(128);
+        entity.Property(x => x.MetadataJson).HasColumnName("metadata_json").HasColumnType("jsonb").IsRequired();
+        entity.Property(x => x.OccurredAt).HasColumnName("occurred_at").IsRequired();
+
+        entity.HasIndex(x => x.OccurredAt).HasDatabaseName("ix_iam_audit_entries_occurred_at").IsDescending();
+        entity.HasIndex(x => x.ActorEmail).HasDatabaseName("ix_iam_audit_entries_actor_email");
     }
 }

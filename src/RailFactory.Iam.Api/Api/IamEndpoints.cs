@@ -2,13 +2,17 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.Iam.Api.Application;
 using RailFactory.Iam.Api.Application.Auth;
+using RailFactory.Iam.Api.Domain;
 using RailFactory.Iam.Api.Infrastructure;
+using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
 using RailFactory.Iam.Api.Api.Validation;
 using RailFactory.Iam.Api.Api.Requests;
+using static RailFactory.Iam.Api.IamRequestContext;
 
 namespace RailFactory.Iam.Api.Api;
 
@@ -32,6 +36,7 @@ public static class IamEndpoints
     private const string UsersPath = "/users";
     private const string UserRolesPath = "/users/{email}/roles";
     private const string UserSpecificRolePath = "/users/{email}/roles/{roleId:guid}";
+    private const string AuditPath = "/admin/audit";
     
     private static readonly AuthSessionDto UnauthenticatedSession = AuthSessionDto.Unauthenticated;
 
@@ -62,6 +67,7 @@ public static class IamEndpoints
         adminGroup.MapGet(UsersPath, HandleListUsers);
         adminGroup.MapPost(UserRolesPath, HandleAssignRole);
         adminGroup.MapDelete(UserSpecificRolePath, HandleRemoveRole);
+        adminGroup.MapGet(AuditPath, HandleListAuditEntries);
 
         return app;
     }
@@ -161,6 +167,7 @@ public static class IamEndpoints
         [FromServices] GoogleOAuthRedirects redirects,
         [FromServices] FinalizeExternalLogin finalizeExternalLogin,
         [FromServices] UpsertLocalUserFromExternalLogin upsertLocalUserFromExternalLogin,
+        [FromServices] IamAuthDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var validation = RequestValidator.Validate(request);
@@ -183,19 +190,32 @@ public static class IamEndpoints
                 result.ErrorCode ?? AuthResultErrorCode.OAuthError));
         }
 
+        var email = context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email");
+
         var upsertResult = await upsertLocalUserFromExternalLogin.ExecuteAsync(
             externalProvider: "google",
             externalSubject: context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
-            email: context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email"),
+            email: email,
             displayName: context.User.Identity?.Name,
             cancellationToken);
 
-        return upsertResult.Success
-            ? Results.Redirect(redirects.BuildSuccessfulFrontendRedirect(result.ReturnUrl, result.TenantCode))
-            : Results.Redirect(redirects.BuildFailedFrontendRedirect(
-                result.ReturnUrl,
-                result.TenantCode,
-                upsertResult.ErrorCode ?? AuthResultErrorCode.OAuthError));
+        if (upsertResult.Success)
+        {
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                dbContext.AuditEntries.Add(IamAuditEntry.Create(
+                    "session_created", email, null,
+                    ExtractIpAddress(context),
+                    ExtractCorrelationId(context)));
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            return Results.Redirect(redirects.BuildSuccessfulFrontendRedirect(result.ReturnUrl, result.TenantCode));
+        }
+
+        return Results.Redirect(redirects.BuildFailedFrontendRedirect(
+            result.ReturnUrl,
+            result.TenantCode,
+            upsertResult.ErrorCode ?? AuthResultErrorCode.OAuthError));
     }
 
     private static async Task<IResult> HandleGetSession(
@@ -210,13 +230,48 @@ public static class IamEndpoints
 
         var provider = "google";
         var subject = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub");
-        
+        var email = context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email") ?? string.Empty;
+
         var permissions = await getUserPermissions.ExecuteAsync(provider, subject!, cancellationToken);
 
         return Results.Ok(AuthSessionDto.CreateAuthenticated(
             context.User.Identity?.Name,
-            context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email"),
+            email,
             permissions));
+    }
+
+    private static async Task<IResult> HandleListAuditEntries(
+        [FromServices] IamAuthDbContext dbContext,
+        string? action = null,
+        string? actorEmail = null,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        int page = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        page = Math.Max(1, page);
+
+        var query = dbContext.AuditEntries.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(action)) query = query.Where(x => x.Action == action);
+        if (!string.IsNullOrWhiteSpace(actorEmail)) query = query.Where(x => x.ActorEmail == actorEmail);
+        if (from.HasValue) query = query.Where(x => x.OccurredAt >= from.Value);
+        if (to.HasValue) query = query.Where(x => x.OccurredAt <= to.Value);
+
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(x => x.OccurredAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new
+            {
+                x.Id, x.Action, x.ActorEmail, x.AffectedEmail,
+                x.IpAddress, x.CorrelationId, x.MetadataJson, x.OccurredAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(new { total, page, pageSize, items });
     }
 
     private static async Task<IResult> HandleLogout(HttpContext context)

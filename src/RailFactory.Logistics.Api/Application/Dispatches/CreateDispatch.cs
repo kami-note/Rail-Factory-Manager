@@ -27,9 +27,6 @@ public sealed class CreateDispatch(
         var dispatch = Dispatch.Create(order.Id, carrier.Id, input.VehicleId, input.DriverPersonId, freightBrl);
         await dispatches.SaveAsync(dispatch, ct);
 
-        order.MarkShipped();
-        await orders.SaveAsync(order, ct);
-
         return dispatch;
     }
 }

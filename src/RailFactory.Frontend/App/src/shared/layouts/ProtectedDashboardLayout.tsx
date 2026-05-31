@@ -18,7 +18,7 @@ import {
   Avatar,
   IconButton
 } from '@mui/material';
-import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, Wrench, Fuel, PackageCheck } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, Wrench, Fuel, PackageCheck, ScrollText } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { usePermissions } from '../../features/auth';
 import { SystemPermissions } from '../types/permissions';
@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
   { href: '/app/inventory', label: 'ESTOQUE', icon: <Boxes size={18} />, permission: SystemPermissions.Inventory.Read },
   { href: '/app/iam/users', label: 'USUÁRIOS / ACESSO', icon: <Users size={18} />, permission: SystemPermissions.Iam.RolesManage },
   { href: '/app/iam/roles', label: 'PERFIS / ROLES', icon: <ShieldCheck size={18} />, permission: SystemPermissions.Iam.RolesManage },
+  { href: '/app/iam/audit', label: 'TRILHA DE AUDITORIA', icon: <ScrollText size={18} />, permission: SystemPermissions.Iam.Read },
   { href: '/app/production/work-centers', label: 'CENTROS DE TRABALHO', icon: <Factory size={18} />, permission: SystemPermissions.Production.Read },
   { href: '/app/production/boms', label: 'LISTAS DE MATERIAIS', icon: <BookOpen size={18} />, permission: SystemPermissions.Production.Read },
   { href: '/app/production/orders', label: 'ORDENS DE PRODUÇÃO', icon: <ClipboardList size={18} />, permission: SystemPermissions.Production.Read },

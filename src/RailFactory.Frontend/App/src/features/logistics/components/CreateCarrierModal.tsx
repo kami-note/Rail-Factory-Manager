@@ -14,6 +14,7 @@ export function CreateCarrierModal({ open, tenantCode, onCreated, onClose }: Pro
   const [name, setName] = useState('');
   const [documentNumber, setDocumentNumber] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState('');
   const [ratePerKg, setRatePerKg] = useState('');
   const [ratePerCbm, setRatePerCbm] = useState('');
   const [saving, setSaving] = useState(false);
@@ -22,7 +23,7 @@ export function CreateCarrierModal({ open, tenantCode, onCreated, onClose }: Pro
   useEffect(() => {
     if (!open) {
       setName(''); setDocumentNumber(''); setContactEmail('');
-      setRatePerKg(''); setRatePerCbm(''); setSaving(false); setError(null);
+      setWebhookUrl(''); setRatePerKg(''); setRatePerCbm(''); setSaving(false); setError(null);
     }
   }, [open]);
 
@@ -36,6 +37,7 @@ export function CreateCarrierModal({ open, tenantCode, onCreated, onClose }: Pro
       const carrier = await createCarrier(tenantCode, {
         name: name.trim(), documentNumber: documentNumber.trim(),
         contactEmail: contactEmail.trim() || undefined,
+        webhookUrl: webhookUrl.trim() || undefined,
         ratePerKg: parseFloat(ratePerKg), ratePerCbm: parseFloat(ratePerCbm),
       });
       onCreated(carrier);
@@ -60,6 +62,7 @@ export function CreateCarrierModal({ open, tenantCode, onCreated, onClose }: Pro
             <TextField label="Nome" value={name} onChange={e => setName(e.target.value)} required fullWidth autoFocus size="small" />
             <TextField label="CNPJ / Documento" value={documentNumber} onChange={e => setDocumentNumber(e.target.value)} required fullWidth size="small" />
             <TextField label="E-mail de contato" value={contactEmail} onChange={e => setContactEmail(e.target.value)} fullWidth size="small" type="email" />
+            <TextField label="URL de Webhook (opcional)" value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} fullWidth size="small" placeholder="https://..." helperText="Endpoint para receber notificações de status de despacho" />
             <TextField label="Taxa por kg (R$)" value={ratePerKg} onChange={e => setRatePerKg(e.target.value)} required fullWidth size="small" type="number" slotProps={{ htmlInput: { min: 0, step: '0.0001' } }} />
             <TextField label="Taxa por m³ (R$)" value={ratePerCbm} onChange={e => setRatePerCbm(e.target.value)} required fullWidth size="small" type="number" slotProps={{ htmlInput: { min: 0, step: '0.0001' } }} />
           </Stack>

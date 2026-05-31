@@ -5,4 +5,5 @@ public sealed record CreateCarrierRequest(
     string DocumentNumber,
     string? ContactEmail,
     decimal RatePerKg,
-    decimal RatePerCbm);
+    decimal RatePerCbm,
+    string? WebhookUrl = null);

@@ -5,14 +5,14 @@ namespace RailFactory.Logistics.Api.Application.Carriers;
 
 public sealed record CreateCarrierInput(
     string Name, string DocumentNumber, string? ContactEmail,
-    decimal RatePerKg, decimal RatePerCbm);
+    decimal RatePerKg, decimal RatePerCbm, string? WebhookUrl = null);
 
 public sealed class CreateCarrier(ICarrierRepository carriers)
 {
     public async Task<Carrier> ExecuteAsync(CreateCarrierInput input, CancellationToken ct)
     {
         var carrier = Carrier.Create(input.Name, input.DocumentNumber, input.ContactEmail,
-            input.RatePerKg, input.RatePerCbm);
+            input.RatePerKg, input.RatePerCbm, input.WebhookUrl);
         await carriers.SaveAsync(carrier, ct);
         return carrier;
     }

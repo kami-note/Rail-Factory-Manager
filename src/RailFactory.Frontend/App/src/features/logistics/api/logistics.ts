@@ -5,7 +5,7 @@ const BASE = '/api/logistics';
 
 export async function createCarrier(tenantCode: string, body: {
   name: string; documentNumber: string; contactEmail?: string;
-  ratePerKg: number; ratePerCbm: number;
+  webhookUrl?: string; ratePerKg: number; ratePerCbm: number;
 }): Promise<Carrier> {
   return fetchJsonOrThrow<Carrier>(
     `${BASE}/carriers`,

@@ -38,6 +38,12 @@ public static class IntegrationConstants
         /// Inventory consumes this to debit available stock.
         /// </summary>
         public const string ShipmentDispatched = "logistics.shipment_dispatched";
+
+        /// <summary>
+        /// Published once per dispatch status change. Processed by LogisticsWebhookDispatcher
+        /// to POST the status update to the carrier's webhook URL.
+        /// </summary>
+        public const string WebhookNotification = "logistics.webhook_notification";
     }
 
     /// <summary>

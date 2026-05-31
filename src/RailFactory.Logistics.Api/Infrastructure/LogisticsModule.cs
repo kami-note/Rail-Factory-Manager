@@ -24,6 +24,9 @@ public static class LogisticsModule
 
         services.AddHostedService<LogisticsSchemaInitializer>();
         services.AddHostedService<LogisticsInventoryDispatcher>();
+        services.AddHostedService<LogisticsWebhookDispatcher>();
+        services.AddHttpClient("logistics-webhook")
+            .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddSingleton<RabbitMqPublisher>(sp => new RabbitMqPublisher(
             sp.GetRequiredService<RabbitMQ.Client.IConnection>(),
             IntegrationConstants.Exchanges.Logistics));
