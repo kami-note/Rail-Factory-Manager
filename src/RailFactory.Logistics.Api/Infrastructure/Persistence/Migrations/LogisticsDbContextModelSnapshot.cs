@@ -210,6 +210,16 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DeliveryCity")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<decimal?>("DeliveryLatitudeDeg")
+                        .HasColumnType("numeric(10,6)");
+
+                    b.Property<decimal?>("DeliveryLongitudeDeg")
+                        .HasColumnType("numeric(10,6)");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");

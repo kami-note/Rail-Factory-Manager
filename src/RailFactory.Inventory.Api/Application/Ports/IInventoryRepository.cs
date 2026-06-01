@@ -29,6 +29,16 @@ public interface IInventoryRepository
 
     Task<InventoryStockSummary> GetStockSummaryAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Returns all ledger entries for a completed production order, joined with balance lot/unit data (RF-15).
+    /// </summary>
+    Task<List<ProductionTraceabilityLine>> GetProductionTraceabilityAsync(Guid orderId, CancellationToken ct);
+
+    /// <summary>
+    /// Aggregates production_consumed ledger entries by material code for the cost dashboard (RF-38).
+    /// </summary>
+    Task<List<MaterialConsumptionSummary>> GetProductionCostSummaryAsync(DateTimeOffset? from, DateTimeOffset? to, CancellationToken ct);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }
 
@@ -38,3 +48,18 @@ public sealed record InventoryStockSummary(
     int AvailableCount,
     int ReservedCount,
     int BlockedCount);
+
+public sealed record ProductionTraceabilityLine(
+    Guid BalanceId,
+    string MaterialCode,
+    string? LotNumber,
+    string UnitOfMeasure,
+    decimal ConsumedQty,
+    DateTimeOffset ConsumedAt);
+
+public sealed record MaterialConsumptionSummary(
+    string MaterialCode,
+    string UnitOfMeasure,
+    decimal TotalConsumedQty,
+    int EventCount,
+    DateTimeOffset? LastConsumedAt);

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using RailFactory.Iam.Api.Application;
+using RailFactory.Iam.Api.Application.ApiKeys;
 using RailFactory.Iam.Api.Application.Auth;
+using RailFactory.Iam.Api.Application.Mfa;
 using RailFactory.Iam.Api.Infrastructure.Auth;
 using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
 
@@ -32,6 +34,16 @@ public static class IamModule
         services.AddScoped<AssignRoleToUser>();
         services.AddScoped<RemoveRoleFromUser>();
         services.AddScoped<IExternalIdentityProvider, GoogleExternalIdentityProvider>();
+
+        services.AddScoped<GenerateApiKey>();
+        services.AddScoped<RevokeApiKey>();
+        services.AddScoped<ListApiKeys>();
+        services.AddScoped<ValidateApiKey>();
+
+        services.AddScoped<EnrollMfa>();
+        services.AddScoped<ConfirmMfa>();
+        services.AddScoped<DisableMfa>();
+
         return services;
     }
 }

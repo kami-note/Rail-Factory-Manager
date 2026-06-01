@@ -9,4 +9,9 @@ public sealed class IamLocalUserRecord
     public DateTimeOffset FirstLoginAt { get; init; }
     public DateTimeOffset LastLoginAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    // MFA TOTP (RF-07)
+    public string? MfaSecretBase32 { get; set; }
+    public bool MfaEnabled { get; set; }
+    public DateTimeOffset? MfaEnabledAt { get; set; }
 }

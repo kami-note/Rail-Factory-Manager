@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Mvc;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.Fleet.Api.Api.Requests;
 using RailFactory.Fleet.Api.Application.Drivers;
 using RailFactory.Fleet.Api.Application.Fueling;
 using RailFactory.Fleet.Api.Application.Maintenance;
 using RailFactory.Fleet.Api.Application.Ports;
+using RailFactory.Fleet.Api.Application.Routing;
+using RailFactory.Fleet.Api.Application.Telemetry;
 using RailFactory.Fleet.Api.Application.Vehicles;
 using RailFactory.Fleet.Api.Domain;
 
@@ -66,6 +69,17 @@ public static class FleetEndpoints
             .RequirePermission(SystemPermissions.Fleet.Write);
 
         secure.MapGet("/vehicles/{id:guid}/fueling-records", HandleListFuelingRecords)
+            .RequirePermission(SystemPermissions.Fleet.Read);
+
+        // Telemetry Events (RF-30)
+        secure.MapPost("/vehicles/{id:guid}/telemetry-events", HandleRecordTelemetry)
+            .RequirePermission(SystemPermissions.Fleet.Write);
+
+        secure.MapGet("/vehicles/{id:guid}/telemetry-events", HandleListTelemetry)
+            .RequirePermission(SystemPermissions.Fleet.Read);
+
+        // Route Optimization (RF-29)
+        secure.MapPost("/route-optimization", HandleRouteOptimization)
             .RequirePermission(SystemPermissions.Fleet.Read);
 
         return app;
@@ -246,6 +260,36 @@ public static class FleetEndpoints
         return Results.Ok(records.Select(MapFuelingResponse));
     }
 
+    // ── Telemetry ─────────────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleRecordTelemetry(
+        Guid id, RecordTelemetryEventRequest req, RecordTelemetryEvent useCase, CancellationToken ct)
+    {
+        try
+        {
+            var ev = await useCase.ExecuteAsync(new RecordTelemetryInput(
+                id, req.DriverPersonId, req.EventType, req.Description,
+                req.OccurredAt, req.LatitudeDeg, req.LongitudeDeg), ct);
+            return Results.Created($"{ApiGroup}/vehicles/{id}/telemetry-events/{ev.Id}", MapTelemetryResponse(ev));
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+        catch (ArgumentException ex) { return Results.BadRequest(new { Error = ex.Message }); }
+    }
+
+    private static async Task<IResult> HandleListTelemetry(
+        Guid id, DateTimeOffset? from, DateTimeOffset? to, ListTelemetryEvents useCase, CancellationToken ct)
+    {
+        var events = await useCase.ExecuteAsync(id, from, to, ct);
+        return Results.Ok(events.Select(MapTelemetryResponse));
+    }
+
+    private static object MapTelemetryResponse(VehicleTelemetryEvent e) => new
+    {
+        e.Id, e.VehicleId, e.DriverPersonId, e.EventType,
+        e.Description, e.OccurredAt, e.LatitudeDeg, e.LongitudeDeg, e.CreatedAt
+    };
+
     private static object MapMaintenanceResponse(VehicleMaintenancePlan p) => new
     {
         p.Id, p.VehicleId,
@@ -254,6 +298,18 @@ public static class FleetEndpoints
         Status = p.Status.ToString(),
         p.Notes, p.CreatedAt
     };
+
+    // ── Route Optimization (RF-29) ────────────────────────────────────────────
+
+    private static IResult HandleRouteOptimization([FromBody] RouteOptimizationRequest req)
+    {
+        if (req.Stops is null || req.Stops.Count == 0)
+            return Results.BadRequest(new { Error = "At least one stop is required." });
+
+        var stops = req.Stops.Select(s => new RouteStop(s.Id, s.Label, s.Lat, s.Lon)).ToList();
+        var result = RouteOptimizer.Optimize(stops);
+        return Results.Ok(result);
+    }
 
     private static object MapFuelingResponse(FuelingRecord r) => new
     {

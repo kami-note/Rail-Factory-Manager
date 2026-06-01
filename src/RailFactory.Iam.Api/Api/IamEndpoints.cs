@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.Iam.Api.Application;
+using RailFactory.Iam.Api.Application.ApiKeys;
 using RailFactory.Iam.Api.Application.Auth;
+using RailFactory.Iam.Api.Application.Mfa;
 using RailFactory.Iam.Api.Domain;
 using RailFactory.Iam.Api.Infrastructure;
 using RailFactory.Iam.Api.Infrastructure.Auth.Persistence;
@@ -37,6 +39,13 @@ public static class IamEndpoints
     private const string UserRolesPath = "/users/{email}/roles";
     private const string UserSpecificRolePath = "/users/{email}/roles/{roleId:guid}";
     private const string AuditPath = "/admin/audit";
+    private const string ApiKeysPath = "/admin/api-keys";
+    private const string ApiKeyByIdPath = "/admin/api-keys/{keyId:guid}";
+    private const string ApiKeyRevokePath = "/admin/api-keys/{keyId:guid}/revoke";
+    private const string ApiKeyValidatePath = "/api-keys/validate";
+    private const string MfaEnrollPath = "/mfa/enroll";
+    private const string MfaConfirmPath = "/mfa/confirm";
+    private const string MfaDisablePath = "/mfa/disable";
     
     private static readonly AuthSessionDto UnauthenticatedSession = AuthSessionDto.Unauthenticated;
 
@@ -68,6 +77,20 @@ public static class IamEndpoints
         adminGroup.MapPost(UserRolesPath, HandleAssignRole);
         adminGroup.MapDelete(UserSpecificRolePath, HandleRemoveRole);
         adminGroup.MapGet(AuditPath, HandleListAuditEntries);
+
+        // API Keys (RF-06)
+        adminGroup.MapGet(ApiKeysPath, HandleListApiKeys);
+        adminGroup.MapPost(ApiKeysPath, HandleGenerateApiKey);
+        adminGroup.MapPost(ApiKeyRevokePath, HandleRevokeApiKey);
+
+        // Public validate endpoint (machine-to-machine)
+        group.MapPost(ApiKeyValidatePath, HandleValidateApiKey).AllowAnonymous();
+
+        // MFA (RF-07) — requires user authentication
+        var mfaGroup = group.MapGroup("/").RequireAuthorization();
+        mfaGroup.MapPost(MfaEnrollPath, HandleMfaEnroll);
+        mfaGroup.MapPost(MfaConfirmPath, HandleMfaConfirm);
+        mfaGroup.MapPost(MfaDisablePath, HandleMfaDisable);
 
         return app;
     }
@@ -317,5 +340,120 @@ public static class IamEndpoints
             context.User.Identity?.Name,
             context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email"),
             permissions));
+    }
+
+    // ── API Keys (RF-06) ─────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleListApiKeys(
+        [FromServices] ListApiKeys useCase, CancellationToken ct)
+    {
+        var keys = await useCase.ExecuteAsync(ct);
+        return Results.Ok(keys.Select(k => new
+        {
+            k.Id, k.Name, k.KeyPrefix, k.CreatedByEmail, k.CreatedAt,
+            k.ExpiresAt, k.RevokedAt, IsActive = k.IsActive
+        }));
+    }
+
+    private static async Task<IResult> HandleGenerateApiKey(
+        HttpContext context,
+        [FromBody] GenerateApiKeyRequest request,
+        [FromServices] GenerateApiKey useCase,
+        CancellationToken ct)
+    {
+        var actorEmail = context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email") ?? "unknown";
+        var (entity, plaintextKey) = await useCase.ExecuteAsync(
+            new GenerateApiKeyInput(request.Name, actorEmail, request.Permissions, request.ExpiresAt), ct);
+
+        return Results.Created($"{ApiGroup}{ApiKeysPath}/{entity.Id}", new
+        {
+            entity.Id, entity.Name, entity.KeyPrefix, entity.CreatedAt,
+            plaintextKey,
+            warning = "Store this key securely — it will not be shown again."
+        });
+    }
+
+    private static async Task<IResult> HandleRevokeApiKey(
+        Guid keyId,
+        [FromServices] RevokeApiKey useCase,
+        CancellationToken ct)
+    {
+        var revoked = await useCase.ExecuteAsync(keyId, ct);
+        return revoked ? Results.NoContent() : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleValidateApiKey(
+        [FromBody] ValidateApiKeyRequest request,
+        [FromServices] ValidateApiKey useCase,
+        CancellationToken ct)
+    {
+        var result = await useCase.ExecuteAsync(request.ApiKey, ct);
+        if (!result.IsValid)
+            return Results.Unauthorized();
+
+        return Results.Ok(new { result.TenantCode, result.Permissions });
+    }
+
+    // ── MFA (RF-07) ──────────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleMfaEnroll(
+        HttpContext context,
+        [FromServices] EnrollMfa useCase,
+        CancellationToken ct)
+    {
+        var provider = "google";
+        var subject = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub");
+        var email = context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email") ?? "";
+
+        try
+        {
+            var result = await useCase.ExecuteAsync(provider, subject!, email, ct);
+            return Results.Ok(new
+            {
+                result.SecretBase32,
+                result.OtpAuthUri,
+                instruction = "Scan the QR code with your authenticator app, then call /mfa/confirm with a valid code."
+            });
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+    }
+
+    private static async Task<IResult> HandleMfaConfirm(
+        HttpContext context,
+        [FromBody] MfaTotpRequest request,
+        [FromServices] ConfirmMfa useCase,
+        CancellationToken ct)
+    {
+        var provider = "google";
+        var subject = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub");
+
+        try
+        {
+            await useCase.ExecuteAsync(provider, subject!, request.Code, ct);
+            return Results.Ok(new { message = "MFA enabled successfully." });
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+        catch (UnauthorizedAccessException) { return Results.Json(new { Error = "Invalid TOTP code." }, statusCode: 422); }
+    }
+
+    private static async Task<IResult> HandleMfaDisable(
+        HttpContext context,
+        [FromBody] MfaTotpRequest request,
+        [FromServices] DisableMfa useCase,
+        CancellationToken ct)
+    {
+        var provider = "google";
+        var subject = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub");
+
+        try
+        {
+            await useCase.ExecuteAsync(provider, subject!, request.Code, ct);
+            return Results.Ok(new { message = "MFA disabled." });
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+        catch (UnauthorizedAccessException) { return Results.Json(new { Error = "Invalid TOTP code." }, statusCode: 422); }
     }
 }

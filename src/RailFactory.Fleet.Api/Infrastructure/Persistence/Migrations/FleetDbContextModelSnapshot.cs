@@ -199,6 +199,49 @@ namespace RailFactory.Fleet.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("maintenance_plans", (string)null);
                 });
 
+            modelBuilder.Entity("RailFactory.Fleet.Api.Domain.VehicleTelemetryEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("DriverPersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<decimal?>("LatitudeDeg")
+                        .HasColumnType("numeric(10,6)");
+
+                    b.Property<decimal?>("LongitudeDeg")
+                        .HasColumnType("numeric(10,6)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("VehicleId", "OccurredAt");
+
+                    b.ToTable("vehicle_telemetry_events", (string)null);
+                });
+
             modelBuilder.Entity("RailFactory.Fleet.Api.Domain.DriverAssignment", b =>
                 {
                     b.HasOne("RailFactory.Fleet.Api.Domain.Vehicle", null)
