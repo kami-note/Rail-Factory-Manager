@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using RailFactory.BuildingBlocks.Integrations;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -16,6 +17,12 @@ internal static class TenantServiceCollectionExtensions
         builder.Services.AddScoped<ITenantContextAccessor, TenantContextAccessor>();
         builder.Services.AddScoped<ITenantConnectionResolver, TenantConnectionResolver>();
         builder.Services.AddHttpClient<ITenantCatalogClient, TenantCatalogHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri("http://tenant-management");
+        })
+        .AddStandardResilienceHandler();
+
+        builder.Services.AddHttpClient<ITenantIntegrationClient, TenantIntegrationHttpClient>(client =>
         {
             client.BaseAddress = new Uri("http://tenant-management");
         })

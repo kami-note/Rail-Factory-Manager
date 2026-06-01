@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RailFactory.Tenancy.Api.Application;
+using RailFactory.Tenancy.Api.Application.Ports;
 using RailFactory.Tenancy.Api.Infrastructure.Persistence;
 
 namespace RailFactory.Tenancy.Api.Infrastructure;
@@ -19,9 +20,14 @@ public static class TenancyModule
         services.AddDbContext<TenancyDbContext>(options => options.UseNpgsql(tenantCatalogConnectionString));
         services.AddHostedService<TenantCatalogSchemaInitializer>();
         services.AddScoped<ITenantRepository, PostgresTenantRepository>();
+        services.AddScoped<ITenantIntegrationRepository, PostgresTenantIntegrationRepository>();
+        services.AddSingleton<CredentialEncryptionService>();
 
         services.AddScoped<GetTenantByCode>();
         services.AddScoped<ListTenants>();
+        services.AddScoped<ConfigureIntegration>();
+        services.AddScoped<GetIntegrationCredentials>();
+        services.AddScoped<ListTenantIntegrations>();
 
         return services;
     }

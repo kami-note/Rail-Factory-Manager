@@ -8,9 +8,12 @@ namespace RailFactory.Tenancy.Api.Infrastructure.Persistence;
 public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options) : DbContext(options)
 {
     public DbSet<TenantRecord> Tenants => Set<TenantRecord>();
+    public DbSet<TenantIntegrationRecord> TenantIntegrations => Set<TenantIntegrationRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ConfigureTenantIntegrations(modelBuilder);
+
         var entity = modelBuilder.Entity<TenantRecord>();
         entity.ToTable("tenants");
         entity.HasKey(x => x.Code);
@@ -37,5 +40,27 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options)
         entity.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp with time zone");
 
         entity.HasIndex(x => x.Status).HasDatabaseName("ix_tenants_status");
+    }
+
+    private static void ConfigureTenantIntegrations(ModelBuilder modelBuilder)
+    {
+        var e = modelBuilder.Entity<TenantIntegrationRecord>();
+        e.ToTable("tenant_integrations");
+        e.HasKey(x => x.Id);
+
+        e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+        e.Property(x => x.TenantId).HasColumnName("tenant_id").HasColumnType("text");
+        e.Property(x => x.Category).HasColumnName("category").HasColumnType("varchar(50)");
+        e.Property(x => x.ProviderType).HasColumnName("provider_type").HasColumnType("varchar(50)");
+        e.Property(x => x.IsEnabled).HasColumnName("is_enabled").HasColumnType("boolean");
+        e.Property(x => x.EncryptedCredentials).HasColumnName("encrypted_credentials").HasColumnType("bytea");
+        e.Property(x => x.CredentialsDek).HasColumnName("credentials_dek").HasColumnType("bytea");
+        e.Property(x => x.CredentialsIv).HasColumnName("credentials_iv").HasColumnType("bytea");
+        e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
+        e.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp with time zone");
+
+        e.HasIndex(x => new { x.TenantId, x.Category })
+            .IsUnique()
+            .HasDatabaseName("uix_tenant_integrations_tenant_category");
     }
 }
