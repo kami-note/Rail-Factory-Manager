@@ -27,6 +27,7 @@ static AppHostParameters AddParameters(IDistributedApplicationBuilder builder)
         PostgresPassword: builder.AddParameter("postgres-password", "rail-factory-dev-postgres", secret: true),
         InternalApiKey: builder.AddParameter("internal-api-key", secret: true),
         InternalTokenSigningKey: builder.AddParameter("internal-token-signing-key", secret: true),
+        TenancyKek: builder.AddParameter("tenancy-kek", secret: true),
         OAuth: new AppHostOAuthParameters(
             GoogleClientId: builder.AddParameter("google-client-id", secret: true),
             GoogleClientSecret: builder.AddParameter("google-client-secret", secret: true)),
@@ -71,6 +72,7 @@ static AppHostDomainServices AddDomainServices(
     AppHostParameters parameters)
 {
     var tenantManagement = builder.AddProject<Projects.RailFactory_Tenancy_Api>("tenant-management")
+        .WithEnvironment("TENANCY__KEK", parameters.TenancyKek)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevIamDb)
         .WithReference(infra.TenantDevSupplyChainDb)
@@ -258,12 +260,33 @@ static void ValidateSecrets(IConfiguration configuration)
             $"\"$(python3 -c 'import secrets; print(secrets.token_hex(32))')\"" +
             "\nRun this command from the RailFactory.AppHost directory.");
     }
+
+    var kek = configuration["Parameters:tenancy-kek"] ?? string.Empty;
+    if (!string.IsNullOrWhiteSpace(kek))
+    {
+        try
+        {
+            var kekBytes = Convert.FromBase64String(kek);
+            if (kekBytes.Length < 32)
+                throw new InvalidOperationException(
+                    $"Parameters:tenancy-kek must decode to at least 32 bytes (256 bits). Current: {kekBytes.Length} bytes.");
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException(
+                "Parameters:tenancy-kek must be a valid Base64 string. Generate with:\n" +
+                "  dotnet user-secrets set \"Parameters:tenancy-kek\" " +
+                $"\"$(python3 -c 'import secrets,base64; print(base64.b64encode(secrets.token_bytes(32)).decode())')\"" +
+                "\nRun this command from the RailFactory.AppHost directory.");
+        }
+    }
 }
 
 file sealed record AppHostParameters(
     IResourceBuilder<ParameterResource> PostgresPassword,
     IResourceBuilder<ParameterResource> InternalApiKey,
     IResourceBuilder<ParameterResource> InternalTokenSigningKey,
+    IResourceBuilder<ParameterResource> TenancyKek,
     AppHostOAuthParameters OAuth,
     AppHostEdgeParameters Edge);
 
