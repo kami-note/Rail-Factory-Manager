@@ -109,6 +109,48 @@ public sealed class PostgresInventoryRepository(InventoryDbContext dbContext) : 
         return new InventoryStockSummary(totalMaterials, materialsWithStock, availableCount, reservedCount, blockedCount);
     }
 
+    public async Task<List<MaterialConsumptionSummary>> GetProductionCostSummaryAsync(DateTimeOffset? from, DateTimeOffset? to, CancellationToken ct)
+    {
+        var query = dbContext.LedgerEntries.AsNoTracking()
+            .Where(l => l.Operation == "production_consumed");
+
+        if (from.HasValue) query = query.Where(l => l.CreatedAt >= from.Value);
+        if (to.HasValue) query = query.Where(l => l.CreatedAt <= to.Value);
+
+        var raw = await (
+            from l in query
+            join b in dbContext.Balances.AsNoTracking() on l.BalanceId equals b.Id
+            select new { b.MaterialCode, b.UnitOfMeasure, l.QuantityDelta, l.CreatedAt }
+        ).ToListAsync(ct);
+
+        return raw
+            .GroupBy(r => new { r.MaterialCode, r.UnitOfMeasure })
+            .Select(g => new MaterialConsumptionSummary(
+                g.Key.MaterialCode,
+                g.Key.UnitOfMeasure,
+                g.Sum(x => -x.QuantityDelta),
+                g.Count(),
+                g.Max(x => x.CreatedAt)))
+            .OrderByDescending(s => s.TotalConsumedQty)
+            .ToList();
+    }
+
+    public async Task<List<ProductionTraceabilityLine>> GetProductionTraceabilityAsync(Guid orderId, CancellationToken ct)
+    {
+        var orderIdStr = orderId.ToString();
+        var rows = await (
+            from l in dbContext.LedgerEntries.AsNoTracking()
+            join b in dbContext.Balances.AsNoTracking() on l.BalanceId equals b.Id
+            where l.Operation == "production_consumed" && l.DetailsJson.Contains(orderIdStr)
+            orderby l.CreatedAt
+            select new { b.Id, b.MaterialCode, b.LotNumber, b.UnitOfMeasure, l.QuantityDelta, l.CreatedAt }
+        ).ToListAsync(ct);
+
+        return rows.Select(r => new ProductionTraceabilityLine(
+            r.Id, r.MaterialCode, r.LotNumber, r.UnitOfMeasure, -r.QuantityDelta, r.CreatedAt)
+        ).ToList();
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
         => dbContext.SaveChangesAsync(cancellationToken);
 }

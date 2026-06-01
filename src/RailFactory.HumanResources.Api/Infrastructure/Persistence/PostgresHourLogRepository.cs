@@ -17,6 +17,16 @@ public sealed class PostgresHourLogRepository(HrDbContext context) : IHourLogRep
         return query.OrderByDescending(x => x.Date).ToListAsync(cancellationToken);
     }
 
+    public Task<List<HourLog>> ListAllForPeriodAsync(int year, int month, CancellationToken cancellationToken)
+    {
+        var from = new DateOnly(year, month, 1);
+        var to = from.AddMonths(1).AddDays(-1);
+        return context.HourLogs
+            .Where(x => x.Date >= from && x.Date <= to)
+            .OrderBy(x => x.PersonId).ThenBy(x => x.Date)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
         => context.SaveChangesAsync(cancellationToken);
 }

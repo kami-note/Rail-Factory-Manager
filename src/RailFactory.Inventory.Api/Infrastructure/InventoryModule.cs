@@ -6,6 +6,7 @@ using RailFactory.Inventory.Api.Application.Materials;
 using RailFactory.Inventory.Api.Application.Ports;
 using RailFactory.Inventory.Api.Infrastructure.Messaging;
 using RailFactory.Inventory.Api.Infrastructure.Persistence;
+using RailFactory.Inventory.Api.Infrastructure;
 
 namespace RailFactory.Inventory.Api.Infrastructure;
 
@@ -16,6 +17,7 @@ public static class InventoryModule
 {
     public static IServiceCollection AddInventoryModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<AlertBroadcaster>();
         services.AddScoped<AuditSaveChangesInterceptor>();
         services.AddDbContext<InventoryDbContext>((sp, options) =>
         {
@@ -47,6 +49,8 @@ public static class InventoryModule
         services.AddScoped<GetMaterialSuggestions>();
         services.AddScoped<RegisterSupplierMaterialMapping>();
         services.AddScoped<IMergeMaterialUseCase, MergeMaterialUseCase>();
+        services.AddScoped<GetProductionOrderTraceability>();
+        services.AddScoped<GetProductionCostSummary>();
 
         // ELITE FIX: Infrastructure health checks (Manual connectivity check)
         services.AddHealthChecks()

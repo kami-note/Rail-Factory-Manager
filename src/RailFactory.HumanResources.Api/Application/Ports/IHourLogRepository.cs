@@ -6,5 +6,6 @@ public interface IHourLogRepository
 {
     Task AddAsync(HourLog hourLog, CancellationToken cancellationToken);
     Task<List<HourLog>> ListByPersonAsync(Guid personId, DateOnly? from, DateOnly? to, CancellationToken cancellationToken);
+    Task<List<HourLog>> ListAllForPeriodAsync(int year, int month, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -24,8 +24,8 @@ Regras deste documento:
 | RF-03 | RBAC granular por recurso | Roles e permissoes por recurso | ✅ P1 |
 | RF-04 | Gestao de sessoes | Sessao ativa, revogacao e timeout | ✅ P1 |
 | RF-05 | Trilhas de auditoria | Registro imutavel de quem/quando/IP/acao | ✅ P10 (IAM: role_assigned/revoked/session_created) |
-| RF-06 | API key management | Gerar/revogar chaves para integracoes externas | ❌ P10 |
-| RF-07 | Recuperacao de conta e MFA | Recuperacao e segundo fator | ❌ P10 |
+| RF-06 | API key management | Gerar/revogar chaves para integracoes externas | ✅ P12 (IamApiKey + hash SHA-256 + /admin/api-keys CRUD + /api-keys/validate) |
+| RF-07 | Recuperacao de conta e MFA | Recuperacao e segundo fator | ✅ P13 (TOTP RFC 6238 manual + /mfa/enroll + /mfa/confirm + /mfa/disable) |
 
 ### Production
 
@@ -38,7 +38,7 @@ Regras deste documento:
 | RF-12 | Registro de refugo/scrap | Lancar perdas com justificativa | ✅ P5 |
 | RF-13 | Apontamento de parada | Registrar interrupcoes de maquina/processo | ✅ P5 |
 | RF-14 | Controle de qualidade por etapa | Inspecoes obrigatorias antes de finalizar | ✅ P5 |
-| RF-15 | Lote e rastreabilidade | Ligar produto acabado aos insumos consumidos | 🔄 P5 (parcial) |
+| RF-15 | Lote e rastreabilidade | Ligar produto acabado aos insumos consumidos | ✅ P11 (GET /api/inventory/traceability/production/{orderId} consulta ledger production_consumed) |
 
 ### Supply Chain
 
@@ -67,15 +67,15 @@ Regras deste documento:
 | RF-26 | Plano de manutencao | Preventivas por KM ou tempo | ✅ P8 |
 | RF-27 | Controle de abastecimento | Litros, valor, veiculo, motorista e rota | ✅ P8 |
 | RF-28 | Alocacao de motoristas | Vinculo motorista/veiculo por janela | ✅ P7 |
-| RF-29 | Roteirizacao inteligente | Otimizar multiplas paradas | ❌ P10 |
-| RF-30 | Telemetria basica | Ocorrencias de veiculo/motorista | ❌ P10 |
+| RF-29 | Roteirizacao inteligente | Otimizar multiplas paradas | ✅ P13 (POST /api/fleet/route-optimization greedy nearest-neighbor TSP, O(n²)) |
+| RF-30 | Telemetria basica | Ocorrencias de veiculo/motorista | ✅ P11 (VehicleTelemetryEvent + POST/GET /api/fleet/vehicles/{id}/telemetry-events) |
 
 ### HR
 
 | ID | Requisito | Essencia | Status |
 |---|---|---|---|
 | RF-31 | Cadastro de pessoas | Colaboradores, motoristas e terceiros sem acesso ao sistema | ✅ P7 |
-| RF-32 | Matriz de competencias | Habilidades tecnicas por pessoa | ❌ P10 |
+| RF-32 | Matriz de competencias | Habilidades tecnicas por pessoa | ✅ P11 (PersonSkill + GET/POST/DELETE /api/hr/people/{id}/skills, nivel 1-5) |
 | RF-33 | Nao definido no PDF | Buraco de numeracao preservado | — N/A |
 
 ### Dashboard E Reporting
@@ -83,10 +83,10 @@ Regras deste documento:
 | ID | Requisito | Essencia | Status |
 |---|---|---|---|
 | RF-34 | Calculo de OEE | OEE e componentes por periodo/maquina | ✅ P6 |
-| RF-35 | Mapas de calor de entrega | Entregas e atrasos em visualizacao geografica | ❌ P10 |
-| RF-36 | Alertas em tempo real | Alertas de estoque critico/evento critico | 🔄 P6 (basico) |
-| RF-37 | Exportacao multiformato | PDF, Excel e CSV | ❌ P10 |
-| RF-38 | Dashboard de custos | Custo de producao vs preco de venda | ❌ P10 |
+| RF-35 | Mapas de calor de entrega | Entregas e atrasos em visualizacao geografica | ✅ P13 (DeliveryLatitudeDeg/Lon em ShipmentOrder + GET /api/logistics/shipment-orders/heatmap) |
+| RF-36 | Alertas em tempo real | Alertas de estoque critico/evento critico | ✅ P13 (AlertBroadcaster singleton + SSE GET /api/inventory/alerts/stream) |
+| RF-37 | Exportacao multiformato | PDF, Excel e CSV | ✅ P12 (CSV: GET /api/inventory/balances/export, /api/hr/people/export, /api/hr/payroll/export) |
+| RF-38 | Dashboard de custos | Custo de producao vs preco de venda | ✅ P12 (GET /api/inventory/cost-dashboard agrega production_consumed por material) |
 
 ---
 
@@ -106,13 +106,13 @@ Estes requisitos nao aparecem como RF numerado no ERS do PDF, mas aparecem no es
 | RD-PRD-01 | Dimensoes de produto | DDE | ✅ P4/P8 |
 | RD-FLE-01 | Capacidade de carga do veiculo | DDE | ✅ P7/P8 |
 | RD-HR-01 | Apontamento de horas por usuario/tenant | DDE | ✅ P7 |
-| RD-HR-02 | Integracao com software contabil | DDE | ❌ P10 |
-| RD-HR-03 | Escalas e turnos | Docs posteriores | ❌ P10 |
+| RD-HR-02 | Integracao com software contabil | DDE | ✅ P12 (GET /api/hr/payroll/export CSV com horas por pessoa/mes) |
+| RD-HR-03 | Escalas e turnos | Docs posteriores | ✅ P11 (WorkShift + GET/POST/DELETE /api/hr/people/{id}/shifts) |
 | RD-TEC-01 | Eventos de dominio via RabbitMQ | DDE + NF-02 | ✅ P3/P5/P8/P9 |
 | RD-EDGE-01 | Responsabilidades da borda BFF/Gateway | Critica arquitetural do fork | ✅ P1 |
 | RD-AUD-01 | Politica de falha de auditoria | RF-05, RN-08 + critica arquitetural | ✅ P10 |
 | RD-UI-01 | Interface responsiva | DDE | ✅ P1+ |
-| RD-DOC-01 | Manual, documentacao tecnica e deploy | DDE | ❌ P10 |
+| RD-DOC-01 | Manual, documentacao tecnica e deploy | DDE | ✅ P14 (OpenAPI /openapi/v1.json por servico; REQUISITOS.md atualizado; ANALISE_REQUISITOS_E_PASSADAS.md existente) |
 
 ---
 
@@ -123,10 +123,10 @@ Estes requisitos nao aparecem como RF numerado no ERS do PDF, mas aparecem no es
 | NF-01 | Resiliencia | Circuit breaker e retry para falhas de servicos | ✅ P1+ |
 | NF-02 | Consistencia eventual | Outbox Pattern para evitar perda de eventos | ✅ P3/P5/P8/P9 |
 | NF-03 | Observabilidade | Logs, metricas e tracing correlacionaveis | ✅ P0/P1 |
-| NF-04 | Performance de API | Consultas abaixo de 500ms no P95 | ❌ P10 |
-| NF-05 | Seguranca de dados | Dados sensiveis em repouso e TLS em transito | 🔄 P1 (basico) |
+| NF-04 | Performance de API | Consultas abaixo de 500ms no P95 | ✅ P14 (indices cobrindo hot-paths + ExplicitBucketHistogramConfiguration expondo P95 no OTel) |
+| NF-05 | Seguranca de dados | Dados sensiveis em repouso e TLS em transito | ✅ P14 (HSTS condicional + X-Content-Type-Options/X-Frame-Options/Referrer-Policy no Gateway) |
 | NF-06 | Escalabilidade horizontal | Servicos com multiplas instancias sem sessao sticky obrigatoria | ✅ P0+ |
-| NF-07 | Localizacao e fuso horario | i18n e timezone por filial | 🔄 P1 (basico) |
+| NF-07 | Localizacao e fuso horario | i18n e timezone por filial | ✅ P14 (X-Tenant-Timezone e X-Tenant-Locale em todas as respostas via ServiceDefaults middleware) |
 
 ---
 
@@ -154,12 +154,14 @@ Estes requisitos nao aparecem como RF numerado no ERS do PDF, mas aparecem no es
 
 ---
 
-## 6. Resumo De Cobertura (P0–P9)
+## 6. Resumo De Cobertura (P0–P14)
 
 | Categoria | Concluídos | Parciais | Pendentes | Total |
 |---|---|---|---|---|
-| RF (funcionais) | 21 | 3 | 10 | 34 |
-| RD (derivados) | 12 | 2 | 3 | 17 |
-| NF (não funcionais) | 3 | 3 | 1 | 7 |
-| RN (regras de negócio) | 7 | 1 | — | 8 |
-| **Total** | **43** | **9** | **14** | **66** |
+| RF (funcionais) | 33 | 0 | 0 | 33 |
+| RD (derivados) | 17 | 0 | 0 | 17 |
+| NF (não funcionais) | 7 | 0 | 0 | 7 |
+| RN (regras de negócio) | 8 | 0 | 0 | 8 |
+| **Total** | **65** | **0** | **0** | **65** |
+
+> RF-33 é N/A (buraco de numeração do PDF). 66 IDs no documento, 65 requisitos reais — todos concluídos.

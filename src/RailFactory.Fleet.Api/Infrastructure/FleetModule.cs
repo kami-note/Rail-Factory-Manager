@@ -5,6 +5,7 @@ using RailFactory.Fleet.Api.Application.Drivers;
 using RailFactory.Fleet.Api.Application.Fueling;
 using RailFactory.Fleet.Api.Application.Maintenance;
 using RailFactory.Fleet.Api.Application.Ports;
+using RailFactory.Fleet.Api.Application.Telemetry;
 using RailFactory.Fleet.Api.Application.Vehicles;
 using RailFactory.Fleet.Api.Infrastructure.Persistence;
 
@@ -26,6 +27,7 @@ public static class FleetModule
         services.AddScoped<IVehicleRepository, PostgresVehicleRepository>();
         services.AddScoped<IMaintenanceRepository, PostgresMaintenanceRepository>();
         services.AddScoped<IFuelingRepository, PostgresFuelingRepository>();
+        services.AddScoped<ITelemetryRepository, PostgresTelemetryRepository>();
 
         services.AddScoped<CreateVehicle>();
         services.AddScoped<ActivateVehicle>();
@@ -42,6 +44,9 @@ public static class FleetModule
 
         services.AddScoped<RecordFueling>();
         services.AddScoped<ListFuelingRecords>();
+
+        services.AddScoped<RecordTelemetryEvent>();
+        services.AddScoped<ListTelemetryEvents>();
 
         services.AddHealthChecks()
             .AddCheck("fleet-db-check", () =>

@@ -9,6 +9,7 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
     public DbSet<DriverAssignment> DriverAssignments => Set<DriverAssignment>();
     public DbSet<VehicleMaintenancePlan> MaintenancePlans => Set<VehicleMaintenancePlan>();
     public DbSet<FuelingRecord> FuelingRecords => Set<FuelingRecord>();
+    public DbSet<VehicleTelemetryEvent> TelemetryEvents => Set<VehicleTelemetryEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -84,6 +85,22 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             entity.Property(x => x.RecordedAt).IsRequired();
             entity.HasIndex(x => x.VehicleId);
             entity.HasIndex(x => x.Date);
+        });
+
+        modelBuilder.Entity<VehicleTelemetryEvent>(entity =>
+        {
+            entity.ToTable("vehicle_telemetry_events");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.VehicleId).IsRequired();
+            entity.Property(x => x.DriverPersonId);
+            entity.Property(x => x.EventType).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.OccurredAt).IsRequired();
+            entity.Property(x => x.LatitudeDeg).HasColumnType("numeric(10,6)");
+            entity.Property(x => x.LongitudeDeg).HasColumnType("numeric(10,6)");
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.HasIndex(x => new { x.VehicleId, x.OccurredAt });
+            entity.HasIndex(x => x.EventType);
         });
     }
 }

@@ -14,6 +14,7 @@ public sealed class IamAuthDbContext(
     public DbSet<IamTenantRoleRecord> Roles => Set<IamTenantRoleRecord>();
     public DbSet<IamTenantUserRoleRecord> UserRoles => Set<IamTenantUserRoleRecord>();
     public DbSet<IamAuditEntry> AuditEntries => Set<IamAuditEntry>();
+    public DbSet<IamApiKey> ApiKeys => Set<IamApiKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +22,7 @@ public sealed class IamAuthDbContext(
         ConfigureRoles(modelBuilder);
         ConfigureUserRoles(modelBuilder);
         ConfigureAuditEntries(modelBuilder);
+        ConfigureApiKeys(modelBuilder);
     }
 
     private static void ConfigureLocalUsers(ModelBuilder modelBuilder)
@@ -36,6 +38,9 @@ public sealed class IamAuthDbContext(
         entity.Property(x => x.FirstLoginAt).HasColumnName("first_login_at");
         entity.Property(x => x.LastLoginAt).HasColumnName("last_login_at");
         entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        entity.Property(x => x.MfaSecretBase32).HasColumnName("mfa_secret_base32").HasMaxLength(64);
+        entity.Property(x => x.MfaEnabled).HasColumnName("mfa_enabled");
+        entity.Property(x => x.MfaEnabledAt).HasColumnName("mfa_enabled_at");
 
         entity.HasIndex(x => x.Email).HasDatabaseName("ix_iam_local_users_email");
     }
@@ -112,5 +117,29 @@ public sealed class IamAuthDbContext(
 
         entity.HasIndex(x => x.OccurredAt).HasDatabaseName("ix_iam_audit_entries_occurred_at").IsDescending();
         entity.HasIndex(x => x.ActorEmail).HasDatabaseName("ix_iam_audit_entries_actor_email");
+    }
+
+    private void ConfigureApiKeys(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<IamApiKey>();
+        entity.ToTable("iam_api_keys");
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Id).HasColumnName("id");
+        entity.Property(x => x.TenantCode).HasColumnName("tenant_code").HasMaxLength(64).IsRequired();
+        entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(120).IsRequired();
+        entity.Property(x => x.KeyPrefix).HasColumnName("key_prefix").HasMaxLength(16).IsRequired();
+        entity.Property(x => x.KeyHash).HasColumnName("key_hash").HasMaxLength(64).IsRequired();
+        entity.Property(x => x.PermissionsJson).HasColumnName("permissions_json").HasColumnType("jsonb").IsRequired();
+        entity.Property(x => x.CreatedByEmail).HasColumnName("created_by_email").HasMaxLength(200).IsRequired();
+        entity.Property(x => x.CreatedAt).HasColumnName("created_at").IsRequired();
+        entity.Property(x => x.RevokedAt).HasColumnName("revoked_at");
+        entity.Property(x => x.ExpiresAt).HasColumnName("expires_at");
+
+        entity.HasIndex(x => x.KeyHash).HasDatabaseName("ix_iam_api_keys_hash").IsUnique();
+        entity.HasIndex(x => x.TenantCode).HasDatabaseName("ix_iam_api_keys_tenant");
+
+        // Multi-tenancy filter
+        entity.HasQueryFilter(x => x.TenantCode == _tenantCode);
     }
 }

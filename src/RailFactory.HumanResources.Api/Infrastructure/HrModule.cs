@@ -4,6 +4,8 @@ using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.HumanResources.Api.Application.Hours;
 using RailFactory.HumanResources.Api.Application.People;
 using RailFactory.HumanResources.Api.Application.Ports;
+using RailFactory.HumanResources.Api.Application.Skills;
+using RailFactory.HumanResources.Api.Application.Shifts;
 using RailFactory.HumanResources.Api.Infrastructure.Persistence;
 
 namespace RailFactory.HumanResources.Api.Infrastructure;
@@ -23,6 +25,8 @@ public static class HrModule
 
         services.AddScoped<IPersonRepository, PostgresPersonRepository>();
         services.AddScoped<IHourLogRepository, PostgresHourLogRepository>();
+        services.AddScoped<IPersonSkillRepository, PostgresPersonSkillRepository>();
+        services.AddScoped<IWorkShiftRepository, PostgresWorkShiftRepository>();
 
         services.AddScoped<CreatePerson>();
         services.AddScoped<ActivatePerson>();
@@ -31,6 +35,14 @@ public static class HrModule
 
         services.AddScoped<LogHours>();
         services.AddScoped<ListHourLogs>();
+
+        services.AddScoped<AddPersonSkill>();
+        services.AddScoped<RemovePersonSkill>();
+        services.AddScoped<ListPersonSkills>();
+
+        services.AddScoped<CreateWorkShift>();
+        services.AddScoped<DeleteWorkShift>();
+        services.AddScoped<ListWorkShifts>();
 
         services.AddHealthChecks()
             .AddCheck("hr-db-check", () =>

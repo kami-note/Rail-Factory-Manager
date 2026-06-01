@@ -38,6 +38,9 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.ProductionOrderRef);
             entity.Property(x => x.Notes).HasMaxLength(1000);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
+            entity.Property(x => x.DeliveryLatitudeDeg).HasColumnType("numeric(10,6)");
+            entity.Property(x => x.DeliveryLongitudeDeg).HasColumnType("numeric(10,6)");
+            entity.Property(x => x.DeliveryCity).HasMaxLength(120);
             entity.Property(x => x.CreatedAt).IsRequired();
             entity.Property(x => x.UpdatedAt).IsRequired();
             entity.HasIndex(x => x.OrderNumber).IsUnique();

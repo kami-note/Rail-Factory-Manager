@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.BuildingBlocks.Tenancy;
@@ -11,6 +12,7 @@ using RailFactory.Inventory.Api.Application.Balances;
 using RailFactory.Inventory.Api.Application.Materials;
 using RailFactory.Inventory.Api.Application.Ports;
 using RailFactory.Inventory.Api.Domain;
+using RailFactory.Inventory.Api.Infrastructure;
 
 namespace RailFactory.Inventory.Api.Api;
 
@@ -73,6 +75,22 @@ public static class InventoryEndpoints
 
         secureGroup.MapPost(MaterialMergePath, HandleMergeMaterials)
             .RequirePermission(SystemPermissions.Inventory.Write);
+
+        // Traceability (RF-15)
+        secureGroup.MapGet("/traceability/production/{orderId:guid}", HandleGetProductionTraceability)
+            .RequirePermission(SystemPermissions.Inventory.Read);
+
+        // Cost Dashboard (RF-38)
+        secureGroup.MapGet("/cost-dashboard", HandleGetCostDashboard)
+            .RequirePermission(SystemPermissions.Inventory.Read);
+
+        // CSV Export (RF-37)
+        secureGroup.MapGet("/balances/export", HandleExportBalancesCsv)
+            .RequirePermission(SystemPermissions.Inventory.Read);
+
+        // Real-time Alerts SSE (RF-36)
+        secureGroup.MapGet("/alerts/stream", HandleAlertsStream)
+            .RequirePermission(SystemPermissions.Inventory.Read);
 
         // INTERNAL API (Service-to-Service)
         var internalGroup = group.MapGroup(InternalPath);
@@ -225,6 +243,67 @@ public static class InventoryEndpoints
                 title: "Material merge failed",
                 detail: ex.Message,
                 statusCode: StatusCodes.Status400BadRequest);
+        }
+    }
+
+    private static async Task<IResult> HandleGetProductionTraceability(
+        Guid orderId,
+        GetProductionOrderTraceability useCase,
+        CancellationToken cancellationToken)
+    {
+        var lines = await useCase.ExecuteAsync(orderId, cancellationToken);
+        return Results.Ok(new { orderId, lines });
+    }
+
+    private static async Task<IResult> HandleGetCostDashboard(
+        GetProductionCostSummary useCase,
+        DateTimeOffset? from, DateTimeOffset? to,
+        CancellationToken cancellationToken)
+    {
+        var summary = await useCase.ExecuteAsync(from, to, cancellationToken);
+        return Results.Ok(new { from, to, summary });
+    }
+
+    private static async Task<IResult> HandleExportBalancesCsv(
+        ListInventoryBalances useCase,
+        CancellationToken cancellationToken)
+    {
+        var balances = await useCase.ExecuteAsync(null, null, cancellationToken);
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Id,MaterialCode,UnitOfMeasure,Quantity,Status,SourceType,LotNumber,CreatedAt");
+        foreach (var b in balances)
+            csv.AppendLine($"{b.Id},{Csv(b.MaterialCode)},{b.UnitOfMeasure},{b.Quantity},{b.Status},{b.SourceType},{Csv(b.LotNumber ?? "")},{b.CreatedAt:O}");
+
+        return Results.Text(csv.ToString(), "text/csv", System.Text.Encoding.UTF8);
+    }
+
+    private static string Csv(string value)
+        => value.Contains(',') || value.Contains('"') ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
+
+    private static async Task HandleAlertsStream(
+        HttpContext context, AlertBroadcaster broadcaster, CancellationToken ct)
+    {
+        context.Response.Headers["Content-Type"] = "text/event-stream";
+        context.Response.Headers["Cache-Control"] = "no-cache";
+        context.Response.Headers["X-Accel-Buffering"] = "no";
+
+        var reader = broadcaster.Subscribe();
+        try
+        {
+            // Send a heartbeat immediately so the client knows the stream is open
+            await context.Response.WriteAsync("event: ping\ndata: {}\n\n", ct);
+            await context.Response.Body.FlushAsync(ct);
+
+            await foreach (var alert in reader.ReadAllAsync(ct))
+            {
+                var json = JsonSerializer.Serialize(alert);
+                await context.Response.WriteAsync($"event: alert\ndata: {json}\n\n", ct);
+                await context.Response.Body.FlushAsync(ct);
+            }
+        }
+        finally
+        {
+            broadcaster.Unsubscribe(reader);
         }
     }
 

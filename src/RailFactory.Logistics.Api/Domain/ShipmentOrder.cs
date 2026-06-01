@@ -39,13 +39,20 @@ public sealed class ShipmentOrder
     public Guid? ProductionOrderRef { get; private set; }
     public string? Notes { get; private set; }
     public ShipmentOrderStatus Status { get; private set; }
+
+    /// <summary>Optional delivery coordinates for heat-map visualisation (RF-35).</summary>
+    public decimal? DeliveryLatitudeDeg { get; private set; }
+    public decimal? DeliveryLongitudeDeg { get; private set; }
+    public string? DeliveryCity { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public IReadOnlyList<ShipmentItem> Items => _items.AsReadOnly();
 
     private ShipmentOrder() { }
 
-    public static ShipmentOrder Create(Guid? productionOrderRef, string? notes)
+    public static ShipmentOrder Create(Guid? productionOrderRef, string? notes,
+        decimal? deliveryLatitudeDeg = null, decimal? deliveryLongitudeDeg = null, string? deliveryCity = null)
     {
         var now = DateTimeOffset.UtcNow;
         var orderNumber = $"EXP-{now:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..4].ToUpperInvariant()}";
@@ -56,6 +63,9 @@ public sealed class ShipmentOrder
             ProductionOrderRef = productionOrderRef,
             Notes = notes?.Trim(),
             Status = ShipmentOrderStatus.Draft,
+            DeliveryLatitudeDeg = deliveryLatitudeDeg,
+            DeliveryLongitudeDeg = deliveryLongitudeDeg,
+            DeliveryCity = deliveryCity?.Trim(),
             CreatedAt = now,
             UpdatedAt = now
         };

@@ -68,6 +68,10 @@ public static class LogisticsEndpoints
         secure.MapPut("/dispatches/{id:guid}/deliver", HandleDeliverDispatch)
             .RequirePermission(SystemPermissions.Logistics.Write);
 
+        // Heat Map (RF-35)
+        secure.MapGet("/shipment-orders/heatmap", HandleGetDeliveryHeatmap)
+            .RequirePermission(SystemPermissions.Logistics.Read);
+
         return app;
     }
 
@@ -128,7 +132,9 @@ public static class LogisticsEndpoints
     private static async Task<IResult> HandleCreateShipmentOrder(
         CreateShipmentOrderRequest req, CreateShipmentOrder useCase, CancellationToken ct)
     {
-        var order = await useCase.ExecuteAsync(new CreateShipmentOrderInput(req.ProductionOrderRef, req.Notes), ct);
+        var order = await useCase.ExecuteAsync(new CreateShipmentOrderInput(
+            req.ProductionOrderRef, req.Notes,
+            req.DeliveryLatitudeDeg, req.DeliveryLongitudeDeg, req.DeliveryCity), ct);
         return Results.Created($"{ApiGroup}/shipment-orders/{order.Id}", MapShipmentOrderResponse(order));
     }
 
@@ -213,10 +219,34 @@ public static class LogisticsEndpoints
         c.CreatedAt, c.UpdatedAt
     };
 
+    // ── Heat Map (RF-35) ─────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleGetDeliveryHeatmap(
+        IShipmentOrderRepository repo, CancellationToken ct)
+    {
+        var orders = await repo.ListAsync(null, ct);
+        var points = orders
+            .Where(o => o.DeliveryLatitudeDeg.HasValue && o.DeliveryLongitudeDeg.HasValue)
+            .GroupBy(o => new { o.DeliveryCity, Lat = Math.Round((double)o.DeliveryLatitudeDeg!.Value, 2), Lon = Math.Round((double)o.DeliveryLongitudeDeg!.Value, 2) })
+            .Select(g => new
+            {
+                g.Key.DeliveryCity,
+                Lat = (decimal)g.Key.Lat,
+                Lon = (decimal)g.Key.Lon,
+                Count = g.Count(),
+                ShippedCount = g.Count(o => o.Status == ShipmentOrderStatus.Shipped)
+            })
+            .OrderByDescending(p => p.Count)
+            .ToList();
+
+        return Results.Ok(new { points });
+    }
+
     private static object MapShipmentOrderResponse(ShipmentOrder o) => new
     {
         o.Id, o.OrderNumber, o.ProductionOrderRef, o.Notes,
         Status = o.Status.ToString(),
+        o.DeliveryLatitudeDeg, o.DeliveryLongitudeDeg, o.DeliveryCity,
         o.CreatedAt, o.UpdatedAt,
         Items = o.Items.Select(i => new
         {

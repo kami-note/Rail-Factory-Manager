@@ -7,6 +7,8 @@ public sealed class HrDbContext(DbContextOptions<HrDbContext> options) : DbConte
 {
     public DbSet<Person> People => Set<Person>();
     public DbSet<HourLog> HourLogs => Set<HourLog>();
+    public DbSet<PersonSkill> PersonSkills => Set<PersonSkill>();
+    public DbSet<WorkShift> WorkShifts => Set<WorkShift>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +37,32 @@ public sealed class HrDbContext(DbContextOptions<HrDbContext> options) : DbConte
             entity.Property(x => x.Description).HasMaxLength(500);
             entity.Property(x => x.RecordedAt).IsRequired();
             entity.HasIndex(x => new { x.PersonId, x.Date });
+        });
+
+        modelBuilder.Entity<PersonSkill>(entity =>
+        {
+            entity.ToTable("person_skills");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.PersonId).IsRequired();
+            entity.Property(x => x.SkillName).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.ProficiencyLevel).IsRequired();
+            entity.Property(x => x.CertifiedAt);
+            entity.Property(x => x.Notes).HasMaxLength(500);
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.HasIndex(x => new { x.PersonId, x.SkillName }).IsUnique();
+        });
+
+        modelBuilder.Entity<WorkShift>(entity =>
+        {
+            entity.ToTable("work_shifts");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.PersonId).IsRequired();
+            entity.Property(x => x.ShiftDate).IsRequired();
+            entity.Property(x => x.StartTime).IsRequired();
+            entity.Property(x => x.EndTime).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(500);
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.HasIndex(x => new { x.PersonId, x.ShiftDate });
         });
     }
 }

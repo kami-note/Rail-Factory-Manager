@@ -96,6 +96,73 @@ namespace RailFactory.HumanResources.Api.Infrastructure.Persistence.Migrations
 
                     b.ToTable("people", (string)null);
                 });
+
+            modelBuilder.Entity("RailFactory.HumanResources.Api.Domain.PersonSkill", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("CertifiedAt")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ProficiencyLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SkillName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId", "SkillName")
+                        .IsUnique();
+
+                    b.ToTable("person_skills", (string)null);
+                });
+
+            modelBuilder.Entity("RailFactory.HumanResources.Api.Domain.WorkShift", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ShiftDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId", "ShiftDate");
+
+                    b.ToTable("work_shifts", (string)null);
+                });
 #pragma warning restore 612, 618
         }
     }
