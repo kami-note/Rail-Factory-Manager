@@ -67,15 +67,20 @@ public static class Extensions
         // NF-07: expose tenant timezone and locale on every response
         app.Use(async (ctx, next) =>
         {
-            await next(ctx);
-            var tenant = ctx.GetResolvedTenant();
-            if (tenant is not null)
+            ctx.Response.OnStarting(() =>
             {
-                if (!string.IsNullOrWhiteSpace(tenant.TimeZone))
-                    ctx.Response.Headers["X-Tenant-Timezone"] = tenant.TimeZone;
-                if (!string.IsNullOrWhiteSpace(tenant.Locale))
-                    ctx.Response.Headers["X-Tenant-Locale"] = tenant.Locale;
-            }
+                var tenant = ctx.GetResolvedTenant();
+                if (tenant is not null)
+                {
+                    if (!string.IsNullOrWhiteSpace(tenant.TimeZone))
+                        ctx.Response.Headers["X-Tenant-Timezone"] = tenant.TimeZone;
+                    if (!string.IsNullOrWhiteSpace(tenant.Locale))
+                        ctx.Response.Headers["X-Tenant-Locale"] = tenant.Locale;
+                }
+                return Task.CompletedTask;
+            });
+
+            await next(ctx);
         });
 
         app.MapOpenApi(); // /openapi/v1.json

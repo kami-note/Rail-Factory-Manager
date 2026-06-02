@@ -97,6 +97,18 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DriverPersonId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("FiscalAccessKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FiscalExternalId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FiscalStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<decimal>("FreightValueBrl")
                         .HasColumnType("numeric(12,2)");
 
@@ -118,6 +130,10 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("FiscalExternalId");
+
                     b.HasIndex("ShipmentOrderId");
 
                     b.HasIndex("Status");
@@ -126,6 +142,64 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("dispatches", (string)null);
+                });
+
+            modelBuilder.Entity("RailFactory.Logistics.Api.Domain.InboundWebhookEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<short>("RetryCount")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Status", "ReceivedAt");
+
+                    b.ToTable("logistics_inbound_webhook_events", (string)null);
                 });
 
             modelBuilder.Entity("RailFactory.Logistics.Api.Domain.LogisticsOutboxMessage", b =>
@@ -172,10 +246,23 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CfopCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal>("IcmsRate")
+                        .HasColumnType("numeric(5,2)");
+
                     b.Property<string>("MaterialCode")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("NcmCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("numeric(10,3)");
@@ -183,10 +270,16 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ShipmentOrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("TaxBaseIcms")
+                        .HasColumnType("numeric(14,4)");
+
                     b.Property<string>("UnitOfMeasure")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("UnitValue")
+                        .HasColumnType("numeric(14,4)");
 
                     b.Property<decimal>("VolumeCbm")
                         .HasColumnType("numeric(10,4)");
@@ -220,6 +313,11 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("DeliveryLongitudeDeg")
                         .HasColumnType("numeric(10,6)");
 
+                    b.Property<string>("NatureOfOperation")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -231,6 +329,42 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("ProductionOrderRef")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("RecipientCity")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("RecipientCnpj")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("RecipientDistrict")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RecipientEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RecipientName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RecipientNumber")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("RecipientState")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("RecipientStreet")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RecipientZipCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<string>("Status")
                         .IsRequired()

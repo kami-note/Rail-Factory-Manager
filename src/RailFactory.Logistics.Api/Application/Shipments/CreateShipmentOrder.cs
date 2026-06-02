@@ -8,7 +8,17 @@ public sealed record CreateShipmentOrderInput(
     string? Notes,
     decimal? DeliveryLatitudeDeg = null,
     decimal? DeliveryLongitudeDeg = null,
-    string? DeliveryCity = null);
+    string? DeliveryCity = null,
+    string? RecipientCnpj = null,
+    string? RecipientName = null,
+    string? RecipientEmail = null,
+    string? RecipientStreet = null,
+    string? RecipientNumber = null,
+    string? RecipientDistrict = null,
+    string? RecipientCity = null,
+    string? RecipientState = null,
+    string? RecipientZipCode = null,
+    string? NatureOfOperation = null);
 
 public sealed class CreateShipmentOrder(IShipmentOrderRepository orders)
 {
@@ -16,7 +26,11 @@ public sealed class CreateShipmentOrder(IShipmentOrderRepository orders)
     {
         var order = ShipmentOrder.Create(
             input.ProductionOrderRef, input.Notes,
-            input.DeliveryLatitudeDeg, input.DeliveryLongitudeDeg, input.DeliveryCity);
+            input.DeliveryLatitudeDeg, input.DeliveryLongitudeDeg, input.DeliveryCity,
+            input.RecipientCnpj, input.RecipientName, input.RecipientEmail,
+            input.RecipientStreet, input.RecipientNumber, input.RecipientDistrict,
+            input.RecipientCity, input.RecipientState, input.RecipientZipCode,
+            input.NatureOfOperation);
         await orders.SaveAsync(order, ct);
         return order;
     }

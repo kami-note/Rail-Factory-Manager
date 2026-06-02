@@ -10,6 +10,7 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
     public DbSet<ShipmentItem> ShipmentItems => Set<ShipmentItem>();
     public DbSet<Dispatch> Dispatches => Set<Dispatch>();
     public DbSet<LogisticsOutboxMessage> OutboxMessages => Set<LogisticsOutboxMessage>();
+    public DbSet<InboundWebhookEvent> InboundWebhookEvents => Set<InboundWebhookEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +38,16 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.OrderNumber).HasMaxLength(30).IsRequired();
             entity.Property(x => x.ProductionOrderRef);
             entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.Property(x => x.NatureOfOperation).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.RecipientCnpj).HasMaxLength(20);
+            entity.Property(x => x.RecipientName).HasMaxLength(200);
+            entity.Property(x => x.RecipientEmail).HasMaxLength(200);
+            entity.Property(x => x.RecipientStreet).HasMaxLength(200);
+            entity.Property(x => x.RecipientNumber).HasMaxLength(10);
+            entity.Property(x => x.RecipientDistrict).HasMaxLength(100);
+            entity.Property(x => x.RecipientCity).HasMaxLength(120);
+            entity.Property(x => x.RecipientState).HasMaxLength(2);
+            entity.Property(x => x.RecipientZipCode).HasMaxLength(10);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.DeliveryLatitudeDeg).HasColumnType("numeric(10,6)");
             entity.Property(x => x.DeliveryLongitudeDeg).HasColumnType("numeric(10,6)");
@@ -66,6 +77,11 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.UnitOfMeasure).HasMaxLength(20).IsRequired();
             entity.Property(x => x.WeightKg).HasColumnType("numeric(10,3)").IsRequired();
             entity.Property(x => x.VolumeCbm).HasColumnType("numeric(10,4)").IsRequired();
+            entity.Property(x => x.NcmCode).HasMaxLength(10);
+            entity.Property(x => x.CfopCode).HasMaxLength(10);
+            entity.Property(x => x.UnitValue).HasColumnType("numeric(14,4)");
+            entity.Property(x => x.TaxBaseIcms).HasColumnType("numeric(14,4)");
+            entity.Property(x => x.IcmsRate).HasColumnType("numeric(5,2)");
             entity.HasIndex(x => x.ShipmentOrderId);
         });
 
@@ -83,6 +99,25 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.HasIndex(x => new { x.DispatchedAt, x.DeadLetteredAt });
         });
 
+        modelBuilder.Entity<InboundWebhookEvent>(entity =>
+        {
+            entity.ToTable("logistics_inbound_webhook_events");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.TenantId).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Provider).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.EventType).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.ExternalId).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Payload).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
+            entity.Property(x => x.RetryCount).IsRequired();
+            entity.Property(x => x.LastError).HasMaxLength(2000);
+            entity.Property(x => x.ReceivedAt).IsRequired();
+            entity.Property(x => x.ProcessedAt);
+            // Idempotency: one provider+externalId per tenant
+            entity.HasIndex(x => new { x.Provider, x.ExternalId }).IsUnique();
+            entity.HasIndex(x => new { x.TenantId, x.Status, x.ReceivedAt });
+        });
+
         modelBuilder.Entity<Dispatch>(entity =>
         {
             entity.ToTable("dispatches");
@@ -98,9 +133,14 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.DispatchedAt);
             entity.Property(x => x.DeliveredAt);
             entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.FiscalExternalId).HasMaxLength(200);
+            entity.Property(x => x.FiscalAccessKey).HasMaxLength(100);
+            entity.Property(x => x.FiscalStatus).HasMaxLength(50);
             entity.HasIndex(x => x.TrackingCode).IsUnique();
             entity.HasIndex(x => x.ShipmentOrderId);
             entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.FiscalExternalId);
+            entity.HasIndex(x => x.CreatedAt);
         });
     }
 }

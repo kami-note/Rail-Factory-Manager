@@ -9,7 +9,9 @@ import { RolesManagementPage, UsersManagementPage, AuditPage } from './features/
 import { WorkCentersPage, BomsPage, ProductionOrdersPage } from './features/production';
 import { PeoplePage } from './features/hr';
 import { VehiclesPage, MaintenancePage, FuelingPage } from './features/fleet';
-import { CarriersPage, ShipmentOrdersPage } from './features/logistics';
+import { CarriersPage, DispatchesPage, ShipmentOrdersPage } from './features/logistics';
+import { IntegrationsPage } from './features/integrations';
+import { TenantManagementPage } from './features/tenants';
 import { TenantSelector } from './shared/components/TenantSelector';
 import { Box, Button, Card, CircularProgress, Container, Typography, Link } from '@mui/material';
 import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from './shared/lib/http';
@@ -231,6 +233,9 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
             <Route path="fleet/fueling" element={<FuelingPage tenantCode={tenantCode} />} />
             <Route path="logistics/carriers" element={<CarriersPage tenantCode={tenantCode} />} />
             <Route path="logistics/shipment-orders" element={<ShipmentOrdersPage tenantCode={tenantCode} />} />
+            <Route path="logistics/dispatches" element={<DispatchesPage tenantCode={tenantCode} />} />
+            <Route path="settings/integrations" element={<IntegrationsPage tenantCode={tenantCode} />} />
+            <Route path="settings/tenants" element={<TenantManagementPage tenantCode={tenantCode} />} />
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>
         </ProtectedDashboardLayout>

@@ -52,6 +52,12 @@ public static class IntegrationConstants
         /// to POST the status update to the carrier's webhook URL.
         /// </summary>
         public const string WebhookNotification = "logistics.webhook_notification";
+
+        /// <summary>
+        /// Published once per dispatch when it is shipped and fiscal emission is required.
+        /// Processed by LogisticsFiscalDispatcher.
+        /// </summary>
+        public const string FiscalEmissionRequested = "logistics.fiscal_emission_requested";
     }
 
     /// <summary>

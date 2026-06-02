@@ -12,10 +12,19 @@ public sealed class ShipmentItem
     public decimal WeightKg { get; private set; }
     public decimal VolumeCbm { get; private set; }
 
+    // Fiscal fields (NF-e)
+    public string NcmCode { get; private set; } = string.Empty;
+    public string CfopCode { get; private set; } = string.Empty;
+    public decimal UnitValue { get; private set; }
+    public decimal TaxBaseIcms { get; private set; }
+    public decimal IcmsRate { get; private set; }
+
     private ShipmentItem() { }
 
     public static ShipmentItem Create(Guid shipmentOrderId, string materialCode,
-        decimal quantity, string unitOfMeasure, decimal weightKg, decimal volumeCbm)
+        decimal quantity, string unitOfMeasure, decimal weightKg, decimal volumeCbm,
+        string ncmCode = "", string cfopCode = "", decimal unitValue = 0,
+        decimal taxBaseIcms = 0, decimal icmsRate = 12)
     {
         return new ShipmentItem
         {
@@ -25,7 +34,12 @@ public sealed class ShipmentItem
             Quantity = quantity,
             UnitOfMeasure = unitOfMeasure.Trim(),
             WeightKg = weightKg,
-            VolumeCbm = volumeCbm
+            VolumeCbm = volumeCbm,
+            NcmCode = ncmCode.Trim(),
+            CfopCode = cfopCode.Trim(),
+            UnitValue = unitValue,
+            TaxBaseIcms = taxBaseIcms,
+            IcmsRate = icmsRate
         };
     }
 }
@@ -45,6 +59,18 @@ public sealed class ShipmentOrder
     public decimal? DeliveryLongitudeDeg { get; private set; }
     public string? DeliveryCity { get; private set; }
 
+    // Recipient (destinatário NF-e)
+    public string? RecipientCnpj { get; private set; }
+    public string? RecipientName { get; private set; }
+    public string? RecipientEmail { get; private set; }
+    public string? RecipientStreet { get; private set; }
+    public string? RecipientNumber { get; private set; }
+    public string? RecipientDistrict { get; private set; }
+    public string? RecipientCity { get; private set; }
+    public string? RecipientState { get; private set; }
+    public string? RecipientZipCode { get; private set; }
+    public string NatureOfOperation { get; private set; } = "Venda de mercadoria";
+
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public IReadOnlyList<ShipmentItem> Items => _items.AsReadOnly();
@@ -52,7 +78,13 @@ public sealed class ShipmentOrder
     private ShipmentOrder() { }
 
     public static ShipmentOrder Create(Guid? productionOrderRef, string? notes,
-        decimal? deliveryLatitudeDeg = null, decimal? deliveryLongitudeDeg = null, string? deliveryCity = null)
+        decimal? deliveryLatitudeDeg = null, decimal? deliveryLongitudeDeg = null,
+        string? deliveryCity = null,
+        string? recipientCnpj = null, string? recipientName = null, string? recipientEmail = null,
+        string? recipientStreet = null, string? recipientNumber = null,
+        string? recipientDistrict = null, string? recipientCity = null,
+        string? recipientState = null, string? recipientZipCode = null,
+        string? natureOfOperation = null)
     {
         var now = DateTimeOffset.UtcNow;
         var orderNumber = $"EXP-{now:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..4].ToUpperInvariant()}";
@@ -66,17 +98,30 @@ public sealed class ShipmentOrder
             DeliveryLatitudeDeg = deliveryLatitudeDeg,
             DeliveryLongitudeDeg = deliveryLongitudeDeg,
             DeliveryCity = deliveryCity?.Trim(),
+            RecipientCnpj = recipientCnpj?.Trim(),
+            RecipientName = recipientName?.Trim(),
+            RecipientEmail = recipientEmail?.Trim(),
+            RecipientStreet = recipientStreet?.Trim(),
+            RecipientNumber = recipientNumber?.Trim(),
+            RecipientDistrict = recipientDistrict?.Trim(),
+            RecipientCity = recipientCity?.Trim(),
+            RecipientState = recipientState?.Trim(),
+            RecipientZipCode = recipientZipCode?.Trim(),
+            NatureOfOperation = natureOfOperation?.Trim() ?? "Venda de mercadoria",
             CreatedAt = now,
             UpdatedAt = now
         };
     }
 
     public ShipmentItem AddItem(string materialCode, decimal quantity, string unitOfMeasure,
-        decimal weightKg, decimal volumeCbm)
+        decimal weightKg, decimal volumeCbm,
+        string ncmCode = "", string cfopCode = "", decimal unitValue = 0,
+        decimal taxBaseIcms = 0, decimal icmsRate = 12)
     {
         if (Status != ShipmentOrderStatus.Draft)
             throw new InvalidOperationException("Items can only be added to Draft orders.");
-        var item = ShipmentItem.Create(Id, materialCode, quantity, unitOfMeasure, weightKg, volumeCbm);
+        var item = ShipmentItem.Create(Id, materialCode, quantity, unitOfMeasure, weightKg, volumeCbm,
+            ncmCode, cfopCode, unitValue, taxBaseIcms, icmsRate);
         _items.Add(item);
         UpdatedAt = DateTimeOffset.UtcNow;
         return item;

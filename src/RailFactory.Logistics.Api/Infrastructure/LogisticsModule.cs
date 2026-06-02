@@ -1,11 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using RailFactory.BuildingBlocks.Events;
+using RailFactory.BuildingBlocks.Integrations;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Logistics.Api.Application.Carriers;
 using RailFactory.Logistics.Api.Application.Dispatches;
 using RailFactory.Logistics.Api.Application.Ports;
 using RailFactory.Logistics.Api.Application.Shipments;
+using RailFactory.Logistics.Api.Application.Fiscal;
+using RailFactory.Logistics.Api.Infrastructure.Adapters.Fiscal;
 using RailFactory.Logistics.Api.Infrastructure.Integration;
 using RailFactory.Logistics.Api.Infrastructure.Persistence;
 
@@ -25,11 +28,41 @@ public static class LogisticsModule
         services.AddHostedService<LogisticsSchemaInitializer>();
         services.AddHostedService<LogisticsInventoryDispatcher>();
         services.AddHostedService<LogisticsWebhookDispatcher>();
+        services.AddHostedService<InboundWebhookProcessor>();
+        services.AddHostedService<LogisticsFiscalDispatcher>();
         services.AddHttpClient("logistics-webhook")
             .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddSingleton<RabbitMqPublisher>(sp => new RabbitMqPublisher(
             sp.GetRequiredService<RabbitMQ.Client.IConnection>(),
             IntegrationConstants.Exchanges.Logistics));
+
+        // Named HTTP clients for fiscal adapters (base URLs, timeouts, resilience)
+        services.AddHttpClient("plugnotas", c =>
+        {
+            c.BaseAddress = new Uri("https://api.plugnotas.com.br");
+            c.Timeout = TimeSpan.FromSeconds(30);
+        }).AddStandardResilienceHandler();
+
+        services.AddHttpClient("focusnfe", c =>
+        {
+            c.BaseAddress = new Uri("https://api.focusnfe.com.br");
+            c.Timeout = TimeSpan.FromSeconds(30);
+        }).AddStandardResilienceHandler();
+
+        // Fiscal adapter factory + signature validators
+        services.AddScoped<ITenantAdapterFactory<IFiscalIssuerAdapter>, FiscalIssuerAdapterFactory>();
+        services.AddSingleton<IWebhookSignatureValidator, PlugNotasWebhookSignatureValidator>();
+        services.AddSingleton<IWebhookSignatureValidator, FocusNfeWebhookSignatureValidator>();
+
+        // Fiscal webhook handlers (one per provider)
+        services.AddScoped<IInboundWebhookHandler, PlugNotasFiscalWebhookHandler>();
+        services.AddScoped<IInboundWebhookHandler, FocusNfeFiscalWebhookHandler>();
+
+        // Fiscal document use case
+        services.AddScoped<IssueFiscalDocument>();
+
+        // Webhook event repository
+        services.AddScoped<IInboundWebhookEventRepository, PostgresInboundWebhookEventRepository>();
 
         services.AddScoped<ICarrierRepository, PostgresCarrierRepository>();
         services.AddScoped<IShipmentOrderRepository, PostgresShipmentOrderRepository>();

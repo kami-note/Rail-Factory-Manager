@@ -12,6 +12,13 @@ public sealed class PostgresDispatchRepository(LogisticsDbContext db) : IDispatc
     public Task<Dispatch?> GetByTrackingCodeAsync(string trackingCode, CancellationToken ct)
         => db.Dispatches.FirstOrDefaultAsync(x => x.TrackingCode == trackingCode, ct);
 
+    public Task<List<Dispatch>> ListAsync(int page, int pageSize, CancellationToken ct)
+        => db.Dispatches
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
     public async Task SaveAsync(Dispatch dispatch, CancellationToken ct)
     {
         if (db.Entry(dispatch).State == EntityState.Detached)

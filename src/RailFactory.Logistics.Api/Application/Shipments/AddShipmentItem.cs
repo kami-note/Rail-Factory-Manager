@@ -5,7 +5,9 @@ namespace RailFactory.Logistics.Api.Application.Shipments;
 
 public sealed record AddShipmentItemInput(
     Guid OrderId, string MaterialCode, decimal Quantity,
-    string UnitOfMeasure, decimal WeightKg, decimal VolumeCbm);
+    string UnitOfMeasure, decimal WeightKg, decimal VolumeCbm,
+    string NcmCode = "", string CfopCode = "",
+    decimal UnitValue = 0, decimal TaxBaseIcms = 0, decimal IcmsRate = 12);
 
 public sealed class AddShipmentItem(IShipmentOrderRepository orders)
 {
@@ -15,7 +17,8 @@ public sealed class AddShipmentItem(IShipmentOrderRepository orders)
             ?? throw new KeyNotFoundException($"Shipment order {input.OrderId} not found.");
 
         var item = order.AddItem(input.MaterialCode, input.Quantity,
-            input.UnitOfMeasure, input.WeightKg, input.VolumeCbm);
+            input.UnitOfMeasure, input.WeightKg, input.VolumeCbm,
+            input.NcmCode, input.CfopCode, input.UnitValue, input.TaxBaseIcms, input.IcmsRate);
 
         await orders.AddItemDirectAsync(order.Id, item, order.UpdatedAt, ct);
         return item;

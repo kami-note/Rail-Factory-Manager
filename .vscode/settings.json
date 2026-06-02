@@ -8,5 +8,12 @@
     "statusBar.background": "#1f4e79",
     "statusBar.foreground": "#ffffff",
     "sideBar.background": "#101820"
-  }
+  },
+  "search.exclude": {
+   "**/node_modules": true,
+   "**/bin": true,
+   "**/obj": true,
+   "**/.aspire": true
+  },
+  "typescript.tsserver.maxTsServerMemory": 4096
 }

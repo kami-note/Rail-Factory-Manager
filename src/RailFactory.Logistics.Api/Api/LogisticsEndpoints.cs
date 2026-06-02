@@ -1,7 +1,13 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using RailFactory.BuildingBlocks.Auth;
+using RailFactory.BuildingBlocks.Integrations;
 using RailFactory.Logistics.Api.Api.Requests;
 using RailFactory.Logistics.Api.Application.Carriers;
 using RailFactory.Logistics.Api.Application.Dispatches;
+using RailFactory.Logistics.Api.Application.Fiscal;
 using RailFactory.Logistics.Api.Application.Ports;
 using RailFactory.Logistics.Api.Application.Shipments;
 using RailFactory.Logistics.Api.Domain;
@@ -57,6 +63,8 @@ public static class LogisticsEndpoints
             .RequirePermission(SystemPermissions.Logistics.Write);
 
         // Dispatches
+        secure.MapGet("/dispatches", HandleListDispatches)
+            .RequirePermission(SystemPermissions.Logistics.Read);
         secure.MapGet("/dispatches/{id:guid}", HandleGetDispatch)
             .RequirePermission(SystemPermissions.Logistics.Read);
         secure.MapPost("/dispatches", HandleCreateDispatch)
@@ -71,6 +79,15 @@ public static class LogisticsEndpoints
         // Heat Map (RF-35)
         secure.MapGet("/shipment-orders/heatmap", HandleGetDeliveryHeatmap)
             .RequirePermission(SystemPermissions.Logistics.Read);
+
+        // Fiscal document emission
+        secure.MapPost("/dispatches/{id:guid}/fiscal-document", HandleIssueFiscalDocument)
+            .RequirePermission(SystemPermissions.Logistics.Write);
+
+        // Inbound webhooks — public endpoint, no auth (providers POST here).
+        // Tenant is in the URL so providers don't need to send any custom headers.
+        group.MapPost("/webhooks/{provider}/{tenantCode}", HandleInboundWebhook)
+            .AllowAnonymous();
 
         return app;
     }
@@ -134,7 +151,11 @@ public static class LogisticsEndpoints
     {
         var order = await useCase.ExecuteAsync(new CreateShipmentOrderInput(
             req.ProductionOrderRef, req.Notes,
-            req.DeliveryLatitudeDeg, req.DeliveryLongitudeDeg, req.DeliveryCity), ct);
+            req.DeliveryLatitudeDeg, req.DeliveryLongitudeDeg, req.DeliveryCity,
+            req.RecipientCnpj, req.RecipientName, req.RecipientEmail,
+            req.RecipientStreet, req.RecipientNumber, req.RecipientDistrict,
+            req.RecipientCity, req.RecipientState, req.RecipientZipCode,
+            req.NatureOfOperation), ct);
         return Results.Created($"{ApiGroup}/shipment-orders/{order.Id}", MapShipmentOrderResponse(order));
     }
 
@@ -144,9 +165,12 @@ public static class LogisticsEndpoints
         try
         {
             var item = await useCase.ExecuteAsync(
-                new AddShipmentItemInput(id, req.MaterialCode, req.Quantity, req.UnitOfMeasure, req.WeightKg, req.VolumeCbm), ct);
+                new AddShipmentItemInput(id, req.MaterialCode, req.Quantity, req.UnitOfMeasure,
+                    req.WeightKg, req.VolumeCbm, req.NcmCode, req.CfopCode,
+                    req.UnitValue, req.TaxBaseIcms, req.IcmsRate), ct);
             return Results.Created($"{ApiGroup}/shipment-orders/{id}/items/{item.Id}",
-                new { item.Id, item.MaterialCode, item.Quantity, item.UnitOfMeasure, item.WeightKg, item.VolumeCbm });
+                new { item.Id, item.MaterialCode, item.Quantity, item.UnitOfMeasure,
+                    item.WeightKg, item.VolumeCbm, item.NcmCode, item.CfopCode, item.UnitValue });
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
         catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
@@ -165,6 +189,18 @@ public static class LogisticsEndpoints
         => ExecuteTransitionAsync(id, useCase.ExecuteAsync, ct);
 
     // ── Dispatches ────────────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleListDispatches(
+        IDispatchRepository repo,
+        CancellationToken ct,
+        int page = 1,
+        int pageSize = 50)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        var dispatches = await repo.ListAsync(page, pageSize, ct);
+        return Results.Ok(dispatches.Select(MapDispatchResponse));
+    }
 
     private static async Task<IResult> HandleGetDispatch(Guid id, IDispatchRepository repo, CancellationToken ct)
     {
@@ -259,6 +295,108 @@ public static class LogisticsEndpoints
         d.Id, d.ShipmentOrderId, d.CarrierId, d.VehicleId, d.DriverPersonId,
         d.TrackingCode, d.FreightValueBrl,
         Status = d.Status.ToString(),
+        d.FiscalExternalId, d.FiscalStatus,
         d.ConferencedAt, d.DispatchedAt, d.DeliveredAt, d.CreatedAt
     };
+
+    // ── Fiscal Documents ─────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleIssueFiscalDocument(
+        Guid id,
+        [FromBody] IssueFiscalDocumentRequest req,
+        IssueFiscalDocument useCase,
+        CancellationToken ct)
+    {
+        var result = await useCase.ExecuteAsync(req with { DispatchId = id }, ct);
+        return result.IsSuccess
+            ? Results.Ok(result.Value)
+            : result.Error.Code.EndsWith("not_found", StringComparison.Ordinal)
+                ? Results.NotFound(new { error = result.Error.Message })
+                : Results.BadRequest(new { error = result.Error.Message });
+    }
+
+    // ── Inbound Webhooks ─────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleInboundWebhook(
+        string provider,
+        string tenantCode,
+        HttpRequest httpRequest,
+        [FromServices] IEnumerable<IWebhookSignatureValidator> validators,
+        [FromServices] IInboundWebhookEventRepository repo,
+        [FromServices] ITenantIntegrationClient integrationClient,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("Webhooks");
+
+        // Read body as raw string for signature validation
+        using var reader = new StreamReader(httpRequest.Body);
+        var rawBody = await reader.ReadToEndAsync(ct);
+
+        // Resolve registered validator for this provider — fail-closed if unknown.
+        var validator = validators.FirstOrDefault(v =>
+            v.Provider.Equals(provider, StringComparison.OrdinalIgnoreCase));
+
+        if (validator is null)
+        {
+            logger.LogWarning(
+                "No signature validator registered for provider '{Provider}'. Request rejected.", provider);
+            return Results.Problem(
+                title: "Unknown provider",
+                detail: $"No webhook integration registered for provider '{provider}'.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        // Fetch stored credentials for this tenant's fiscal integration to get the webhook secret.
+        using var config = await integrationClient.GetConfigAsync(tenantCode, "fiscal", ct);
+        if (config is null)
+        {
+            logger.LogWarning(
+                "No fiscal integration configured for tenant {TenantCode}. Webhook rejected.", tenantCode);
+            return Results.Unauthorized();
+        }
+
+        var storedSecret = config.Credentials.TryGetString(validator.CredentialKey, out var secret)
+            ? secret
+            : string.Empty;
+
+        if (!validator.IsValid(rawBody, httpRequest, storedSecret))
+        {
+            logger.LogWarning(
+                "Invalid signature from provider '{Provider}' for tenant {TenantCode}.", provider, tenantCode);
+            return Results.Unauthorized();
+        }
+
+        // Determine event type and external ID from the payload.
+        // Fallback: SHA256 hash of the raw body — deterministic, so identical payloads
+        // from the same provider are always treated as duplicates (idempotency preserved).
+        string eventType = "unknown";
+        string externalId = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawBody)));
+        try
+        {
+            using var doc = JsonDocument.Parse(rawBody);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("event", out var evProp)) eventType = evProp.GetString() ?? eventType;
+            else if (root.TryGetProperty("status", out var stProp)) eventType = stProp.GetString() ?? eventType;
+
+            // PlugNotas: "idIntegracao" | FocusNFe: "ref" | fallback: "id"
+            if (root.TryGetProperty("idIntegracao", out var integProp)) externalId = integProp.GetString() ?? externalId;
+            else if (root.TryGetProperty("ref", out var refProp)) externalId = refProp.GetString() ?? externalId;
+            else if (root.TryGetProperty("id", out var idProp)) externalId = idProp.GetString() ?? externalId;
+        }
+        catch (JsonException) { /* malformed body — hash-based externalId ensures idempotency */ }
+
+        // Idempotency check
+        if (await repo.ExistsAsync(provider, externalId, ct))
+            return Results.Ok(new { status = "duplicate", message = "Already received." });
+
+        var evt = InboundWebhookEvent.Receive(tenantCode, provider, eventType, externalId, rawBody);
+        await repo.AddAsync(evt, ct);
+
+        logger.LogInformation(
+            "Inbound webhook received from {Provider} for tenant {TenantCode}: event={EventType} id={ExternalId}",
+            provider, tenantCode, eventType, externalId);
+
+        return Results.Ok(new { status = "accepted" });
+    }
 }

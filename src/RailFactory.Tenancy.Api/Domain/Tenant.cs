@@ -68,6 +68,29 @@ public sealed class Tenant : AggregateRoot<string>
         return tenant;
     }
 
+    // Standard database names every tenant needs
+    private static readonly string[] ServiceDbs =
+        ["iamdb", "supplychaindb", "inventorydb", "productiondb", "hrdb", "fleetdb", "logisticsdb"];
+
+    /// <summary>
+    /// Registers a new tenant. Connection strings follow the convention tenant-{code}-{dbname}.
+    /// </summary>
+    public static Tenant Register(string code, string displayName, string locale, string timeZone)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(locale);
+        ArgumentException.ThrowIfNullOrWhiteSpace(timeZone);
+
+        var normalizedCode = code.Trim().ToLowerInvariant();
+        var tenant = new Tenant(normalizedCode, displayName.Trim(), locale.Trim(), timeZone.Trim(), TenantStatus.Active);
+        foreach (var db in ServiceDbs)
+            tenant.SetConnectionString(db, $"tenant-{normalizedCode}-{db}");
+
+        tenant.RaiseDomainEvent(new TenantRegisteredDomainEvent(Guid.NewGuid(), DateTimeOffset.UtcNow, tenant.Code));
+        return tenant;
+    }
+
     public static Tenant Restore(
         string code,
         string displayName,
