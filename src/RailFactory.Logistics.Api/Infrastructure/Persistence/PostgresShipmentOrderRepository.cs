@@ -31,8 +31,12 @@ public sealed class PostgresShipmentOrderRepository(LogisticsDbContext db) : ISh
         // convention), causing SaveChanges to generate an UPDATE on a non-existent row.
         await db.Database.ExecuteSqlAsync(
             $"""
-            INSERT INTO "shipment_items" ("Id", "ShipmentOrderId", "MaterialCode", "Quantity", "UnitOfMeasure", "WeightKg", "VolumeCbm")
-            VALUES ({item.Id}, {orderId}, {item.MaterialCode}, {item.Quantity}, {item.UnitOfMeasure}, {item.WeightKg}, {item.VolumeCbm})
+            INSERT INTO "shipment_items"
+              ("Id", "ShipmentOrderId", "MaterialCode", "Quantity", "UnitOfMeasure", "WeightKg", "VolumeCbm",
+               "NcmCode", "CfopCode", "UnitValue", "TaxBaseIcms", "IcmsRate")
+            VALUES
+              ({item.Id}, {orderId}, {item.MaterialCode}, {item.Quantity}, {item.UnitOfMeasure}, {item.WeightKg}, {item.VolumeCbm},
+               {item.NcmCode}, {item.CfopCode}, {item.UnitValue}, {item.TaxBaseIcms}, {item.IcmsRate})
             """,
             ct);
 

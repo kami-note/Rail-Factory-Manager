@@ -34,6 +34,9 @@ export const SystemPermissions = {
     Read: 'logistics.read',
     Write: 'logistics.write',
   },
+  Tenancy: {
+    Admin: 'tenancy.admin',
+  },
 } as const;
 
 export type SystemPermission =
@@ -43,4 +46,5 @@ export type SystemPermission =
   | (typeof SystemPermissions.Iam)[keyof typeof SystemPermissions.Iam]
   | (typeof SystemPermissions.Hr)[keyof typeof SystemPermissions.Hr]
   | (typeof SystemPermissions.Fleet)[keyof typeof SystemPermissions.Fleet]
-  | (typeof SystemPermissions.Logistics)[keyof typeof SystemPermissions.Logistics];
+  | (typeof SystemPermissions.Logistics)[keyof typeof SystemPermissions.Logistics]
+  | (typeof SystemPermissions.Tenancy)[keyof typeof SystemPermissions.Tenancy];

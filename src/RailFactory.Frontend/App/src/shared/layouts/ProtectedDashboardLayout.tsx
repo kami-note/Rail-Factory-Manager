@@ -18,7 +18,7 @@ import {
   Avatar,
   IconButton
 } from '@mui/material';
-import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, Wrench, Fuel, PackageCheck, ScrollText } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, Wrench, Fuel, PackageCheck, ScrollText, Plug, SendHorizonal, Building2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { usePermissions } from '../../features/auth';
 import { SystemPermissions } from '../types/permissions';
@@ -49,6 +49,9 @@ const navItems: NavItem[] = [
   { href: '/app/fleet/fueling', label: 'ABASTECIMENTO', icon: <Fuel size={18} />, permission: SystemPermissions.Fleet.Read },
   { href: '/app/logistics/carriers', label: 'TRANSPORTADORAS', icon: <Truck size={18} />, permission: SystemPermissions.Logistics.Read },
   { href: '/app/logistics/shipment-orders', label: 'EXPEDIÇÃO', icon: <PackageCheck size={18} />, permission: SystemPermissions.Logistics.Read },
+  { href: '/app/logistics/dispatches', label: 'DESPACHOS', icon: <SendHorizonal size={18} />, permission: SystemPermissions.Logistics.Read },
+  { href: '/app/settings/integrations', label: 'INTEGRAÇÕES', icon: <Plug size={18} />, permission: SystemPermissions.Tenancy.Admin },
+  { href: '/app/settings/tenants', label: 'TENANTS', icon: <Building2 size={18} />, permission: SystemPermissions.Tenancy.Admin },
 ];
 
 type ProtectedDashboardLayoutProps = {

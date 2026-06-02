@@ -17,6 +17,11 @@ public sealed class Dispatch
     public DateTimeOffset? DeliveredAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
 
+    // Fiscal document (NF-e) fields — populated after emission via adapter
+    public string? FiscalExternalId { get; private set; }
+    public string? FiscalAccessKey { get; private set; }
+    public string? FiscalStatus { get; private set; }
+
     private Dispatch() { }
 
     public static Dispatch Create(Guid shipmentOrderId, Guid carrierId,
@@ -65,5 +70,12 @@ public sealed class Dispatch
         if (Status != DispatchStatus.InTransit)
             throw new InvalidOperationException("Only InTransit dispatches can be returned.");
         Status = DispatchStatus.Returned;
+    }
+
+    public void UpdateFiscalStatus(string externalId, string fiscalStatus, string? accessKey)
+    {
+        FiscalExternalId = externalId;
+        FiscalStatus = fiscalStatus;
+        FiscalAccessKey = accessKey;
     }
 }

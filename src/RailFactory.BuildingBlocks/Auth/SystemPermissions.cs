@@ -50,6 +50,11 @@ public static class SystemPermissions
         public const string Write = "logistics.write";
     }
 
+    public static class Tenancy
+    {
+        public const string Admin = "tenancy.admin";
+    }
+
     /// <summary>
     /// Returns all available permission codes for validation or UI selection.
     /// </summary>
@@ -72,5 +77,6 @@ public static class SystemPermissions
         yield return Fleet.Write;
         yield return Logistics.Read;
         yield return Logistics.Write;
+        yield return Tenancy.Admin;
     }
 }

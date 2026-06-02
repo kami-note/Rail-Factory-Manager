@@ -22,6 +22,9 @@ export interface ShipmentItem {
   unitOfMeasure: string;
   weightKg: number;
   volumeCbm: number;
+  ncmCode?: string;
+  cfopCode?: string;
+  unitValue?: number;
 }
 
 export interface ShipmentOrder {
@@ -30,12 +33,30 @@ export interface ShipmentOrder {
   productionOrderRef?: string;
   notes?: string;
   status: ShipmentOrderStatus;
+  recipientCnpj?: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  recipientStreet?: string;
+  recipientNumber?: string;
+  recipientDistrict?: string;
+  recipientCity?: string;
+  recipientState?: string;
+  recipientZipCode?: string;
+  natureOfOperation?: string;
   createdAt: string;
   updatedAt: string;
   items: ShipmentItem[];
 }
 
 export type DispatchStatus = 'Pending' | 'InTransit' | 'Delivered' | 'Returned';
+
+export type FiscalStatus =
+  | 'processando' | 'processando_autorizacao'
+  | 'autorizado' | 'CONCLUIDO'
+  | 'erro_autorizacao' | 'REJEITADO'
+  | 'cancelado' | 'CANCELADO'
+  | 'denegado' | 'DENEGADO'
+  | string;
 
 export interface Dispatch {
   id: string;
@@ -46,6 +67,9 @@ export interface Dispatch {
   trackingCode: string;
   freightValueBrl: number;
   status: DispatchStatus;
+  fiscalExternalId?: string;
+  fiscalAccessKey?: string;
+  fiscalStatus?: FiscalStatus;
   conferencedAt?: string;
   dispatchedAt?: string;
   deliveredAt?: string;

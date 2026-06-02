@@ -38,43 +38,36 @@ public sealed class TenantCatalogSchemaInitializer(
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Inspects the actual database schema and marks already-applied migrations as done
+    /// so EF Core does not try to re-run them. Handles legacy databases that were created
+    /// before the EF migration system was introduced.
+    /// </summary>
     private static async Task AlignLegacySchemaWithMigrationHistoryAsync(
         TenancyDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken);
-        if (appliedMigrations.Any())
-        {
-            return;
-        }
+        var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
 
-        var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync(cancellationToken);
         if (!pendingMigrations.Any())
-        {
             return;
-        }
 
         var connection = dbContext.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
-        {
             await connection.OpenAsync(cancellationToken);
-        }
 
-        await using var tableExistsCommand = connection.CreateCommand();
-        tableExistsCommand.CommandText = "SELECT to_regclass('public.tenants') IS NOT NULL;";
-        var tableExistsResult = await tableExistsCommand.ExecuteScalarAsync(cancellationToken);
-        var tenantsTableExists = tableExistsResult is true;
+        // Check what already exists in the database
+        var tenantsTableExists = await ColumnExistsAsync(connection, "tenants", null, cancellationToken);
         if (!tenantsTableExists)
-        {
-            return;
-        }
+            return; // truly fresh database — let MigrateAsync create everything
 
-        var firstPendingMigration = pendingMigrations.First();
+        var connectionStringsColumnExists = await ColumnExistsAsync(connection, "tenants", "connection_strings", cancellationToken);
+        var tenantIntegrationsTableExists = await ColumnExistsAsync(connection, "tenant_integrations", null, cancellationToken);
+
         var efProductVersion = typeof(DbContext)
             .Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion
-            ?.Split('+')[0] ?? "9.0.0";
+            .InformationalVersion?.Split('+')[0] ?? "9.0.0";
 
         await dbContext.Database.ExecuteSqlRawAsync("""
             CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
@@ -84,11 +77,50 @@ public sealed class TenantCatalogSchemaInitializer(
             );
             """);
 
-        await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-            VALUES ({firstPendingMigration}, {efProductVersion})
-            ON CONFLICT ("MigrationId") DO NOTHING;
-            """);
+        // Mark each legacy migration as applied only when we confirm its schema change already exists
+        foreach (var migration in pendingMigrations)
+        {
+            var alreadyApplied = migration switch
+            {
+                var m when m.Contains("InitialTenantCatalog")       => tenantsTableExists,
+                var m when m.Contains("AddTenantConnectionStrings") => connectionStringsColumnExists,
+                var m when m.Contains("AddTenantIntegrations")      => tenantIntegrationsTableExists,
+                _ => false
+            };
+
+            if (alreadyApplied)
+            {
+                await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+                    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                    VALUES ({migration}, {efProductVersion})
+                    ON CONFLICT ("MigrationId") DO NOTHING;
+                    """);
+            }
+        }
+    }
+
+    private static readonly HashSet<string> AllowedTables =
+        ["tenants", "tenant_integrations"];
+    private static readonly HashSet<string> AllowedColumns =
+        ["connection_strings"];
+
+    private static async Task<bool> ColumnExistsAsync(
+        System.Data.Common.DbConnection connection,
+        string table,
+        string? column,
+        CancellationToken cancellationToken)
+    {
+        if (!AllowedTables.Contains(table))
+            throw new ArgumentException($"Table '{table}' is not in the schema-check allowlist.", nameof(table));
+        if (column is not null && !AllowedColumns.Contains(column))
+            throw new ArgumentException($"Column '{column}' is not in the schema-check allowlist.", nameof(column));
+
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = column is null
+            ? $"SELECT to_regclass('public.{table}') IS NOT NULL"
+            : $"SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='{table}' AND column_name='{column}')";
+        var result = await cmd.ExecuteScalarAsync(cancellationToken);
+        return result is true;
     }
 
     private async Task SeedDevTenantAsync(TenancyDbContext dbContext, CancellationToken cancellationToken)

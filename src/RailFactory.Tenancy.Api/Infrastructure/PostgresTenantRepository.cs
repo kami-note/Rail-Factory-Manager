@@ -13,33 +13,34 @@ public sealed class PostgresTenantRepository(TenancyDbContext dbContext) : ITena
         var record = await dbContext.Tenants
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.Code.ToLower() == normalizedCode, cancellationToken);
-        if (record is null)
-        {
-            return null;
-        }
 
-        return Tenant.Restore(
-            record.Code,
-            record.DisplayName,
-            record.Locale,
-            record.TimeZone,
-            Enum.Parse<TenantStatus>(record.Status, ignoreCase: true),
-            record.ConnectionStrings);
+        return record is null ? null : ToTenant(record);
     }
 
     public async Task<IReadOnlyList<Tenant>> ListTenantsAsync(CancellationToken cancellationToken = default)
     {
-        var records = await dbContext.Tenants
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-
-        return records.Select(record => Tenant.Restore(
-            record.Code,
-            record.DisplayName,
-            record.Locale,
-            record.TimeZone,
-            Enum.Parse<TenantStatus>(record.Status, ignoreCase: true),
-            record.ConnectionStrings)).ToList();
+        var records = await dbContext.Tenants.AsNoTracking().ToListAsync(cancellationToken);
+        return records.Select(ToTenant).ToList();
     }
 
+    public async Task AddAsync(Tenant tenant, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        dbContext.Tenants.Add(new TenantRecord
+        {
+            Code = tenant.Code,
+            DisplayName = tenant.DisplayName,
+            Locale = tenant.Locale,
+            TimeZone = tenant.TimeZone,
+            Status = tenant.Status.ToString(),
+            ConnectionStrings = tenant.ConnectionStrings.ToDictionary(k => k.Key, v => v.Value),
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static Tenant ToTenant(TenantRecord r) =>
+        Tenant.Restore(r.Code, r.DisplayName, r.Locale, r.TimeZone,
+            Enum.Parse<TenantStatus>(r.Status, ignoreCase: true), r.ConnectionStrings);
 }

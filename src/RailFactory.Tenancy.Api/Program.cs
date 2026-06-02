@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using System.Text.Json;
+using RailFactory.BuildingBlocks.Auth;
 using RailFactory.BuildingBlocks.Results;
 using RailFactory.Tenancy.Api.Application;
 using RailFactory.Tenancy.Api.Infrastructure;
@@ -10,11 +12,15 @@ using RailFactory.Tenancy.Api.Api.Validation;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.Services.AddInternalTokenAuthentication(builder.Configuration);
+
 builder.Services.AddTenancyModule(builder.Configuration);
 
 var app = builder.Build();
 
 app.UseServiceDefaults();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapDefaultEndpoints();
 
 // Root redirect
@@ -39,15 +45,10 @@ group.MapGet("/tenants/{code}", async ([AsParameters] GetTenantByCodeRequest req
 {
     var validation = RequestValidator.Validate(request);
     if (validation is not null)
-    {
         return validation;
-    }
 
     var result = await getTenant.ExecuteAsync(request.Code, cancellationToken);
-
-    return result.IsSuccess
-        ? Results.Ok(result.Value)
-        : ToHttpResult(result.Error);
+    return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
 });
 
 group.MapGet("/tenants", async (ListTenants listTenants, CancellationToken cancellationToken) =>
@@ -56,7 +57,8 @@ group.MapGet("/tenants", async (ListTenants listTenants, CancellationToken cance
     return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
 });
 
-// Integration management endpoints (admin: requires InternalApiKey)
+// ── Internal endpoints (service-to-service, InternalApiKey) ──────────────────
+
 var integrationsGroup = group.MapGroup("/integrations");
 integrationsGroup.RequireInternalApiKey();
 
@@ -91,8 +93,6 @@ integrationsGroup.MapGet("/{tenantCode}/{category}/credentials", async (
     if (!result.IsSuccess)
         return ToHttpResult(result.Error);
 
-    // Serialize to bytes before disposing so credential strings are released from
-    // the SecureCredentials byte arrays before the response is written.
     using var details = result.Value;
     var json = JsonSerializer.SerializeToUtf8Bytes(new
     {
@@ -100,6 +100,92 @@ integrationsGroup.MapGet("/{tenantCode}/{category}/credentials", async (
         credentials = details.Credentials.ToStringDictionary()
     });
     return Results.Bytes(json, contentType: "application/json");
+});
+
+// ── Admin endpoints (JWT + tenancy.admin permission) ─────────────────────────
+// Tenant management
+
+var adminTenantsGroup = group.MapGroup("/admin/tenants")
+    .RequireAuthorization()
+    .RequirePermission(SystemPermissions.Tenancy.Admin);
+
+adminTenantsGroup.MapGet("/", async (ListTenants list, CancellationToken ct) =>
+{
+    var result = await list.ExecuteAsync(ct);
+    return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
+});
+
+adminTenantsGroup.MapPost("/", async (
+    [FromBody] RegisterTenantRequest req,
+    RegisterTenant register,
+    CancellationToken ct) =>
+{
+    var result = await register.ExecuteAsync(
+        new RegisterTenantInput(req.Code, req.DisplayName, req.Locale ?? "pt-BR", req.TimeZone ?? "America/Sao_Paulo"), ct);
+    return result.IsSuccess
+        ? Results.Created($"/api/tenancy/tenants/{result.Value.Code}", result.Value)
+        : ToHttpResult(result.Error);
+});
+
+// ── Admin integration management ──────────────────────────────────────────────
+// Tenant code is always derived from the JWT "tenant" claim — never from the URL.
+// This prevents cross-tenant privilege escalation.
+
+var adminGroup = group.MapGroup("/admin/integrations")
+    .RequireAuthorization()
+    .RequirePermission(SystemPermissions.Tenancy.Admin);
+
+adminGroup.MapGet("/", async (
+    ClaimsPrincipal user,
+    ListTenantIntegrations list,
+    CancellationToken cancellationToken) =>
+{
+    var tenantCode = user.FindFirstValue(InternalServiceTokenClaimTypes.Tenant);
+    if (string.IsNullOrWhiteSpace(tenantCode))
+        return Results.Problem("Tenant claim missing from token.", statusCode: StatusCodes.Status403Forbidden);
+    var items = await list.ExecuteAsync(tenantCode, cancellationToken);
+    return Results.Ok(items);
+});
+
+adminGroup.MapPost("/", async (
+    ClaimsPrincipal user,
+    [FromBody] ConfigureIntegrationRequest req,
+    ConfigureIntegration configure,
+    CancellationToken cancellationToken) =>
+{
+    var tenantCode = user.FindFirstValue(InternalServiceTokenClaimTypes.Tenant);
+    if (string.IsNullOrWhiteSpace(tenantCode))
+        return Results.Problem("Tenant claim missing from token.", statusCode: StatusCodes.Status403Forbidden);
+    var result = await configure.ExecuteAsync(tenantCode, req.Category, req.ProviderType, req.Credentials, cancellationToken);
+    return result.IsSuccess
+        ? Results.Ok(new { id = result.Value })
+        : ToHttpResult(result.Error);
+});
+
+adminGroup.MapPut("/{category}/enable", async (
+    string category,
+    ClaimsPrincipal user,
+    EnableIntegration enable,
+    CancellationToken cancellationToken) =>
+{
+    var tenantCode = user.FindFirstValue(InternalServiceTokenClaimTypes.Tenant);
+    if (string.IsNullOrWhiteSpace(tenantCode))
+        return Results.Problem("Tenant claim missing from token.", statusCode: StatusCodes.Status403Forbidden);
+    var result = await enable.ExecuteAsync(tenantCode, category, cancellationToken);
+    return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
+});
+
+adminGroup.MapPut("/{category}/disable", async (
+    string category,
+    ClaimsPrincipal user,
+    DisableIntegration disable,
+    CancellationToken cancellationToken) =>
+{
+    var tenantCode = user.FindFirstValue(InternalServiceTokenClaimTypes.Tenant);
+    if (string.IsNullOrWhiteSpace(tenantCode))
+        return Results.Problem("Tenant claim missing from token.", statusCode: StatusCodes.Status403Forbidden);
+    var result = await disable.ExecuteAsync(tenantCode, category, cancellationToken);
+    return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
 });
 
 app.Run();
@@ -123,8 +209,5 @@ static IResult ToHttpResult(Error error)
         title: title,
         detail: error.Message,
         statusCode: statusCode,
-        extensions: new Dictionary<string, object?>
-        {
-            ["code"] = error.Code
-        });
+        extensions: new Dictionary<string, object?> { ["code"] = error.Code });
 }

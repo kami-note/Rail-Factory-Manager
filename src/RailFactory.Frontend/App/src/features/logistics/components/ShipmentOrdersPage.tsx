@@ -1,16 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Box, Button, Chip, CircularProgress,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, IconButton,
 } from '@mui/material';
-import { PackageCheck, Plus, XCircle } from 'lucide-react';
+import { FileCheck2, PackageCheck, Plus, XCircle } from 'lucide-react';
+
+function FiscalStatusCell({ dispatch }: { dispatch?: Dispatch }) {
+  if (!dispatch?.fiscalStatus) return <span style={{ color: '#999', fontSize: 12 }}>—</span>;
+  const color = FISCAL_COLOR[dispatch.fiscalStatus] ?? 'default';
+  const label = FISCAL_LABEL[dispatch.fiscalStatus] ?? dispatch.fiscalStatus;
+  return (
+    <Tooltip title={dispatch.fiscalExternalId ?? ''}>
+      <Chip icon={<FileCheck2 size={12} />} label={label} color={color} size="small" variant="outlined" />
+    </Tooltip>
+  );
+}
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { ConfirmDialog } from '../../../shared/components/common/ConfirmDialog';
 import { transitionShipmentOrder } from '../api/logistics';
 import { useShipmentOrders } from '../hooks/useShipmentOrders';
+import { useDispatches } from '../hooks/useDispatches';
 import { CreateShipmentOrderModal } from './CreateShipmentOrderModal';
-import type { ShipmentOrder, ShipmentOrderStatus } from '../types';
+import { AddShipmentItemModal } from './AddShipmentItemModal';
+import type { Dispatch, FiscalStatus, ShipmentItem, ShipmentOrder, ShipmentOrderStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 
 type Props = { tenantCode: string };
@@ -26,12 +39,36 @@ const STATUS_COLOR: Record<ShipmentOrderStatus, 'default' | 'info' | 'warning' |
   ReadyToShip: 'success', Shipped: 'success', Cancelled: 'error',
 };
 
+const FISCAL_COLOR: Record<string, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
+  processando: 'info', processando_autorizacao: 'info',
+  autorizado: 'success', CONCLUIDO: 'success',
+  erro_autorizacao: 'error', REJEITADO: 'error',
+  cancelado: 'default', CANCELADO: 'default',
+  denegado: 'error', DENEGADO: 'error',
+};
+const FISCAL_LABEL: Record<string, string> = {
+  processando: 'Processando', processando_autorizacao: 'Processando',
+  autorizado: 'Autorizada', CONCLUIDO: 'Autorizada',
+  erro_autorizacao: 'Erro', REJEITADO: 'Rejeitada',
+  cancelado: 'Cancelada', CANCELADO: 'Cancelada',
+  denegado: 'Denegada', DENEGADO: 'Denegada',
+};
+
 export function ShipmentOrdersPage({ tenantCode }: Props) {
   const { data, loading, error: fetchError } = useShipmentOrders(tenantCode);
+  const { data: dispatchData } = useDispatches(tenantCode);
   const [orders, setOrders] = useState<ShipmentOrder[]>([]);
+
+  // Map shipmentOrderId → dispatch for fiscal status lookup
+  const dispatchByOrder = useMemo(() => {
+    const map = new Map<string, Dispatch>();
+    dispatchData?.forEach(d => map.set(d.shipmentOrderId, d));
+    return map;
+  }, [dispatchData]);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [addItemOrder, setAddItemOrder] = useState<ShipmentOrder | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [confirming, setConfirming] = useState(false);
 
@@ -41,6 +78,14 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
     setOrders(prev => [o, ...prev]);
     setCreateOpen(false);
     setSuccess(`Ordem "${o.orderNumber}" criada com sucesso.`);
+  };
+
+  const handleItemAdded = (orderId: string, item: ShipmentItem) => {
+    setOrders(prev => prev.map(o =>
+      o.id === orderId ? { ...o, items: [...o.items, item] } : o
+    ));
+    setAddItemOrder(null);
+    setSuccess('Item adicionado com sucesso.');
   };
 
   const handleTransition = (id: string, action: string, newStatus: ShipmentOrderStatus, label: string) => {
@@ -88,8 +133,9 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
             <TableRow>
               <TableCell>Número</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>NF-e</TableCell>
               <TableCell>Itens</TableCell>
-              <TableCell>Observações</TableCell>
+              <TableCell>Destinatário</TableCell>
               <TableCell>Criado em</TableCell>
               <TableCell />
             </TableRow>
@@ -104,10 +150,20 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
                 <TableCell>
                   <Chip label={STATUS_LABELS[o.status]} color={STATUS_COLOR[o.status]} size="small" />
                 </TableCell>
+                <TableCell>
+                  <FiscalStatusCell dispatch={dispatchByOrder.get(o.id)} />
+                </TableCell>
                 <TableCell>{o.items.length}</TableCell>
-                <TableCell>{o.notes ?? '-'}</TableCell>
+                <TableCell sx={{ fontSize: 12 }}>{o.recipientName ?? o.recipientCnpj ?? '-'}</TableCell>
                 <TableCell>{new Date(o.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                  {o.status === 'Draft' && (
+                    <Tooltip title="Adicionar Item">
+                      <IconButton size="small" onClick={() => setAddItemOrder(o)}>
+                        <Plus size={15} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   {o.status === 'Draft' && (
                     <Tooltip title="Iniciar Separação">
                       <Button size="small" onClick={() => handleTransition(o.id, 'start-picking', 'Picking', 'Iniciar Separação')}>Separar</Button>
@@ -138,6 +194,17 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
       </TableContainer>
 
       <CreateShipmentOrderModal open={createOpen} tenantCode={tenantCode} onCreated={handleCreated} onClose={() => setCreateOpen(false)} />
+
+      {addItemOrder && (
+        <AddShipmentItemModal
+          open={!!addItemOrder}
+          tenantCode={tenantCode}
+          orderId={addItemOrder.id}
+          orderNumber={addItemOrder.orderNumber}
+          onAdded={(item) => handleItemAdded(addItemOrder.id, item)}
+          onClose={() => setAddItemOrder(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={!!confirm}

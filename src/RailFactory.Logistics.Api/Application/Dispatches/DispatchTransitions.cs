@@ -76,6 +76,16 @@ public sealed class ShipDispatch(
                 ct);
         }
 
+        // Enqueue fiscal emission — processed asynchronously by LogisticsFiscalDispatcher
+        var fiscalPayload = JsonSerializer.Serialize(new
+        {
+            dispatchId = dispatch.Id,
+            shipmentOrderId = order.Id
+        });
+        await outbox.AddAsync(
+            LogisticsOutboxMessage.Create(IntegrationConstants.LogisticsEvents.FiscalEmissionRequested, fiscalPayload),
+            ct);
+
         await dispatches.SaveAsync(dispatch, ct);
     }
 }

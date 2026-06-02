@@ -73,6 +73,7 @@ static AppHostDomainServices AddDomainServices(
 {
     var tenantManagement = builder.AddProject<Projects.RailFactory_Tenancy_Api>("tenant-management")
         .WithEnvironment("TENANCY__KEK", parameters.TenancyKek)
+        .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WithReference(infra.TenantCatalogDb)
         .WithReference(infra.TenantDevIamDb)
         .WithReference(infra.TenantDevSupplyChainDb)
