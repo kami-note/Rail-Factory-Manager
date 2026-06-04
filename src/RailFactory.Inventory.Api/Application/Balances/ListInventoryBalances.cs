@@ -21,6 +21,9 @@ public sealed class ListInventoryBalances(
         var balances = await repository.ListBalancesAsync(status, sourceType, cancellationToken);
         if (balances.Count == 0) return [];
 
+        // Exclude zero-quantity Available entries — they are fully depleted and offer no actionable stock.
+        balances = balances.Where(b => !(b.Status == InventoryBalanceStatus.Available && b.Quantity == 0)).ToList();
+
         // ELITE FIX: Bulk fetch materials to eliminate N+1 query pattern.
         var materialCodes = balances.Select(x => x.MaterialCode).Distinct();
         var materials = await materialRepository.GetByCodesAsync(materialCodes, cancellationToken);

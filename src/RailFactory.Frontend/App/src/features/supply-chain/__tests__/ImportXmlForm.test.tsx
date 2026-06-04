@@ -1,9 +1,10 @@
+import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ImportXmlForm } from '../components/ImportXmlForm';
 import { AuthSessionProvider } from '../../auth';
 
-function renderWithAuth(component: JSX.Element) {
+function renderWithAuth(component: React.ReactElement) {
   return render(
     <AuthSessionProvider tenantCode="dev">
       {component}

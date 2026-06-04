@@ -62,3 +62,24 @@ export const TechnicalIdFormatter = {
     }
   }
 }
+
+/**
+ * Utility for formatting monetary values to BRL.
+ */
+export const CurrencyFormatter = {
+  /**
+   * Formats a number to BRL currency string (e.g. R$ 1.500,00)
+   * @param value - The monetary value to format.
+   * @returns Formatted currency string or '-' if null/undefined.
+   */
+  format: (value: number | string | null | undefined): string => {
+    if (value === null || value === undefined || value === '') return '-';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '-';
+    
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(num);
+  }
+}

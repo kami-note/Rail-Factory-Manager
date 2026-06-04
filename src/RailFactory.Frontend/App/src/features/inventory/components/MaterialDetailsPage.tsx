@@ -25,6 +25,7 @@ import {
 } from '@mui/material'
 import { ArrowLeft as BackIcon, AlertTriangle, User, Calendar, GitMerge as MergeIcon } from 'lucide-react'
 import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http'
+import { CurrencyFormatter } from '../../../shared/lib/utils/formatters'
 import { PageError } from '../../../shared/components/common/PageError'
 import { StatusChip } from '../../../shared/components/common/StatusChip'
 import type { DisplayStatus } from '../../../shared/lib/utils/status-mapping'
@@ -276,7 +277,7 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
                       <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{mapping.supplierName}</TableCell>
                       <TableCell sx={{ fontFamily: 'monospace' }}>{mapping.supplierCode}</TableCell>
                       <TableCell align="right">{mapping.conversionFactor.toFixed(4)}</TableCell>
-                      <TableCell align="right">R$ {mapping.lastPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell align="right">{CurrencyFormatter.format(mapping.lastPrice)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

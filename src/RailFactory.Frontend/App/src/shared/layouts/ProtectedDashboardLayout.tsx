@@ -48,7 +48,7 @@ const navGroups: NavGroup[] = [
     title: 'SUPRIMENTOS',
     items: [
       { href: '/app/receipts', label: 'RECEBIMENTOS', icon: <ReceiptText size={18} />, permission: SystemPermissions.SupplyChain.Read },
-      { href: '/app/supply-chain/association', label: 'CONFERÊNCIA DE NOTAS', icon: <Link2 size={18} />, permission: SystemPermissions.SupplyChain.Read },
+      { href: '/app/supply-chain/association', label: 'ASSOCIAÇÃO DE SKUs', icon: <Link2 size={18} />, permission: SystemPermissions.SupplyChain.Read },
       { href: '/app/inventory', label: 'ESTOQUE', icon: <Boxes size={18} />, permission: SystemPermissions.Inventory.Read },
     ]
   },

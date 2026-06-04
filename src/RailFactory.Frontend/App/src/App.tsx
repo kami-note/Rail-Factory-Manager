@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import { AuthSessionProvider, buildLoginHref, logout, useAuthSession } from './features/auth';
 import { ProtectedDashboardLayout } from './shared/layouts/ProtectedDashboardLayout';
 import { OverviewPanel, Status } from './features/dashboard';
-import { ReceiptsWorkspace, AssociationWorkbenchPage } from './features/supply-chain';
+import { ReceiptsWorkspace } from './features/supply-chain';
 import { InventoryStocksPage, MaterialDetailsPage } from './features/inventory';
 import { RolesManagementPage, UsersManagementPage, AuditPage } from './features/iam';
 import { WorkCentersPage, BomsPage, ProductionOrdersPage } from './features/production';
@@ -217,8 +217,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
           <Routes>
             <Route index element={<OverviewPanel status={status} statusError={statusError} tenantCode={tenantCode} onNavigate={navigateTo} />} />
             <Route path="receipts" element={<ReceiptsWorkspace tenantCode={tenantCode} />} />
-            <Route path="supply-chain/association" element={<AssociationWorkbenchPage tenantCode={tenantCode} />} />
-            <Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />
+<Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />
             <Route path="inventory" element={<InventoryStocksPage tenantCode={tenantCode} />} />
             <Route path="inventory/materials/:materialCode" element={<MaterialDetailsPage tenantCode={tenantCode} />} />
             <Route path="iam/users" element={<UsersManagementPage tenantCode={tenantCode} />} />

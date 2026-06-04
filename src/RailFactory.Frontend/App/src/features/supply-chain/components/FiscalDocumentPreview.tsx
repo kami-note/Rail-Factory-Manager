@@ -16,6 +16,7 @@ import {
   useTheme
 } from '@mui/material';
 import { Building2, FileText, Calendar, Hash } from 'lucide-react';
+import { CurrencyFormatter } from '../../../shared/lib/utils/formatters';
 
 export type ParsedReceiptItem = {
   materialCode: string;
@@ -128,7 +129,7 @@ export function FiscalDocumentPreview({ data }: FiscalDocumentPreviewProps) {
             </Typography>
             <Typography variant="h5" sx={{ fontWeight: 900, color: 'success.main' }}>
               {data.totalValue !== undefined && data.totalValue !== null
-                ? `R$ ${data.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                ? CurrencyFormatter.format(data.totalValue)
                 : 'N/A'}
             </Typography>
           </Grid>
@@ -166,12 +167,12 @@ export function FiscalDocumentPreview({ data }: FiscalDocumentPreviewProps) {
                 </TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>
                   {item.unitPrice !== undefined && item.unitPrice !== null
-                    ? `R$ ${item.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    ? CurrencyFormatter.format(item.unitPrice)
                     : '---'}
                 </TableCell>
                 <TableCell align="right" sx={{ fontWeight: 800, color: 'success.main' }}>
                   {item.totalPrice !== undefined && item.totalPrice !== null
-                    ? `R$ ${item.totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    ? CurrencyFormatter.format(item.totalPrice)
                     : '---'}
                 </TableCell>
               </TableRow>
