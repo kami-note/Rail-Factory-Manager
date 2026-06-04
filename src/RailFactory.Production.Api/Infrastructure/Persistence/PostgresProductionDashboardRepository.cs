@@ -38,12 +38,19 @@ public sealed class PostgresProductionDashboardRepository(ProductionDbContext db
 
     public async Task<(int Passed, int Failed)> GetInspectionSummaryAsync(CancellationToken ct)
     {
-        var results = await db.QualityInspections
-            .Select(x => x.Result)
+        // Count per order using the latest inspection result — multiple attempts on the same order
+        // should not inflate the failed count if the order ultimately passed.
+        var allInspections = await db.QualityInspections
+            .Select(x => new { x.ProductionOrderId, x.Result, x.InspectedAt })
             .ToListAsync(ct);
 
-        var passed = results.Count(r => r == InspectionResult.Passed);
-        var failed = results.Count(r => r == InspectionResult.Failed);
+        var latestPerOrder = allInspections
+            .GroupBy(x => x.ProductionOrderId)
+            .Select(g => g.OrderByDescending(x => x.InspectedAt).First().Result)
+            .ToList();
+
+        var passed = latestPerOrder.Count(r => r == InspectionResult.Passed);
+        var failed = latestPerOrder.Count(r => r == InspectionResult.Failed);
 
         return (passed, failed);
     }

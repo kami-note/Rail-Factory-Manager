@@ -87,11 +87,19 @@ public sealed class TopologyDeclarator(
             arguments: deadLetterArgs,
             cancellationToken: cancellationToken);
 
-        await channel.QueueBindAsync(
-            IntegrationConstants.Queues.InventoryProductionIntegration,
-            IntegrationConstants.Exchanges.Production,
+        foreach (var routingKey in new[]
+        {
             IntegrationConstants.ProductionEvents.StockReservationRequested,
-            cancellationToken: cancellationToken);
+            IntegrationConstants.ProductionEvents.OrderCompleted,
+            IntegrationConstants.ProductionEvents.OrderCancelled,
+        })
+        {
+            await channel.QueueBindAsync(
+                IntegrationConstants.Queues.InventoryProductionIntegration,
+                IntegrationConstants.Exchanges.Production,
+                routingKey,
+                cancellationToken: cancellationToken);
+        }
 
         // Logistics exchange and inventory queue.
         await channel.ExchangeDeclareAsync(

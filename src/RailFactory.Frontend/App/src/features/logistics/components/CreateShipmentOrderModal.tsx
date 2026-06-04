@@ -103,34 +103,34 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
                     Preencha para habilitar emissão automática de NF-e ao despachar.
                   </Typography>
                   <Grid container spacing={1}>
-                    <Grid item xs={6}>
+                    <Grid xs={6}>
                       <TextField label="CNPJ / CPF" value={form.recipientCnpj} onChange={set('recipientCnpj')} fullWidth size="small" placeholder="00.000.000/0000-00" />
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid xs={6}>
                       <TextField label="Razão Social / Nome" value={form.recipientName} onChange={set('recipientName')} fullWidth size="small" />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid xs={12}>
                       <TextField label="E-mail" value={form.recipientEmail} onChange={set('recipientEmail')} fullWidth size="small" />
                     </Grid>
-                    <Grid item xs={8}>
+                    <Grid xs={8}>
                       <TextField label="Logradouro" value={form.recipientStreet} onChange={set('recipientStreet')} fullWidth size="small" />
                     </Grid>
-                    <Grid item xs={4}>
+                    <Grid xs={4}>
                       <TextField label="Número" value={form.recipientNumber} onChange={set('recipientNumber')} fullWidth size="small" />
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid xs={6}>
                       <TextField label="Bairro" value={form.recipientDistrict} onChange={set('recipientDistrict')} fullWidth size="small" />
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid xs={6}>
                       <TextField label="CEP" value={form.recipientZipCode} onChange={set('recipientZipCode')} fullWidth size="small" />
                     </Grid>
-                    <Grid item xs={8}>
+                    <Grid xs={8}>
                       <TextField label="Município" value={form.recipientCity} onChange={set('recipientCity')} fullWidth size="small" />
                     </Grid>
-                    <Grid item xs={4}>
-                      <TextField label="UF" value={form.recipientState} onChange={set('recipientState')} fullWidth size="small" inputProps={{ maxLength: 2 }} placeholder="SP" />
+                    <Grid xs={4}>
+                      <TextField label="UF" value={form.recipientState} onChange={set('recipientState')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 2 } }} placeholder="SP" />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid xs={12}>
                       <TextField label="Natureza da Operação" value={form.natureOfOperation} onChange={set('natureOfOperation')} fullWidth size="small" />
                     </Grid>
                   </Grid>

@@ -47,6 +47,10 @@ public sealed class InventoryPendingBalanceDispatcher(
             {
                 await DispatchTenantBatchAsync(tenant, cancellationToken);
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("was not found in configuration"))
+            {
+                logger.LogDebug("Database for tenant {TenantCode} is not provisioned yet. Skipping outbox dispatch.", tenant.Code);
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to dispatch supply outbox messages for tenant {TenantCode}.", tenant.Code);

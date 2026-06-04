@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import { Plus, X } from 'lucide-react';
 import { listBoms, createProductionOrder } from '../../api/production';
-import { MaterialCodeAutocomplete } from '../../../inventory';
 import { InlineError } from '../../../../shared/components/common/InlineError';
 import { toUiErrorMessage } from '../../../../shared/lib/http';
 import type { ProductionOrder, WorkCenter, Bom } from '../../types';
@@ -31,7 +30,6 @@ export function CreateOrderModal({ open, tenantCode, workCenters, onCreated, onC
   onCreated: (order: ProductionOrder) => void;
   onClose: () => void;
 }) {
-  const [productCode, setProductCode] = useState('');
   const [boms, setBoms] = useState<Bom[]>([]);
   const [bomsLoading, setBomsLoading] = useState(false);
   const [selectedBomId, setSelectedBomId] = useState('');
@@ -42,30 +40,28 @@ export function CreateOrderModal({ open, tenantCode, workCenters, onCreated, onC
 
   const activeWorkCenters = workCenters.filter(wc => wc.status.key === 'Active');
 
-  const handleProductSelect = async (code: string) => {
-    setProductCode(code);
-    if (!code.trim()) { setBoms([]); setSelectedBomId(''); return; }
+  // Load active BOMs when dialog opens
+  useEffect(() => {
+    if (!open) return;
     setBomsLoading(true);
-    setSelectedBomId('');
-    setBoms([]);
-    try {
-      const found = await listBoms(tenantCode, code.trim().toUpperCase());
-      setBoms(found);
-      const active = found.find(b => b.status.key === 'Active');
-      if (active) setSelectedBomId(active.id);
-    } catch (err) {
-      setError(toUiErrorMessage(err, 'Não foi possível buscar as BOMs.'));
-    } finally {
-      setBomsLoading(false);
-    }
-  };
+    listBoms(tenantCode)
+      .then(all => setBoms(all.filter(b => b.status.key === 'Active')))
+      .catch(err => setError(toUiErrorMessage(err, 'Não foi possível carregar as BOMs.')))
+      .finally(() => setBomsLoading(false));
+  }, [open, tenantCode]);
+
+  const selectedBom = boms.find(b => b.id === selectedBomId);
 
   const handleSubmit = async () => {
     if (!selectedBomId || !workCenterId || !plannedQuantity) return;
     setSaving(true);
     setError(null);
     try {
-      const order = await createProductionOrder(tenantCode, { bomId: selectedBomId, workCenterId, plannedQuantity: Number(plannedQuantity) });
+      const order = await createProductionOrder(tenantCode, {
+        bomId: selectedBomId,
+        workCenterId,
+        plannedQuantity: Number(plannedQuantity),
+      });
       onCreated(order);
       onClose();
     } catch (err) {
@@ -77,8 +73,6 @@ export function CreateOrderModal({ open, tenantCode, workCenters, onCreated, onC
 
   const handleClose = () => {
     if (saving) return;
-    setProductCode('');
-    setBoms([]);
     setSelectedBomId('');
     setWorkCenterId('');
     setPlannedQuantity('1');
@@ -96,51 +90,80 @@ export function CreateOrderModal({ open, tenantCode, workCenters, onCreated, onC
       </DialogTitle>
 
       <DialogContent dividers>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+        <Stack spacing={2.5} sx={{ pt: 1 }}>
           {error && <InlineError message={error} marginBottom={0} />}
 
-          <MaterialCodeAutocomplete
-            tenantCode={tenantCode}
-            value={productCode}
-            onInputChange={code => {
-              setProductCode(code);
-              if (!code) { setBoms([]); setSelectedBomId(''); }
-            }}
-            onMaterialSelect={m => void handleProductSelect(m.materialCode)}
-            label="Produto"
-            fullWidth
-            category="FinishedGood"
-          />
+          {/* BOM selector — product is derived from BOM */}
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+              Selecione a BOM (estrutura do produto a produzir)
+            </Typography>
+            {bomsLoading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+                <CircularProgress size={16} />
+                <Typography variant="caption" color="text.secondary">Carregando BOMs ativas…</Typography>
+              </Box>
+            ) : boms.length === 0 ? (
+              <Alert severity="warning" sx={{ py: 0.5 }}>
+                Nenhuma BOM ativa encontrada. Ative uma BOM antes de criar a ordem.
+              </Alert>
+            ) : (
+              <FormControl size="small" fullWidth>
+                <InputLabel>BOM</InputLabel>
+                <Select
+                  label="BOM"
+                  value={selectedBomId}
+                  onChange={e => setSelectedBomId(e.target.value)}
+                >
+                  {boms.map(b => (
+                    <MenuItem key={b.id} value={b.id}>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>
+                          {b.productCode}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          v{b.version} · {b.items.length} componente{b.items.length !== 1 ? 's' : ''}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          </Box>
 
-          {bomsLoading && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={16} />
-              <Typography variant="caption" color="text.secondary">Buscando BOMs...</Typography>
-            </Box>
-          )}
-
-          {!bomsLoading && boms.length > 0 && (
-            <FormControl size="small" fullWidth>
-              <InputLabel>Estrutura (BOM)</InputLabel>
-              <Select label="Estrutura (BOM)" value={selectedBomId} onChange={e => setSelectedBomId(e.target.value)}>
-                {boms.map(b => (
-                  <MenuItem key={b.id} value={b.id}>
-                    v{b.version} — {b.status.key === 'Active' ? 'Ativa' : 'Rascunho'} — {b.items.length} componente(s)
-                  </MenuItem>
+          {/* BOM summary — shown after selection */}
+          {selectedBom && (
+            <Box sx={{ bgcolor: '#f5f5f5', borderRadius: 1.5, p: 1.5 }}>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', display: 'block', mb: 0.75 }}>
+                Materiais da BOM
+              </Typography>
+              <Stack spacing={0.25}>
+                {selectedBom.items.map(item => (
+                  <Box key={item.id} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                      {item.materialCode}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {item.quantity} {item.unitOfMeasure}
+                    </Typography>
+                  </Box>
                 ))}
-              </Select>
-            </FormControl>
-          )}
-
-          {!bomsLoading && productCode && boms.length === 0 && (
-            <Alert severity="warning" sx={{ py: 0.5 }}>Nenhuma BOM encontrada para este produto.</Alert>
+              </Stack>
+            </Box>
           )}
 
           <Stack direction="row" spacing={2}>
             <FormControl size="small" sx={{ flexGrow: 1 }}>
               <InputLabel>Centro de Trabalho</InputLabel>
-              <Select label="Centro de Trabalho" value={workCenterId} onChange={e => setWorkCenterId(e.target.value)}>
-                {activeWorkCenters.map(wc => <MenuItem key={wc.id} value={wc.id}>{wc.name}</MenuItem>)}
+              <Select
+                label="Centro de Trabalho"
+                value={workCenterId}
+                onChange={e => setWorkCenterId(e.target.value)}
+              >
+                {activeWorkCenters.map(wc => (
+                  <MenuItem key={wc.id} value={wc.id}>{wc.name}</MenuItem>
+                ))}
               </Select>
             </FormControl>
             <TextField
@@ -150,6 +173,7 @@ export function CreateOrderModal({ open, tenantCode, workCenters, onCreated, onC
               sx={{ width: 140 }}
               value={plannedQuantity}
               onChange={e => setPlannedQuantity(e.target.value)}
+              slotProps={{ htmlInput: { min: 1 } }}
             />
           </Stack>
         </Stack>

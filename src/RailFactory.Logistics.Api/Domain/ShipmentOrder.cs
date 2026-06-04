@@ -18,13 +18,19 @@ public sealed class ShipmentItem
     public decimal UnitValue { get; private set; }
     public decimal TaxBaseIcms { get; private set; }
     public decimal IcmsRate { get; private set; }
+    public int IcmsOrigin { get; private set; }
+    public string IcmsCst { get; private set; } = "40";
+    public string PisCst { get; private set; } = "07";
+    public string CofinsCst { get; private set; } = "07";
+    public decimal IpiRate { get; private set; }
 
     private ShipmentItem() { }
 
     public static ShipmentItem Create(Guid shipmentOrderId, string materialCode,
         decimal quantity, string unitOfMeasure, decimal weightKg, decimal volumeCbm,
         string ncmCode = "", string cfopCode = "", decimal unitValue = 0,
-        decimal taxBaseIcms = 0, decimal icmsRate = 12)
+        decimal taxBaseIcms = 0, decimal icmsRate = 12,
+        int icmsOrigin = 0, string icmsCst = "40", string pisCst = "07", string cofinsCst = "07", decimal ipiRate = 0)
     {
         return new ShipmentItem
         {
@@ -39,7 +45,12 @@ public sealed class ShipmentItem
             CfopCode = cfopCode.Trim(),
             UnitValue = unitValue,
             TaxBaseIcms = taxBaseIcms,
-            IcmsRate = icmsRate
+            IcmsRate = icmsRate,
+            IcmsOrigin = icmsOrigin,
+            IcmsCst = icmsCst.Trim(),
+            PisCst = pisCst.Trim(),
+            CofinsCst = cofinsCst.Trim(),
+            IpiRate = ipiRate
         };
     }
 }
@@ -116,12 +127,14 @@ public sealed class ShipmentOrder
     public ShipmentItem AddItem(string materialCode, decimal quantity, string unitOfMeasure,
         decimal weightKg, decimal volumeCbm,
         string ncmCode = "", string cfopCode = "", decimal unitValue = 0,
-        decimal taxBaseIcms = 0, decimal icmsRate = 12)
+        decimal taxBaseIcms = 0, decimal icmsRate = 12,
+        int icmsOrigin = 0, string icmsCst = "40", string pisCst = "07", string cofinsCst = "07", decimal ipiRate = 0)
     {
         if (Status != ShipmentOrderStatus.Draft)
             throw new InvalidOperationException("Items can only be added to Draft orders.");
         var item = ShipmentItem.Create(Id, materialCode, quantity, unitOfMeasure, weightKg, volumeCbm,
-            ncmCode, cfopCode, unitValue, taxBaseIcms, icmsRate);
+            ncmCode, cfopCode, unitValue, taxBaseIcms, icmsRate,
+            icmsOrigin, icmsCst, pisCst, cofinsCst, ipiRate);
         _items.Add(item);
         UpdatedAt = DateTimeOffset.UtcNow;
         return item;

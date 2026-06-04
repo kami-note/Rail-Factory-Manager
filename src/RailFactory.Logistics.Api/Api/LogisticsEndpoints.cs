@@ -167,10 +167,12 @@ public static class LogisticsEndpoints
             var item = await useCase.ExecuteAsync(
                 new AddShipmentItemInput(id, req.MaterialCode, req.Quantity, req.UnitOfMeasure,
                     req.WeightKg, req.VolumeCbm, req.NcmCode, req.CfopCode,
-                    req.UnitValue, req.TaxBaseIcms, req.IcmsRate), ct);
+                    req.UnitValue, req.TaxBaseIcms, req.IcmsRate,
+                    req.IcmsOrigin, req.IcmsCst, req.PisCst, req.CofinsCst, req.IpiRate), ct);
             return Results.Created($"{ApiGroup}/shipment-orders/{id}/items/{item.Id}",
                 new { item.Id, item.MaterialCode, item.Quantity, item.UnitOfMeasure,
-                    item.WeightKg, item.VolumeCbm, item.NcmCode, item.CfopCode, item.UnitValue });
+                    item.WeightKg, item.VolumeCbm, item.NcmCode, item.CfopCode, item.UnitValue,
+                    item.TaxBaseIcms, item.IcmsRate, item.IcmsOrigin, item.IcmsCst, item.PisCst, item.CofinsCst, item.IpiRate });
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
         catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
@@ -286,7 +288,9 @@ public static class LogisticsEndpoints
         o.CreatedAt, o.UpdatedAt,
         Items = o.Items.Select(i => new
         {
-            i.Id, i.MaterialCode, i.Quantity, i.UnitOfMeasure, i.WeightKg, i.VolumeCbm
+            i.Id, i.MaterialCode, i.Quantity, i.UnitOfMeasure, i.WeightKg, i.VolumeCbm,
+            i.NcmCode, i.CfopCode, i.UnitValue, i.TaxBaseIcms, i.IcmsRate,
+            i.IcmsOrigin, i.IcmsCst, i.PisCst, i.CofinsCst, i.IpiRate
         })
     };
 

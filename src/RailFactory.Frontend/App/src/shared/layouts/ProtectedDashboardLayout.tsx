@@ -32,26 +32,71 @@ type NavItem = {
   permission?: string;
 };
 
-const navItems: NavItem[] = [
-  { href: '/app', label: 'VISÃO GERAL', icon: <LayoutDashboard size={18} /> },
-  { href: '/app/receipts', label: 'RECEBIMENTOS', icon: <ReceiptText size={18} />, permission: SystemPermissions.SupplyChain.Read },
-  { href: '/app/supply-chain/association', label: 'BANCADA', icon: <Link2 size={18} />, permission: SystemPermissions.SupplyChain.Read },
-  { href: '/app/inventory', label: 'ESTOQUE', icon: <Boxes size={18} />, permission: SystemPermissions.Inventory.Read },
-  { href: '/app/iam/users', label: 'USUÁRIOS / ACESSO', icon: <Users size={18} />, permission: SystemPermissions.Iam.RolesManage },
-  { href: '/app/iam/roles', label: 'PERFIS / ROLES', icon: <ShieldCheck size={18} />, permission: SystemPermissions.Iam.RolesManage },
-  { href: '/app/iam/audit', label: 'TRILHA DE AUDITORIA', icon: <ScrollText size={18} />, permission: SystemPermissions.Iam.Read },
-  { href: '/app/production/work-centers', label: 'CENTROS DE TRABALHO', icon: <Factory size={18} />, permission: SystemPermissions.Production.Read },
-  { href: '/app/production/boms', label: 'LISTAS DE MATERIAIS', icon: <BookOpen size={18} />, permission: SystemPermissions.Production.Read },
-  { href: '/app/production/orders', label: 'ORDENS DE PRODUÇÃO', icon: <ClipboardList size={18} />, permission: SystemPermissions.Production.Read },
-  { href: '/app/hr/people', label: 'PESSOAS', icon: <UserCheck size={18} />, permission: SystemPermissions.Hr.Read },
-  { href: '/app/fleet/vehicles', label: 'FROTA', icon: <Truck size={18} />, permission: SystemPermissions.Fleet.Read },
-  { href: '/app/fleet/maintenance', label: 'MANUTENÇÃO', icon: <Wrench size={18} />, permission: SystemPermissions.Fleet.Read },
-  { href: '/app/fleet/fueling', label: 'ABASTECIMENTO', icon: <Fuel size={18} />, permission: SystemPermissions.Fleet.Read },
-  { href: '/app/logistics/carriers', label: 'TRANSPORTADORAS', icon: <Truck size={18} />, permission: SystemPermissions.Logistics.Read },
-  { href: '/app/logistics/shipment-orders', label: 'EXPEDIÇÃO', icon: <PackageCheck size={18} />, permission: SystemPermissions.Logistics.Read },
-  { href: '/app/logistics/dispatches', label: 'DESPACHOS', icon: <SendHorizonal size={18} />, permission: SystemPermissions.Logistics.Read },
-  { href: '/app/settings/integrations', label: 'INTEGRAÇÕES', icon: <Plug size={18} />, permission: SystemPermissions.Tenancy.Admin },
-  { href: '/app/settings/tenants', label: 'TENANTS', icon: <Building2 size={18} />, permission: SystemPermissions.Tenancy.Admin },
+type NavGroup = {
+  title: string;
+  items: NavItem[];
+};
+
+const navGroups: NavGroup[] = [
+  {
+    title: 'GERAL',
+    items: [
+      { href: '/app', label: 'INÍCIO', icon: <LayoutDashboard size={18} /> },
+    ]
+  },
+  {
+    title: 'SUPRIMENTOS',
+    items: [
+      { href: '/app/receipts', label: 'RECEBIMENTOS', icon: <ReceiptText size={18} />, permission: SystemPermissions.SupplyChain.Read },
+      { href: '/app/supply-chain/association', label: 'CONFERÊNCIA DE NOTAS', icon: <Link2 size={18} />, permission: SystemPermissions.SupplyChain.Read },
+      { href: '/app/inventory', label: 'ESTOQUE', icon: <Boxes size={18} />, permission: SystemPermissions.Inventory.Read },
+    ]
+  },
+  {
+    title: 'PRODUÇÃO',
+    items: [
+      { href: '/app/production/work-centers', label: 'CENTROS DE TRABALHO', icon: <Factory size={18} />, permission: SystemPermissions.Production.Read },
+      { href: '/app/production/boms', label: 'ESTRUTURA DE PRODUTOS', icon: <BookOpen size={18} />, permission: SystemPermissions.Production.Read },
+      { href: '/app/production/orders', label: 'ORDENS DE PRODUÇÃO', icon: <ClipboardList size={18} />, permission: SystemPermissions.Production.Read },
+    ]
+  },
+  {
+    title: 'LOGÍSTICA',
+    items: [
+      { href: '/app/logistics/carriers', label: 'TRANSPORTADORAS', icon: <Truck size={18} />, permission: SystemPermissions.Logistics.Read },
+      { href: '/app/logistics/shipment-orders', label: 'EXPEDIÇÃO', icon: <PackageCheck size={18} />, permission: SystemPermissions.Logistics.Read },
+      { href: '/app/logistics/dispatches', label: 'DESPACHOS', icon: <SendHorizonal size={18} />, permission: SystemPermissions.Logistics.Read },
+    ]
+  },
+  {
+    title: 'FROTA',
+    items: [
+      { href: '/app/fleet/vehicles', label: 'VEÍCULOS', icon: <Truck size={18} />, permission: SystemPermissions.Fleet.Read },
+      { href: '/app/fleet/maintenance', label: 'MANUTENÇÃO', icon: <Wrench size={18} />, permission: SystemPermissions.Fleet.Read },
+      { href: '/app/fleet/fueling', label: 'ABASTECIMENTO', icon: <Fuel size={18} />, permission: SystemPermissions.Fleet.Read },
+    ]
+  },
+  {
+    title: 'EQUIPE',
+    items: [
+      { href: '/app/hr/people', label: 'FUNCIONÁRIOS', icon: <UserCheck size={18} />, permission: SystemPermissions.Hr.Read },
+    ]
+  },
+  {
+    title: 'ACESSO E SEGURANÇA',
+    items: [
+      { href: '/app/iam/users', label: 'USUÁRIOS', icon: <Users size={18} />, permission: SystemPermissions.Iam.RolesManage },
+      { href: '/app/iam/roles', label: 'NÍVEIS DE ACESSO', icon: <ShieldCheck size={18} />, permission: SystemPermissions.Iam.RolesManage },
+      { href: '/app/iam/audit', label: 'AUDITORIA', icon: <ScrollText size={18} />, permission: SystemPermissions.Iam.Read },
+    ]
+  },
+  {
+    title: 'CONFIGURAÇÕES',
+    items: [
+      { href: '/app/settings/integrations', label: 'INTEGRAÇÕES', icon: <Plug size={18} />, permission: SystemPermissions.Tenancy.Admin },
+      { href: '/app/settings/tenants', label: 'EMPRESAS', icon: <Building2 size={18} />, permission: SystemPermissions.Tenancy.Admin },
+    ]
+  }
 ];
 
 type ProtectedDashboardLayoutProps = {
@@ -93,43 +138,48 @@ export function ProtectedDashboardLayout({
 
   const sidebar = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#ffffff' }}>
-      <Box sx={{ p: 4, mb: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em' }}>
-          NAVEGAÇÃO
-        </Typography>
-      </Box>
-      
-      <List disablePadding sx={{ flexGrow: 1 }}>
-        {navItems.map((item) => {
-          if (item.permission && !hasPermission(item.permission)) {
-            return null;
-          }
+      <List disablePadding sx={{ flexGrow: 1, pt: 2, pb: 2 }}>
+        {navGroups.map((group, groupIndex) => {
+          const visibleItems = group.items.filter(item => !item.permission || hasPermission(item.permission));
+          if (visibleItems.length === 0) return null;
 
-          const active = item.href === '/app' ? currentPath === '/app' : currentPath.startsWith(item.href);
           return (
-            <ListItemButton
-              key={item.href}
-              onClick={() => navigateTo(item.href)}
-              selected={active}
-              sx={{
-                py: 2,
-                px: 4,
-                mx: 1,
-                borderRadius: 1,
-                '&.Mui-selected': { 
-                  bgcolor: alpha(theme.palette.primary.main, 0.08), 
-                  color: 'primary.main',
-                  '& .MuiListItemIcon-root': { color: 'primary.main' },
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.12) }
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 32 }}>{item.icon}</ListItemIcon>
-              <ListItemText 
-                primary={item.label} 
-                slotProps={{ primary: { variant: 'caption', sx: { fontWeight: active ? 800 : 600 } } }}
-              />
-            </ListItemButton>
+            <React.Fragment key={group.title}>
+              <Box sx={{ px: 4, py: 1, mt: groupIndex > 0 ? 1 : 0 }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em', opacity: 0.7 }}>
+                  {group.title}
+                </Typography>
+              </Box>
+              {visibleItems.map(item => {
+                const active = item.href === '/app' ? currentPath === '/app' : currentPath.startsWith(item.href);
+                return (
+                  <ListItemButton
+                    key={item.href}
+                    onClick={() => navigateTo(item.href)}
+                    selected={active}
+                    sx={{
+                      py: 1.5,
+                      px: 4,
+                      mx: 1,
+                      borderRadius: 1,
+                      mb: 0.5,
+                      '&.Mui-selected': { 
+                        bgcolor: alpha(theme.palette.primary.main, 0.08), 
+                        color: 'primary.main',
+                        '& .MuiListItemIcon-root': { color: 'primary.main' },
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.12) }
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>{item.icon}</ListItemIcon>
+                    <ListItemText 
+                      primary={item.label} 
+                      slotProps={{ primary: { variant: 'caption', sx: { fontWeight: active ? 800 : 600 } } }}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </React.Fragment>
           );
         })}
       </List>

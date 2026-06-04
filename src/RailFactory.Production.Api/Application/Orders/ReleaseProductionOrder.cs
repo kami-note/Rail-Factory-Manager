@@ -34,13 +34,13 @@ public sealed class ReleaseProductionOrder(
 
         var payload = JsonSerializer.Serialize(new
         {
-            OrderId = order.Id,
-            order.OrderNumber,
-            ProductCode = order.ProductCode.Value,
-            order.BomId,
-            order.WorkCenterId,
-            order.PlannedQuantity,
-            OccurredAt = DateTimeOffset.UtcNow
+            orderId = order.Id,
+            orderNumber = order.OrderNumber,
+            productCode = order.ProductCode.Value,
+            bomId = order.BomId,
+            workCenterId = order.WorkCenterId,
+            plannedQuantity = order.PlannedQuantity,
+            occurredAt = DateTimeOffset.UtcNow
         });
 
         var outboxMessage = ProductionOutboxMessage.Create("production_order_released", payload);

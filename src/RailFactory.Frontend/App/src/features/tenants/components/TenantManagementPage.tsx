@@ -70,7 +70,7 @@ function CreateTenantModal({ open, currentTenantCode, onCreated, onClose }: {
               onChange={e => setCode(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
               fullWidth size="small" required
               helperText="Letras minúsculas, números e hífens. Ex: minha-empresa"
-              inputProps={{ pattern: '[a-z0-9\\-]{2,50}' }}
+              slotProps={{ htmlInput: { pattern: '[a-z0-9\\-]{2,50}' } }}
             />
             <TextField
               label="Nome / Razão Social *"

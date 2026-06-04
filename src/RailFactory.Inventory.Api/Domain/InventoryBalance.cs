@@ -135,6 +135,29 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Factory method for creating an initial zero-quantity Available balance for a finished good material.
+    /// Used when a FinishedGood material is first registered in the catalog.
+    /// </summary>
+    public static InventoryBalance CreateInitialFinishedGood(
+        string materialCode,
+        string unitOfMeasure,
+        Guid stockLocationId)
+    {
+        return new InventoryBalance(
+            Guid.NewGuid(),
+            materialCode,
+            unitOfMeasure,
+            0m,
+            stockLocationId,
+            $"catalog-init:{materialCode}",
+            null,
+            null,
+            InventorySourceType.Production,
+            InventoryBalanceStatus.Available,
+            null);
+    }
+
+    /// <summary>
     /// Reserves this balance for a Production Order, blocking it from other uses.
     /// </summary>
     /// <param name="productionOrderId">The Production Order claiming this stock.</param>
@@ -183,6 +206,22 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
 
         ReservedForOrderId = null;
         Status = InventoryBalanceStatus.Available;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Credits (increases) this Available balance by the produced quantity.
+    /// Used when a production order is completed and the finished good enters stock.
+    /// </summary>
+    public void Credit(decimal quantity)
+    {
+        if (Status != InventoryBalanceStatus.Available)
+            throw new InvalidOperationException($"Cannot credit balance in status '{Status}'. Only 'Available' balances can be credited.");
+
+        if (quantity <= 0)
+            throw new ArgumentException("Credit quantity must be positive.", nameof(quantity));
+
+        Quantity += quantity;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 

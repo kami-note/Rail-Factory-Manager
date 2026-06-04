@@ -44,7 +44,7 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
                         complemento = request.Recipient.Address.Complement,
                         bairro = request.Recipient.Address.District,
                         municipio = request.Recipient.Address.City,
-                        estado = request.Recipient.Address.State,
+                        uf = request.Recipient.Address.State,
                         cep = request.Recipient.Address.ZipCode,
                         codigoPais = request.Recipient.Address.CountryCode
                     }
@@ -55,18 +55,19 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
                     descricao = item.Description,
                     ncm = item.NcmCode,
                     cfop = item.CfopCode,
-                    unidadeComercial = item.UnitOfMeasure,
-                    quantidadeComercial = item.Quantity,
-                    valorUnitarioComercial = item.UnitValue,
+                    unidade = item.UnitOfMeasure,
+                    quantidade = item.Quantity,
+                    valorUnitario = item.UnitValue,
                     icms = new
                     {
-                        origem = 0,
-                        cst = "40",
+                        origem = item.IcmsOrigin,
+                        cst = item.IcmsCst,
                         baseCalculo = item.TaxBaseIcms,
                         aliquota = item.IcmsRate
                     },
-                    pis = new { cst = "07" },
-                    cofins = new { cst = "07" }
+                    pis = new { cst = item.PisCst },
+                    cofins = new { cst = item.CofinsCst },
+                    ipi = item.IpiRate > 0 ? new { cst = "50", aliquota = item.IpiRate } : null
                 }).ToArray()
             }
         };

@@ -138,15 +138,26 @@ export function OverviewPanel({
               <Box component="span" sx={{ ml: 2, color: 'error.main' }}>⚠ Erro de conexão</Box>
             )}
           </Typography>
-          <Button
-            variant="contained"
-            disableElevation
-            onClick={() => onNavigate('/app/receipts')}
-            sx={{ height: 32, px: 3, fontSize: '0.75rem', fontWeight: 800, borderRadius: 2 }}
-            endIcon={<ArrowUpRight size={14} />}
-          >
-            Gerenciar Recebimentos
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              disableElevation
+              onClick={() => onNavigate('/app/production/orders')}
+              sx={{ height: 32, px: 3, fontSize: '0.75rem', fontWeight: 800, borderRadius: 2 }}
+              endIcon={<ArrowUpRight size={14} />}
+            >
+              Nova Ordem
+            </Button>
+            <Button
+              variant="contained"
+              disableElevation
+              onClick={() => onNavigate('/app/receipts')}
+              sx={{ height: 32, px: 3, fontSize: '0.75rem', fontWeight: 800, borderRadius: 2 }}
+              endIcon={<ArrowUpRight size={14} />}
+            >
+              Gerenciar Recebimentos
+            </Button>
+          </Stack>
         </Box>
       )}
 
@@ -329,13 +340,12 @@ export function OverviewPanel({
                 ) : (
                   <Stack spacing={0} divider={<Box sx={{ borderBottom: '1px solid #f3f2f1' }} />}>
                     {Object.entries(ordersByStatus)
-                      .filter(([, count]) => count > 0)
                       .map(([s, count]) => {
                         const meta = statusLabels[s] ?? { label: s, color: 'default' as const };
                         return (
-                          <Box key={s} sx={{ px: 3, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Chip label={meta.label} color={meta.color} size="small" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
-                            <Typography variant="h6" sx={{ fontWeight: 800 }}>{count}</Typography>
+                          <Box key={s} sx={{ px: 3, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: count === 0 ? 0.4 : 1 }}>
+                            <Chip label={meta.label} color={count > 0 ? meta.color : 'default'} size="small" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
+                            <Typography variant="h6" sx={{ fontWeight: 800, color: count === 0 ? 'text.disabled' : 'text.primary' }}>{count}</Typography>
                           </Box>
                         );
                       })}

@@ -246,7 +246,9 @@ public sealed class InventoryIntegrationConsumer(
             EventType: envelope.EventType,
             CorrelationId: envelope.CorrelationId,
             ProductionOrderId: payload.ProductionOrderId,
-            OrderNumber: payload.OrderNumber),
+            OrderNumber: payload.OrderNumber,
+            ProductCode: payload.ProductCode,
+            ProducedQuantity: payload.ProducedQuantity),
             cancellationToken);
     }
 
@@ -326,7 +328,9 @@ public sealed class InventoryIntegrationConsumer(
 
     private sealed record OrderStatusPayload(
         Guid ProductionOrderId,
-        string OrderNumber);
+        string OrderNumber,
+        string? ProductCode = null,
+        decimal ProducedQuantity = 0m);
 
     private sealed record StockReservationPayload(
         Guid ProductionOrderId,

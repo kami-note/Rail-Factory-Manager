@@ -42,7 +42,11 @@ internal sealed class TenantConnectionResolver(
             return value;
         }
 
-        // Try as a direct connection string name if it's just a simple string
-        return configuration.GetConnectionString(value) ?? value;
+        // Treat as an Aspire/config key name — throw if not found so callers get a clear
+        // error instead of Npgsql failing to parse the raw name as a connection string.
+        return configuration.GetConnectionString(value)
+            ?? throw new InvalidOperationException(
+                $"Connection string '{value}' was not found in configuration. " +
+                "Ensure the database is provisioned and referenced in the Aspire AppHost (or configuration) for this service.");
     }
 }

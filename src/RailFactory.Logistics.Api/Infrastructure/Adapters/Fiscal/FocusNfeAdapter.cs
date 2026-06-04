@@ -52,10 +52,12 @@ public sealed class FocusNfeAdapter(HttpClient httpClient) : IFiscalIssuerAdapte
                 unidade_comercial = item.UnitOfMeasure,
                 quantidade_comercial = item.Quantity,
                 valor_unitario_comercial = item.UnitValue,
-                icms_origem = 0,
-                icms_situacao_tributaria = "40",
-                pis_situacao_tributaria = "07",
-                cofins_situacao_tributaria = "07"
+                icms_origem = item.IcmsOrigin,
+                icms_situacao_tributaria = item.IcmsCst,
+                pis_situacao_tributaria = item.PisCst,
+                cofins_situacao_tributaria = item.CofinsCst,
+                ipi_situacao_tributaria = item.IpiRate > 0 ? "50" : null,
+                ipi_aliquota = item.IpiRate > 0 ? (decimal?)item.IpiRate : null
             }).ToArray()
         };
 

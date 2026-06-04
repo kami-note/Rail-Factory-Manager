@@ -85,7 +85,7 @@ public sealed class Tenant : AggregateRoot<string>
         var normalizedCode = code.Trim().ToLowerInvariant();
         var tenant = new Tenant(normalizedCode, displayName.Trim(), locale.Trim(), timeZone.Trim(), TenantStatus.Active);
         foreach (var db in ServiceDbs)
-            tenant.SetConnectionString(db, $"tenant-{normalizedCode}-{db}");
+            tenant.SetConnectionString(db, $"ConnectionStrings:tenant-{normalizedCode}-{db}");
 
         tenant.RaiseDomainEvent(new TenantRegisteredDomainEvent(Guid.NewGuid(), DateTimeOffset.UtcNow, tenant.Code));
         return tenant;

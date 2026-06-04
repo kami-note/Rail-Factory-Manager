@@ -60,6 +60,11 @@ export async function addShipmentItem(tenantCode: string, orderId: string, body:
   unitValue?: number;
   taxBaseIcms?: number;
   icmsRate?: number;
+  icmsOrigin?: number;
+  icmsCst?: string;
+  pisCst?: string;
+  cofinsCst?: string;
+  ipiRate?: number;
 }): Promise<ShipmentItem> {
   return fetchJsonOrThrow<ShipmentItem>(
     `${BASE}/shipment-orders/${orderId}/items`,

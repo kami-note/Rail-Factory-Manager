@@ -127,13 +127,13 @@ public sealed class TenantCatalogSchemaInitializer(
     {
         logger.LogInformation("Seeding 'dev' tenant...");
         var tenant = Tenant.RegisterDevTenant();
-        tenant.SetConnectionString("iamdb", "tenant-dev-iamdb");
-        tenant.SetConnectionString("supplychaindb", "tenant-dev-supplychaindb");
-        tenant.SetConnectionString("inventorydb", "tenant-dev-inventorydb");
-        tenant.SetConnectionString("productiondb", "tenant-dev-productiondb");
-        tenant.SetConnectionString("hrdb", "tenant-dev-hrdb");
-        tenant.SetConnectionString("fleetdb", "tenant-dev-fleetdb");
-        tenant.SetConnectionString("logisticsdb", "tenant-dev-logisticsdb");
+        tenant.SetConnectionString("iamdb", "ConnectionStrings:tenant-dev-iamdb");
+        tenant.SetConnectionString("supplychaindb", "ConnectionStrings:tenant-dev-supplychaindb");
+        tenant.SetConnectionString("inventorydb", "ConnectionStrings:tenant-dev-inventorydb");
+        tenant.SetConnectionString("productiondb", "ConnectionStrings:tenant-dev-productiondb");
+        tenant.SetConnectionString("hrdb", "ConnectionStrings:tenant-dev-hrdb");
+        tenant.SetConnectionString("fleetdb", "ConnectionStrings:tenant-dev-fleetdb");
+        tenant.SetConnectionString("logisticsdb", "ConnectionStrings:tenant-dev-logisticsdb");
 
         await UpsertTenantAsync(dbContext, tenant, cancellationToken);
     }
@@ -148,13 +148,13 @@ public sealed class TenantCatalogSchemaInitializer(
             "UTC",
             TenantStatus.Active);
 
-        tenant.SetConnectionString("iamdb", "tenant-acme-iamdb");
-        tenant.SetConnectionString("supplychaindb", "tenant-acme-supplychaindb");
-        tenant.SetConnectionString("inventorydb", "tenant-acme-inventorydb");
-        tenant.SetConnectionString("productiondb", "tenant-acme-productiondb");
-        tenant.SetConnectionString("hrdb", "tenant-acme-hrdb");
-        tenant.SetConnectionString("fleetdb", "tenant-acme-fleetdb");
-        tenant.SetConnectionString("logisticsdb", "tenant-acme-logisticsdb");
+        tenant.SetConnectionString("iamdb", "ConnectionStrings:tenant-acme-iamdb");
+        tenant.SetConnectionString("supplychaindb", "ConnectionStrings:tenant-acme-supplychaindb");
+        tenant.SetConnectionString("inventorydb", "ConnectionStrings:tenant-acme-inventorydb");
+        tenant.SetConnectionString("productiondb", "ConnectionStrings:tenant-acme-productiondb");
+        tenant.SetConnectionString("hrdb", "ConnectionStrings:tenant-acme-hrdb");
+        tenant.SetConnectionString("fleetdb", "ConnectionStrings:tenant-acme-fleetdb");
+        tenant.SetConnectionString("logisticsdb", "ConnectionStrings:tenant-acme-logisticsdb");
 
         await UpsertTenantAsync(dbContext, tenant, cancellationToken);
     }

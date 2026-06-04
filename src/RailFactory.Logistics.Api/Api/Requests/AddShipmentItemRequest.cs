@@ -11,4 +11,9 @@ public sealed record AddShipmentItemRequest(
     string CfopCode = "",
     decimal UnitValue = 0,
     decimal TaxBaseIcms = 0,
-    decimal IcmsRate = 12);
+    decimal IcmsRate = 12,
+    int IcmsOrigin = 0,
+    string IcmsCst = "40",
+    string PisCst = "07",
+    string CofinsCst = "07",
+    decimal IpiRate = 0);

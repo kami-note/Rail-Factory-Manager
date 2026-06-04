@@ -10,7 +10,8 @@ public sealed record NfeParty(
 public sealed record NfeItem(
     string Code, string Description, string NcmCode, string CfopCode,
     string UnitOfMeasure, decimal Quantity, decimal UnitValue,
-    decimal TaxBaseIcms, decimal IcmsRate, decimal IpiRate = 0m);
+    decimal TaxBaseIcms, decimal IcmsRate, decimal IpiRate = 0m,
+    int IcmsOrigin = 0, string IcmsCst = "40", string PisCst = "07", string CofinsCst = "07");
 
 public sealed record NfeRequest(
     string TenantId,

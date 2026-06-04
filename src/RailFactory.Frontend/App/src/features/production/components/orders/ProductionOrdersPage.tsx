@@ -15,8 +15,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  alpha,
-  useTheme,
 } from '@mui/material';
 import {
   ClipboardList,
@@ -33,7 +31,7 @@ import {
 } from '../../api/production';
 import type { ProductionOrder, WorkCenter } from '../../types';
 import { toUiErrorMessage } from '../../../../shared/lib/http';
-import { ExecutionPanel } from './ExecutionPanel';
+import { OrderDetailDialog } from './OrderDetailDialog';
 import { CreateOrderModal } from './CreateOrderModal';
 
 const STATUS_OPTIONS = [
@@ -45,12 +43,7 @@ const STATUS_OPTIONS = [
   { value: 'Cancelled', label: 'Cancelada' },
 ];
 
-type ProductionOrdersPageProps = {
-  tenantCode: string;
-};
-
-export function ProductionOrdersPage({ tenantCode }: ProductionOrdersPageProps) {
-  const theme = useTheme();
+export function ProductionOrdersPage({ tenantCode }: { tenantCode: string }) {
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -60,9 +53,10 @@ export function ProductionOrdersPage({ tenantCode }: ProductionOrdersPageProps) 
   const [workCenterFilter, setWorkCenterFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const selectedOrder = useMemo(() =>
-    orders.find(o => o.id === selectedOrderId),
-    [orders, selectedOrderId]);
+  const selectedOrder = useMemo(
+    () => orders.find(o => o.id === selectedOrderId),
+    [orders, selectedOrderId],
+  );
 
   const load = async () => {
     setLoading(true);
@@ -70,7 +64,7 @@ export function ProductionOrdersPage({ tenantCode }: ProductionOrdersPageProps) 
     try {
       const [ordersData, wcData] = await Promise.all([
         listProductionOrders(tenantCode, statusFilter || undefined, workCenterFilter || undefined),
-        listWorkCenters(tenantCode)
+        listWorkCenters(tenantCode),
       ]);
       setOrders(ordersData);
       setWorkCenters(wcData);
@@ -136,71 +130,59 @@ export function ProductionOrdersPage({ tenantCode }: ProductionOrdersPageProps) 
         </Button>
       </Stack>
 
-      <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', gap: 2 }}>
-        <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
-          {loading ? (
-            <Box sx={{ textAlign: 'center', pt: 6 }}><CircularProgress size={32} /></Box>
-          ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table stickyHeader size="small">
-                <TableHead>
+      <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+        {loading ? (
+          <Box sx={{ textAlign: 'center', pt: 6 }}><CircularProgress size={32} /></Box>
+        ) : (
+          <TableContainer component={Paper} variant="outlined">
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 800 }}>Nº ORDEM</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>PRODUTO</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>CENTRO</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 800 }}>QTD PLANEJADA</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>STATUS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {orders.length === 0 ? (
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 800 }}>Nº ORDEM</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>PRODUTO</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>CENTRO</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800 }}>QTD PLANEJADA</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>STATUS</TableCell>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                      Nenhuma ordem encontrada.
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {orders.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                        Nenhuma ordem encontrada.
-                      </TableCell>
-                    </TableRow>
-                  ) : orders.map(order => (
-                    <TableRow
-                      key={order.id}
-                      hover
-                      selected={selectedOrderId === order.id}
-                      onClick={() => setSelectedOrderId(order.id)}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{order.orderNumber}</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{order.productCode}</TableCell>
-                      <TableCell sx={{ color: 'text.secondary' }}>{workCenterName(order.workCenterId)}</TableCell>
-                      <TableCell align="right">{order.plannedQuantity}</TableCell>
-                      <TableCell><StatusChip status={order.status} /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </Box>
-
-        {selectedOrder && (
-          <Paper
-            variant="outlined"
-            sx={{
-              width: 400,
-              flexShrink: 0,
-              overflowY: 'auto',
-              bgcolor: 'background.paper',
-              borderLeft: 2,
-              borderColor: alpha(theme.palette.primary.main, 0.2)
-            }}
-          >
-            <ExecutionPanel
-              key={selectedOrder.id}
-              tenantCode={tenantCode}
-              order={selectedOrder}
-              onTransition={handleTransition}
-            />
-          </Paper>
+                ) : orders.map(order => (
+                  <TableRow
+                    key={order.id}
+                    hover
+                    onClick={() => setSelectedOrderId(order.id)}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{order.orderNumber}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{order.productCode}</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>{workCenterName(order.workCenterId)}</TableCell>
+                    <TableCell align="right">{order.plannedQuantity}</TableCell>
+                    <TableCell><StatusChip status={order.status} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
       </Box>
+
+      {selectedOrder && (
+        <OrderDetailDialog
+          key={selectedOrder.id}
+          open={!!selectedOrderId}
+          order={selectedOrder}
+          workCenterName={workCenterName(selectedOrder.workCenterId)}
+          tenantCode={tenantCode}
+          onTransition={handleTransition}
+          onClose={() => setSelectedOrderId(null)}
+        />
+      )}
 
       <CreateOrderModal
         open={showCreateModal}

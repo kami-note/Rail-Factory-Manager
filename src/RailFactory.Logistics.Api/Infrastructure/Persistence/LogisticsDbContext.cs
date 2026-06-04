@@ -82,6 +82,11 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.UnitValue).HasColumnType("numeric(14,4)");
             entity.Property(x => x.TaxBaseIcms).HasColumnType("numeric(14,4)");
             entity.Property(x => x.IcmsRate).HasColumnType("numeric(5,2)");
+            entity.Property(x => x.IcmsOrigin).IsRequired();
+            entity.Property(x => x.IcmsCst).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.PisCst).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.CofinsCst).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.IpiRate).HasColumnType("numeric(5,2)");
             entity.HasIndex(x => x.ShipmentOrderId);
         });
 

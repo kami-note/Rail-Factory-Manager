@@ -51,6 +51,10 @@ public sealed class ProductionInventoryDispatcher(
             {
                 await DispatchTenantBatchAsync(tenant, cancellationToken);
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("was not found in configuration"))
+            {
+                logger.LogDebug("Database for tenant {TenantCode} is not provisioned yet. Skipping outbox dispatch.", tenant.Code);
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to dispatch production outbox messages for tenant {TenantCode}.", tenant.Code);
@@ -227,7 +231,9 @@ public sealed class ProductionInventoryDispatcher(
         var itemPayload = JsonSerializer.SerializeToElement(new
         {
             productionOrderId = payload.OrderId,
-            orderNumber = payload.OrderNumber
+            orderNumber = payload.OrderNumber,
+            productCode = payload.ProductCode,
+            producedQuantity = payload.ProducedQuantity
         });
 
         var envelope = new RabbitMqEnvelope(
@@ -280,5 +286,7 @@ public sealed class ProductionInventoryDispatcher(
 
     private sealed record OrderStatusChangedPayload(
         Guid OrderId,
-        string OrderNumber);
+        string OrderNumber,
+        string? ProductCode = null,
+        decimal ProducedQuantity = 0m);
 }
