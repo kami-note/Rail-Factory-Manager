@@ -1,5 +1,5 @@
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
-import type { Person, HourLog } from '../types';
+import type { Person, HourLog, Skill, WorkShift } from '../types';
 
 const base = '/api/hr';
 
@@ -62,3 +62,47 @@ export const listHourLogs = (
   fetchJsonOrThrow<HourLog[]>(`${base}/people/${personId}/hour-logs`, {
     headers: buildTenantHeaders(tenantCode), credentials: 'include', signal
   }, 'Falha ao carregar apontamentos');
+
+// --- Skills ---
+
+export const listSkills = (tenantCode: string, personId: string, signal?: AbortSignal): Promise<Skill[]> =>
+  fetchJsonOrThrow<Skill[]>(`${base}/people/${personId}/skills`, {
+    headers: buildTenantHeaders(tenantCode), credentials: 'include', signal
+  }, 'Falha ao carregar competências');
+
+export const addSkill = (
+  tenantCode: string,
+  personId: string,
+  payload: { skillName: string; proficiencyLevel: number; certifiedAt?: string; notes?: string }
+): Promise<Skill> =>
+  fetchJsonOrThrow<Skill>(`${base}/people/${personId}/skills`, {
+    method: 'POST', headers: buildTenantHeaders(tenantCode), credentials: 'include',
+    body: JSON.stringify(payload)
+  }, 'Falha ao adicionar competência');
+
+export const removeSkill = (tenantCode: string, personId: string, skillId: string): Promise<void> =>
+  fetchJsonOrThrow<void>(`${base}/people/${personId}/skills/${skillId}`, {
+    method: 'DELETE', headers: buildTenantHeaders(tenantCode), credentials: 'include'
+  }, 'Falha ao remover competência');
+
+// --- Shifts ---
+
+export const listShifts = (tenantCode: string, personId: string, signal?: AbortSignal): Promise<WorkShift[]> =>
+  fetchJsonOrThrow<WorkShift[]>(`${base}/people/${personId}/shifts`, {
+    headers: buildTenantHeaders(tenantCode), credentials: 'include', signal
+  }, 'Falha ao carregar turnos');
+
+export const createShift = (
+  tenantCode: string,
+  personId: string,
+  payload: { shiftDate: string; startTime: string; endTime: string; notes?: string }
+): Promise<WorkShift> =>
+  fetchJsonOrThrow<WorkShift>(`${base}/people/${personId}/shifts`, {
+    method: 'POST', headers: buildTenantHeaders(tenantCode), credentials: 'include',
+    body: JSON.stringify(payload)
+  }, 'Falha ao criar turno');
+
+export const deleteShift = (tenantCode: string, personId: string, shiftId: string): Promise<void> =>
+  fetchJsonOrThrow<void>(`${base}/people/${personId}/shifts/${shiftId}`, {
+    method: 'DELETE', headers: buildTenantHeaders(tenantCode), credentials: 'include'
+  }, 'Falha ao excluir turno');

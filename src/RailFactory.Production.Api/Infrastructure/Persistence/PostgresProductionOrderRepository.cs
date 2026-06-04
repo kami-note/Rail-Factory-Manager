@@ -42,6 +42,12 @@ public sealed class PostgresProductionOrderRepository(ProductionDbContext contex
         return $"{prefix}{(count + 1):D4}";
     }
 
+    public Task<bool> HasActiveOrdersForBomAsync(Guid bomId, CancellationToken cancellationToken)
+        => context.ProductionOrders.AnyAsync(
+            x => x.BomId == bomId &&
+                 (x.Status == ProductionOrderStatus.Released || x.Status == ProductionOrderStatus.InExecution),
+            cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
         => context.SaveChangesAsync(cancellationToken);
 }

@@ -57,7 +57,7 @@ export function CreateDispatchModal({ open, tenantCode, onCreated, onClose }: Pr
 
         <DialogContent>
           {loading
-            ? <Stack alignItems="center" sx={{ py: 3 }}><CircularProgress size={28} /></Stack>
+            ? <Stack  sx={{py: 3, alignItems: 'center'}}><CircularProgress size={28} /></Stack>
             : (
               <Stack spacing={2} sx={{ mt: 1 }}>
                 {error && <Alert severity="error">{error}</Alert>}
@@ -85,7 +85,7 @@ export function CreateDispatchModal({ open, tenantCode, onCreated, onClose }: Pr
                   <Select value={carrierId} label="Transportadora" onChange={e => setCarrierId(e.target.value)}>
                     {activeCarriers.map(c => (
                       <MenuItem key={c.id} value={c.id}>
-                        <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                           <Typography variant="body2">{c.name}</Typography>
                           <Typography variant="caption" color="text.secondary">
                             R$ {c.ratePerKg.toFixed(2)}/kg

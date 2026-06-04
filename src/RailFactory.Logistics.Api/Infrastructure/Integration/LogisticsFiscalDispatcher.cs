@@ -45,6 +45,10 @@ public sealed class LogisticsFiscalDispatcher(
             {
                 await DispatchTenantBatchAsync(tenant, cancellationToken);
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("was not found in configuration"))
+            {
+                logger.LogDebug("Database for tenant {TenantCode} is not provisioned yet. Skipping outbox dispatch.", tenant.Code);
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "LogisticsFiscalDispatcher failed for tenant {TenantCode}.", tenant.Code);
@@ -191,7 +195,12 @@ public sealed class LogisticsFiscalDispatcher(
             Quantity: i.Quantity,
             UnitValue: i.UnitValue,
             TaxBaseIcms: i.TaxBaseIcms,
-            IcmsRate: i.IcmsRate)).ToList();
+            IcmsRate: i.IcmsRate,
+            IpiRate: i.IpiRate,
+            IcmsOrigin: i.IcmsOrigin,
+            IcmsCst: string.IsNullOrEmpty(i.IcmsCst) ? "40" : i.IcmsCst,
+            PisCst: string.IsNullOrEmpty(i.PisCst) ? "07" : i.PisCst,
+            CofinsCst: string.IsNullOrEmpty(i.CofinsCst) ? "07" : i.CofinsCst)).ToList();
 
         var nfeRequest = new NfeRequest(
             TenantId: tenantCode,

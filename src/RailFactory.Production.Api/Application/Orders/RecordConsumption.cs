@@ -8,6 +8,7 @@ namespace RailFactory.Production.Api.Application.Orders;
 /// </summary>
 public sealed class RecordConsumption(
     IProductionOrderRepository orderRepository,
+    IBomRepository bomRepository,
     IExecutionRepository executionRepository)
 {
     public async Task ExecuteAsync(RecordConsumptionInput input, CancellationToken cancellationToken)
@@ -17,6 +18,13 @@ public sealed class RecordConsumption(
 
         if (order.Status != ProductionOrderStatus.InExecution)
             throw new InvalidOperationException($"Cannot record consumption for order in status '{order.Status}'. Order must be InExecution.");
+
+        var bom = await bomRepository.GetByIdAsync(order.BomId, cancellationToken)
+            ?? throw new InvalidOperationException($"BOM '{order.BomId}' referenced by order '{input.ProductionOrderId}' not found.");
+
+        var normalizedCode = input.MaterialCode.Trim().ToUpperInvariant();
+        if (!bom.Items.Any(i => i.MaterialCode.Value == normalizedCode))
+            throw new InvalidOperationException($"Material '{normalizedCode}' is not part of the BOM for this production order.");
 
         var record = ConsumptionRecord.Create(
             input.ProductionOrderId,

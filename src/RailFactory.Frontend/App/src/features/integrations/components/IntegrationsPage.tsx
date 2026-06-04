@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert, Box, Button, Chip, CircularProgress, Divider,
-  IconButton, Paper, Stack, Switch, Tooltip, Typography,
+  IconButton, Paper, Stack, Switch, Tooltip, Typography, Grid, Avatar
 } from '@mui/material';
-import { Plug, Plus, Settings2 } from 'lucide-react';
+import { Plug, Plus, Settings2, ExternalLink, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { listIntegrations, enableIntegration, disableIntegration } from '../api/integrations';
 import { ConfigureIntegrationModal } from './ConfigureIntegrationModal';
-import { CATEGORY_LABELS, CATEGORY_PROVIDERS, PROVIDER_SCHEMAS, type Integration, type IntegrationCategory } from '../types';
+import { CATEGORY_LABELS, CATEGORY_PROVIDERS, PROVIDER_SCHEMAS, PROVIDER_METADATA, type Integration, type IntegrationCategory } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 
 type Props = { tenantCode: string };
@@ -66,76 +66,139 @@ export function IntegrationsPage({ tenantCode }: Props) {
   const byCategory = new Map(integrations.map(i => [i.category, i]));
 
   return (
-    <Box sx={{ p: 3, maxWidth: 860 }}>
-      <ModuleHeader label="Integrações" icon={<Plug size={20} />} />
+    <Box sx={{ p: 3, maxWidth: 1200 }}>
+      <ModuleHeader label="Serviços e Integrações" icon={<Plug size={24} />} />
 
-      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>{success}</Alert>}
-      {mutationError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setMutationError(null)}>{mutationError}</Alert>}
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 800 }}>
+        Gerencie as conexões do sistema com provedores externos. Configure tokens de API, webhooks e habilite ou desabilite integrações rapidamente.
+      </Typography>
 
-      <Stack spacing={2}>
+      {success && <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>{success}</Alert>}
+      {mutationError && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setMutationError(null)}>{mutationError}</Alert>}
+
+      <Grid container spacing={3}>
         {ALL_CATEGORIES.map(category => {
           const integration = byCategory.get(category);
           const isTogglingThis = toggling === category;
+          const providerType = integration?.providerType;
+          const meta = providerType ? PROVIDER_METADATA[providerType] : null;
+          const providerLabel = providerType ? (PROVIDER_SCHEMAS[providerType]?.label ?? providerType) : null;
 
           return (
-            <Paper key={category} elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    {CATEGORY_LABELS[category]}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                    {integration
-                      ? `${PROVIDER_SCHEMAS[integration.providerType]?.label ?? integration.providerType} — atualizado ${new Date(integration.updatedAt).toLocaleDateString('pt-BR')}`
-                      : 'Não configurado'}
-                  </Typography>
-                </Box>
+            <Grid item xs={12} md={6} lg={4} key={category}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '1px solid', 
+                  borderColor: integration?.isEnabled ? 'primary.main' : 'divider',
+                  borderRadius: 3, 
+                  overflow: 'hidden',
+                  transition: 'all 0.2s',
+                  boxShadow: integration?.isEnabled ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                  }
+                }}
+              >
+                {/* Header Section */}
+                <Box sx={{ p: 3, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', bgcolor: integration?.isEnabled ? 'rgba(0,0,0,0.01)' : 'transparent' }}>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar 
+                      src={meta && providerType !== 'mock' ? `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${meta.domain}&size=128` : undefined}
+                      variant="rounded"
+                      sx={{ 
+                        width: 48, 
+                        height: 48, 
+                        bgcolor: integration ? 'white' : 'grey.100',
+                        color: 'grey.400',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        p: 0.5,
+                        '& img': { objectFit: 'contain' }
+                      }}
+                    >
+                      {!integration && <Plug size={24} />}
+                      {integration && providerType === 'mock' && <ShieldAlert size={24} color="#666" />}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" color="primary.main" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.65rem' }}>
+                        {CATEGORY_LABELS[category]}
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.2, mt: 0.5 }}>
+                        {providerLabel || 'Não Configurado'}
+                      </Typography>
+                    </Box>
+                  </Stack>
 
-                <Stack direction="row" spacing={1} alignItems="center">
                   {integration && (
                     <Tooltip title={integration.isEnabled ? 'Desabilitar' : 'Habilitar'}>
                       <Switch
                         checked={integration.isEnabled}
                         disabled={isTogglingThis}
                         onChange={() => handleToggle(integration)}
-                        size="small"
+                        color="success"
                       />
                     </Tooltip>
                   )}
+                </Box>
+
+                {/* Body Section */}
+                <Box sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {integration 
+                      ? `Esta integração está configurada para conectar o sistema Rail Factory com o provedor ${providerLabel}.`
+                      : `Nenhum provedor selecionado para a categoria de ${CATEGORY_LABELS[category].toLowerCase()}. Clique em configurar para adicionar.`}
+                  </Typography>
 
                   {integration && (
-                    <Chip
-                      label={integration.isEnabled ? 'Ativo' : 'Inativo'}
-                      color={integration.isEnabled ? 'success' : 'default'}
-                      size="small"
-                      variant="outlined"
-                    />
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 'auto' }}>
+                      <Chip
+                        icon={integration.isEnabled ? <CheckCircle2 size={14} /> : undefined}
+                        label={integration.isEnabled ? 'Sincronização Ativa' : 'Pausada'}
+                        color={integration.isEnabled ? 'success' : 'default'}
+                        size="small"
+                        sx={{ fontWeight: 600 }}
+                      />
+                      <Chip label={`Atualizado: ${new Date(integration.updatedAt).toLocaleDateString('pt-BR')}`} size="small" variant="outlined" />
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Footer Section */}
+                <Box sx={{ p: 2, px: 3, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'grey.50' }}>
+                  {integration && meta && meta.docUrl !== '#' ? (
+                    <Button 
+                      size="small" 
+                      startIcon={<ExternalLink size={14} />} 
+                      href={meta.docUrl} 
+                      target="_blank"
+                      sx={{ color: 'text.secondary', fontWeight: 600 }}
+                    >
+                      Documentação
+                    </Button>
+                  ) : (
+                    <Box /> // Spacer
                   )}
 
-                  <Tooltip title={integration ? 'Editar configuração' : 'Configurar'}>
-                    <IconButton
-                      size="small"
-                      onClick={() => setConfiguring({ category, existing: integration })}
-                    >
-                      {integration ? <Settings2 size={16} /> : <Plus size={16} />}
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              </Box>
-
-              {integration && (
-                <>
-                  <Divider sx={{ my: 1.5 }} />
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
-                    <Chip label={`Provider: ${PROVIDER_SCHEMAS[integration.providerType]?.label ?? integration.providerType}`} size="small" variant="outlined" />
-                    <Chip label={`Categoria: ${category}`} size="small" variant="outlined" />
-                  </Stack>
-                </>
-              )}
-            </Paper>
+                  <Button
+                    variant={integration ? "outlined" : "contained"}
+                    size="small"
+                    startIcon={integration ? <Settings2 size={16} /> : <Plus size={16} />}
+                    onClick={() => setConfiguring({ category, existing: integration })}
+                    sx={{ fontWeight: 700, borderRadius: 2 }}
+                  >
+                    {integration ? 'Configurar' : 'Conectar'}
+                  </Button>
+                </Box>
+              </Paper>
+            </Grid>
           );
         })}
-      </Stack>
+      </Grid>
 
       {configuring && (
         <ConfigureIntegrationModal

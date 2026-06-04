@@ -9,7 +9,7 @@ namespace RailFactory.Inventory.Api.Application.Balances;
 /// Called when <c>production.order_completed</c> is received from the Production service.
 /// Idempotent: replays with the same EventId are skipped.
 /// </summary>
-public sealed class ConsumeReservedStock(IInventoryRepository repository)
+public sealed class ConsumeReservedStock(IInventoryRepository repository, ILogger<ConsumeReservedStock> logger)
 {
     public async Task<bool> ExecuteAsync(ConsumeReservedStockInput input, CancellationToken cancellationToken)
     {
@@ -39,6 +39,37 @@ public sealed class ConsumeReservedStock(IInventoryRepository repository)
                 cancellationToken);
         }
 
+        // Credit the finished good balance with the produced quantity.
+        if (!string.IsNullOrWhiteSpace(input.ProductCode) && input.ProducedQuantity > 0)
+        {
+            var finishedGoodBalance = await repository.GetLatestBalanceByMaterialCodeAsync(
+                input.ProductCode, cancellationToken);
+
+            if (finishedGoodBalance is not null && finishedGoodBalance.Status == InventoryBalanceStatus.Available)
+            {
+                finishedGoodBalance.Credit(input.ProducedQuantity);
+
+                var outputDetailsJson = JsonSerializer.Serialize(new
+                {
+                    input.ProductionOrderId,
+                    input.OrderNumber,
+                    productCode = input.ProductCode,
+                    producedQty = input.ProducedQuantity,
+                    input.CorrelationId
+                });
+
+                await repository.AddLedgerEntryAsync(
+                    InventoryLedgerEntry.Create(finishedGoodBalance.Id, "production_output", input.ProducedQuantity, outputDetailsJson),
+                    cancellationToken);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "No Available balance found for finished good '{ProductCode}' (order {OrderNumber}). Ensure the material is registered as FinishedGood in Inventory.",
+                    input.ProductCode, input.OrderNumber);
+            }
+        }
+
         await repository.AddIntegrationMessageAsync(
             InventoryIntegrationMessage.Create(input.EventId, input.EventType),
             cancellationToken);
@@ -53,4 +84,6 @@ public sealed record ConsumeReservedStockInput(
     string EventType,
     string CorrelationId,
     Guid ProductionOrderId,
-    string OrderNumber);
+    string OrderNumber,
+    string? ProductCode = null,
+    decimal ProducedQuantity = 0m);

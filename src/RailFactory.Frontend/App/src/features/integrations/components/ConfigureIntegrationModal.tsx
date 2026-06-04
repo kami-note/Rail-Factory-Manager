@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
   FormControl, Grid, IconButton, InputLabel, MenuItem, Select,
-  Tab, Tabs, TextField, Typography,
+  Tab, Tabs, TextField, Typography, Avatar
 } from '@mui/material';
-import { X } from 'lucide-react';
+import { X, Plug, ShieldAlert } from 'lucide-react';
 import { configureIntegration } from '../api/integrations';
 import {
-  CATEGORY_LABELS, CATEGORY_PROVIDERS, PROVIDER_SCHEMAS,
+  CATEGORY_LABELS, CATEGORY_PROVIDERS, PROVIDER_SCHEMAS, PROVIDER_METADATA,
   type CredentialField, type IntegrationCategory,
 } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
@@ -25,7 +25,7 @@ function CredentialFieldInput({
   field, value, onChange,
 }: { field: CredentialField; value: string; onChange: (v: string) => void }) {
   return (
-    <Grid item xs={12} sm={field.key.startsWith('emitter_state') || field.key.startsWith('emitter_number') ? 4 : 12}>
+    <Grid xs={12} sm={field.key.startsWith('emitter_state') || field.key.startsWith('emitter_number') ? 4 : 12}>
       <TextField
         label={field.label}
         value={value}
@@ -36,7 +36,7 @@ function CredentialFieldInput({
         placeholder={field.placeholder}
         type={field.secret ? 'password' : 'text'}
         helperText={field.hint}
-        inputProps={{ maxLength: field.key === 'emitter_state' ? 2 : undefined }}
+        slotProps={{ htmlInput: { maxLength: field.key === 'emitter_state' ? 2 : undefined } }}
       />
     </Grid>
   );
@@ -113,12 +113,20 @@ export function ConfigureIntegrationModal({ open, tenantCode, category, existing
         </DialogTitle>
 
         <DialogContent>
-          <Box sx={{ mb: 2 }}>
-            <FormControl fullWidth size="small" required>
-              <InputLabel>Provider</InputLabel>
+          <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', bgcolor: 'grey.50', p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+            <Avatar 
+              src={providerType && providerType !== 'mock' && PROVIDER_METADATA[providerType] ? `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${PROVIDER_METADATA[providerType].domain}&size=128` : undefined}
+              variant="rounded"
+              sx={{ width: 48, height: 48, bgcolor: 'white', border: '1px solid', borderColor: 'divider', p: 0.5, '& img': { objectFit: 'contain' } }}
+            >
+              {!providerType && <Plug size={24} color="#999" />}
+              {providerType === 'mock' && <ShieldAlert size={24} color="#666" />}
+            </Avatar>
+            <FormControl fullWidth size="small" required sx={{ bgcolor: 'white' }}>
+              <InputLabel>Selecione o Provedor</InputLabel>
               <Select
                 value={providerType}
-                label="Provider"
+                label="Selecione o Provedor"
                 onChange={e => handleProviderChange(e.target.value)}
               >
                 {providers.map(p => (

@@ -28,12 +28,18 @@ interface FormState {
   unitValue: string;
   taxBaseIcms: string;
   icmsRate: string;
+  icmsOrigin: string;
+  icmsCst: string;
+  pisCst: string;
+  cofinsCst: string;
+  ipiRate: string;
 }
 
 const EMPTY: FormState = {
   materialCode: '', quantity: '', unitOfMeasure: 'UN',
   weightKg: '', volumeCbm: '',
   ncmCode: '', cfopCode: '5102', unitValue: '', taxBaseIcms: '', icmsRate: '12',
+  icmsOrigin: '0', icmsCst: '40', pisCst: '07', cofinsCst: '07', ipiRate: '0'
 };
 
 export function AddShipmentItemModal({ open, tenantCode, orderId, orderNumber, onAdded, onClose }: Props) {
@@ -71,6 +77,11 @@ export function AddShipmentItemModal({ open, tenantCode, orderId, orderNumber, o
         unitValue: parseFloat(form.unitValue || '0'),
         taxBaseIcms: parseFloat(form.taxBaseIcms || '0'),
         icmsRate: parseFloat(form.icmsRate || '12'),
+        icmsOrigin: parseInt(form.icmsOrigin || '0', 10),
+        icmsCst: form.icmsCst.trim(),
+        pisCst: form.pisCst.trim(),
+        cofinsCst: form.cofinsCst.trim(),
+        ipiRate: parseFloat(form.ipiRate || '0')
       });
       onAdded(item);
     } catch (err) {
@@ -92,20 +103,20 @@ export function AddShipmentItemModal({ open, tenantCode, orderId, orderNumber, o
             {error && <Typography color="error" variant="body2">{error}</Typography>}
 
             <Grid container spacing={1}>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <TextField label="Código do Material *" value={form.materialCode} onChange={set('materialCode')} fullWidth size="small" required />
               </Grid>
-              <Grid item xs={3}>
-                <TextField label="Qtd *" value={form.quantity} onChange={set('quantity')} fullWidth size="small" required type="number" inputProps={{ min: 0.001, step: 0.001 }} />
+              <Grid xs={3}>
+                <TextField label="Qtd *" value={form.quantity} onChange={set('quantity')} fullWidth size="small" required type="number" slotProps={{ htmlInput: { min: 0.001, step: 0.001 } }} />
               </Grid>
-              <Grid item xs={3}>
+              <Grid xs={3}>
                 <TextField label="UN *" value={form.unitOfMeasure} onChange={set('unitOfMeasure')} fullWidth size="small" required />
               </Grid>
-              <Grid item xs={6}>
-                <TextField label="Peso (kg)" value={form.weightKg} onChange={set('weightKg')} fullWidth size="small" type="number" inputProps={{ min: 0, step: 0.001 }} />
+              <Grid xs={6}>
+                <TextField label="Peso (kg)" value={form.weightKg} onChange={set('weightKg')} fullWidth size="small" type="number" slotProps={{ htmlInput: { min: 0, step: 0.001 } }} />
               </Grid>
-              <Grid item xs={6}>
-                <TextField label="Volume (m³)" value={form.volumeCbm} onChange={set('volumeCbm')} fullWidth size="small" type="number" inputProps={{ min: 0, step: 0.0001 }} />
+              <Grid xs={6}>
+                <TextField label="Volume (m³)" value={form.volumeCbm} onChange={set('volumeCbm')} fullWidth size="small" type="number" slotProps={{ htmlInput: { min: 0, step: 0.0001 } }} />
               </Grid>
             </Grid>
 
@@ -114,20 +125,35 @@ export function AddShipmentItemModal({ open, tenantCode, orderId, orderNumber, o
             </Divider>
 
             <Grid container spacing={1}>
-              <Grid item xs={4}>
-                <TextField label="NCM" value={form.ncmCode} onChange={set('ncmCode')} fullWidth size="small" placeholder="84713012" inputProps={{ maxLength: 10 }} />
+              <Grid xs={4}>
+                <TextField label="NCM" value={form.ncmCode} onChange={set('ncmCode')} fullWidth size="small" placeholder="84713012" slotProps={{ htmlInput: { maxLength: 10 } }} />
               </Grid>
-              <Grid item xs={4}>
-                <TextField label="CFOP" value={form.cfopCode} onChange={set('cfopCode')} fullWidth size="small" placeholder="5102" inputProps={{ maxLength: 5 }} />
+              <Grid xs={4}>
+                <TextField label="CFOP" value={form.cfopCode} onChange={set('cfopCode')} fullWidth size="small" placeholder="5102" slotProps={{ htmlInput: { maxLength: 5 } }} />
               </Grid>
-              <Grid item xs={4}>
-                <TextField label="Alíquota ICMS (%)" value={form.icmsRate} onChange={set('icmsRate')} fullWidth size="small" type="number" />
+              <Grid xs={4}>
+                <TextField label="Origem ICMS" value={form.icmsOrigin} onChange={set('icmsOrigin')} fullWidth size="small" type="number" />
               </Grid>
-              <Grid item xs={6}>
-                <TextField label="Valor Unitário (R$)" value={form.unitValue} onChange={set('unitValue')} fullWidth size="small" type="number" inputProps={{ step: 0.01 }} />
+              <Grid xs={3}>
+                <TextField label="CST ICMS" value={form.icmsCst} onChange={set('icmsCst')} fullWidth size="small" placeholder="40" slotProps={{ htmlInput: { maxLength: 3 } }} />
               </Grid>
-              <Grid item xs={6}>
-                <TextField label="Base Cálculo ICMS (R$)" value={form.taxBaseIcms} onChange={set('taxBaseIcms')} fullWidth size="small" type="number" inputProps={{ step: 0.01 }} />
+              <Grid xs={3}>
+                <TextField label="CST PIS" value={form.pisCst} onChange={set('pisCst')} fullWidth size="small" placeholder="07" slotProps={{ htmlInput: { maxLength: 3 } }} />
+              </Grid>
+              <Grid xs={3}>
+                <TextField label="CST COFINS" value={form.cofinsCst} onChange={set('cofinsCst')} fullWidth size="small" placeholder="07" slotProps={{ htmlInput: { maxLength: 3 } }} />
+              </Grid>
+              <Grid xs={3}>
+                <TextField label="Alíq. IPI (%)" value={form.ipiRate} onChange={set('ipiRate')} fullWidth size="small" type="number" slotProps={{ htmlInput: { step: 0.01 } }} />
+              </Grid>
+              <Grid xs={4}>
+                <TextField label="Alíq. ICMS (%)" value={form.icmsRate} onChange={set('icmsRate')} fullWidth size="small" type="number" slotProps={{ htmlInput: { step: 0.01 } }} />
+              </Grid>
+              <Grid xs={4}>
+                <TextField label="Vlr. Unit. (R$)" value={form.unitValue} onChange={set('unitValue')} fullWidth size="small" type="number" slotProps={{ htmlInput: { step: 0.01 } }} />
+              </Grid>
+              <Grid xs={4}>
+                <TextField label="Base ICMS (R$)" value={form.taxBaseIcms} onChange={set('taxBaseIcms')} fullWidth size="small" type="number" slotProps={{ htmlInput: { step: 0.01 } }} />
               </Grid>
             </Grid>
           </Stack>

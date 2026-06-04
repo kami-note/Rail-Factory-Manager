@@ -38,6 +38,10 @@ public sealed class InboundWebhookProcessor(
             {
                 await ProcessTenantBatchAsync(tenant, cancellationToken);
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("was not found in configuration"))
+            {
+                logger.LogDebug("Database for tenant {TenantCode} is not provisioned yet. Skipping webhook processing.", tenant.Code);
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Inbound webhook processor failed for tenant {TenantCode}.", tenant.Code);

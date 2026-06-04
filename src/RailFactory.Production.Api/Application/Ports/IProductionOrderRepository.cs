@@ -21,5 +21,11 @@ public interface IProductionOrderRepository
     /// </summary>
     Task<string> GenerateOrderNumberAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Returns true if any Released or InExecution orders reference the given BOM.
+    /// Used to guard BOM version deactivation.
+    /// </summary>
+    Task<bool> HasActiveOrdersForBomAsync(Guid bomId, CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

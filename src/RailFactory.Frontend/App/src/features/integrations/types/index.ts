@@ -101,3 +101,20 @@ export const CATEGORY_PROVIDERS: Record<string, string[]> = {
   hr: ['ahgora', 'controlid', 'mock'],
   erp: ['omie', 'sankhya', 'contaazul', 'mock'],
 };
+
+export const PROVIDER_METADATA: Record<string, { domain: string, docUrl: string }> = {
+  plugnotas: { domain: 'plugnotas.com.br', docUrl: 'https://docs.plugnotas.com.br' },
+  focusnfe: { domain: 'focusnfe.com.br', docUrl: 'https://focusnfe.com.br/docs' },
+  asaas: { domain: 'asaas.com', docUrl: 'https://docs.asaas.com' },
+  iugu: { domain: 'iugu.com', docUrl: 'https://dev.iugu.com' },
+  melhorenvio: { domain: 'melhorenvio.com.br', docUrl: 'https://docs.melhorenvio.com.br' },
+  intelipost: { domain: 'intelipost.com.br', docUrl: 'https://docs.intelipost.com.br' },
+  cobli: { domain: 'cobli.co', docUrl: 'https://docs.cobli.co' },
+  sascar: { domain: 'sascar.com.br', docUrl: 'https://www.sascar.com.br' },
+  ahgora: { domain: 'ahgora.com.br', docUrl: 'https://docs.ahgora.com.br' },
+  controlid: { domain: 'controlid.com.br', docUrl: 'https://www.controlid.com.br' },
+  omie: { domain: 'omie.com.br', docUrl: 'https://developer.omie.com.br' },
+  sankhya: { domain: 'sankhya.com.br', docUrl: 'https://developer.sankhya.com.br' },
+  contaazul: { domain: 'contaazul.com', docUrl: 'https://developers.contaazul.com' },
+  mock: { domain: 'example.com', docUrl: '#' }
+};

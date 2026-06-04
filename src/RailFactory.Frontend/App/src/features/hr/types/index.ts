@@ -25,3 +25,23 @@ export type HourLog = {
   description?: string;
   recordedAt: string;
 };
+
+export type Skill = {
+  id: string;
+  personId: string;
+  skillName: string;
+  proficiencyLevel: number;
+  certifiedAt?: string;
+  notes?: string;
+  createdAt: string;
+};
+
+export type WorkShift = {
+  id: string;
+  personId: string;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+  createdAt: string;
+};

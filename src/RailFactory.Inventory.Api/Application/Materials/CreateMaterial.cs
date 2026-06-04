@@ -7,8 +7,10 @@ namespace RailFactory.Inventory.Api.Application.Materials;
 
 /// <summary>
 /// Creates a material catalog entry from operator input.
+/// For FinishedGood materials, also seeds an initial zero-quantity balance so the
+/// product appears immediately in the inventory stocks list.
 /// </summary>
-public sealed class CreateMaterial(IMaterialRepository repository)
+public sealed class CreateMaterial(IMaterialRepository repository, IInventoryRepository inventoryRepository)
 {
     public async Task<MaterialResponse> ExecuteAsync(CreateMaterialInput input, string actor, CancellationToken cancellationToken)
     {
@@ -73,6 +75,21 @@ public sealed class CreateMaterial(IMaterialRepository repository)
             gtin: normalizedGtin);
 
         await repository.AddAsync(material, cancellationToken);
+
+        if (category == MaterialCategory.FinishedGood)
+        {
+            await inventoryRepository.EnsureDefaultLocationAsync(cancellationToken);
+            var location = await inventoryRepository.FindDefaultLocationAsync(cancellationToken)
+                ?? throw new InvalidOperationException("Default stock location was not found.");
+
+            var initialBalance = InventoryBalance.CreateInitialFinishedGood(
+                input.MaterialCode,
+                input.UnitOfMeasure,
+                location.Id);
+
+            await inventoryRepository.AddBalanceAsync(initialBalance, cancellationToken);
+        }
+
         await repository.SaveChangesAsync(cancellationToken);
 
         return MaterialDtoMapper.ToResponse(material);

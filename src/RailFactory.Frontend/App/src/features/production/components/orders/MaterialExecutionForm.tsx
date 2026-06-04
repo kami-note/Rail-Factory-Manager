@@ -1,24 +1,30 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
+  Chip,
   CircularProgress,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import { recordConsumption, recordScrap } from '../../api/production';
 import { MaterialCodeAutocomplete } from '../../../inventory';
 import { Authorized } from '../../../auth';
 import { toUiErrorMessage } from '../../../../shared/lib/http';
+import type { BomItem } from '../../types';
 
 type Props = {
   tenantCode: string;
   orderId: string;
   mode: 'consumption' | 'scrap';
+  bomItems?: BomItem[];
+  plannedQuantity?: number;
   onRecorded: () => void;
 };
 
-export function MaterialExecutionForm({ tenantCode, orderId, mode, onRecorded }: Props) {
+export function MaterialExecutionForm({ tenantCode, orderId, mode, bomItems, plannedQuantity, onRecorded }: Props) {
   const [materialCode, setMaterialCode] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('UN');
@@ -28,12 +34,14 @@ export function MaterialExecutionForm({ tenantCode, orderId, mode, onRecorded }:
   const [success, setSuccess] = useState(false);
 
   const isScrap = mode === 'scrap';
-  const buttonLabel = isScrap ? 'Registrar Scrap' : 'Registrar Consumo';
-  const successMessage = isScrap ? 'Scrap registrado.' : 'Consumo registrado.';
-  const errorFallback = isScrap
-    ? 'Não foi possível registrar o scrap.'
-    : 'Não foi possível registrar o consumo.';
-  const canSubmit = !!materialCode.trim() && !!quantity && (!isScrap || !!reason.trim());
+
+  const fillFromBom = (item: BomItem) => {
+    setMaterialCode(item.materialCode);
+    setUnit(item.unitOfMeasure);
+    if (plannedQuantity) {
+      setQuantity(String(item.quantity * plannedQuantity));
+    }
+  };
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -60,16 +68,41 @@ export function MaterialExecutionForm({ tenantCode, orderId, mode, onRecorded }:
       setQuantity('');
       onRecorded();
     } catch (err) {
-      setError(toUiErrorMessage(err, errorFallback));
+      setError(toUiErrorMessage(err, isScrap ? 'Não foi possível registrar o scrap.' : 'Não foi possível registrar o consumo.'));
     } finally {
       setSaving(false);
     }
   };
 
+  const canSubmit = !!materialCode.trim() && !!quantity && (!isScrap || !!reason.trim());
+
   return (
-    <Stack spacing={2}>
-      {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
-      {success && <Alert severity="success" onClose={() => setSuccess(false)}>{successMessage}</Alert>}
+    <Stack spacing={1.5}>
+      {error && <Alert severity="error" onClose={() => setError(null)} sx={{ py: 0.5 }}>{error}</Alert>}
+      {success && <Alert severity="success" onClose={() => setSuccess(false)} sx={{ py: 0.5 }}>Registrado.</Alert>}
+
+      {/* BOM quick-fill chips */}
+      {bomItems && bomItems.length > 0 && (
+        <Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+            Clique para preencher:
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {bomItems.map(item => (
+              <Chip
+                key={item.id}
+                label={item.materialCode}
+                size="small"
+                variant={materialCode === item.materialCode ? 'filled' : 'outlined'}
+                color={materialCode === item.materialCode ? 'primary' : 'default'}
+                onClick={() => fillFromBom(item)}
+                sx={{ fontFamily: 'monospace', fontWeight: 600, cursor: 'pointer', fontSize: '0.72rem' }}
+              />
+            ))}
+          </Box>
+        </Box>
+      )}
+
       <MaterialCodeAutocomplete
         tenantCode={tenantCode}
         value={materialCode}
@@ -79,13 +112,37 @@ export function MaterialExecutionForm({ tenantCode, orderId, mode, onRecorded }:
         fullWidth
         category="RawMaterial"
       />
+
       <Stack direction="row" spacing={1}>
-        <TextField label="Quantidade" type="number" size="small" sx={{ flexGrow: 1 }} value={quantity} onChange={e => setQuantity(e.target.value)} />
-        <TextField label="Unidade" size="small" sx={{ width: 80 }} value={unit} slotProps={{ input: { readOnly: true } }} />
+        <TextField
+          label="Quantidade"
+          type="number"
+          size="small"
+          sx={{ flexGrow: 1 }}
+          value={quantity}
+          onChange={e => setQuantity(e.target.value)}
+        />
+        <TextField
+          label="UM"
+          size="small"
+          sx={{ width: 72 }}
+          value={unit}
+          slotProps={{ input: { readOnly: true } }}
+        />
       </Stack>
+
       {isScrap && (
-        <TextField label="Motivo" size="small" fullWidth multiline rows={2} value={reason} onChange={e => setReason(e.target.value)} />
+        <TextField
+          label="Motivo do scrap"
+          size="small"
+          fullWidth
+          multiline
+          rows={2}
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+        />
       )}
+
       <Authorized permission="production.write">
         <Button
           variant="contained"
@@ -95,7 +152,9 @@ export function MaterialExecutionForm({ tenantCode, orderId, mode, onRecorded }:
           disabled={saving || !canSubmit}
           sx={{ fontWeight: 800 }}
         >
-          {saving ? <CircularProgress size={18} color="inherit" /> : buttonLabel}
+          {saving
+            ? <CircularProgress size={18} color="inherit" />
+            : isScrap ? 'Registrar Scrap' : 'Registrar Consumo'}
         </Button>
       </Authorized>
     </Stack>

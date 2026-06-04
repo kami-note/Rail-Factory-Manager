@@ -25,6 +25,13 @@ export interface ShipmentItem {
   ncmCode?: string;
   cfopCode?: string;
   unitValue?: number;
+  taxBaseIcms?: number;
+  icmsRate?: number;
+  icmsOrigin?: number;
+  icmsCst?: string;
+  pisCst?: string;
+  cofinsCst?: string;
+  ipiRate?: number;
 }
 
 export interface ShipmentOrder {
