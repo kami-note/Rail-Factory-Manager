@@ -27,7 +27,6 @@ import {
   MenuItem
 } from '@mui/material';
 import {
-  RefreshCw as RefreshIcon,
   Plus as AddIcon,
   Save as SaveIcon,
   Clock as ReviewLaterIcon,
@@ -35,22 +34,20 @@ import {
   ArrowRight as ReleaseIcon,
   HelpCircle as HelpIcon,
   Link2 as AssociationIcon,
-  Edit2 as EditIcon
+  Edit2 as EditIcon,
+  ChevronLeft
 } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
 import { searchMaterials, MaterialSearchResult } from '../../inventory';
-import { 
-  getAssociationQueue, 
-  getAssociationWorkbench, 
-  associateReceiptItem, 
-  createMaterialAndAssociate, 
-  recordControlledDecision, 
+import {
+  getAssociationWorkbench,
+  associateReceiptItem,
+  createMaterialAndAssociate,
+  recordControlledDecision,
   releaseToConference,
   overrideSupplierProductCode
 } from '../api/workbench';
-import { 
-  AssociationQueueItem, 
-  AssociationWorkbench as WorkbenchData, 
+import {
+  AssociationWorkbench as WorkbenchData,
   WorkbenchItem
 } from '../types';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
@@ -59,62 +56,37 @@ import { toUiErrorMessage } from '../../../shared/lib/http';
 import { Authorized } from '../../auth';
 
 // Use lucide icons consistently with the layout
-const RefreshIconLucide = () => <RefreshIcon size={16} />;
 const ReleaseIconLucide = () => <ReleaseIcon size={16} />;
 
-interface AssociationWorkbenchPageProps {
+type AssociationWorkspaceProps = {
   tenantCode: string;
-}
+  receiptId: string;
+  onClose: () => void;
+  onReleased: () => void;
+};
 
 /**
- * Full-screen operational workbench for resolving supplier SKU -> internal material SKU decisions.
- * Replaces the legacy modal-based flow (AssociationInbox/Forge).
- * 
+ * Inline workbench for resolving supplier SKU -> internal material SKU decisions.
+ * Renders within ReceiptsWorkspace without leaving the Recebimentos page.
+ *
  * @remarks
  * Security: Mutation endpoints are protected by CSRF tokens handled automatically by the http client.
  * Concurrency: Uses aggregate-level versioning via receipt.version (UpdatedAt) for atomic releases.
  */
-export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPageProps) {
-  const theme = useTheme();
-  const location = useLocation();
-  const [queue, setQueue] = useState<AssociationQueueItem[]>([]);
-  const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
+export function AssociationWorkspace({ tenantCode, receiptId, onClose, onReleased }: AssociationWorkspaceProps) {
   const [workbench, setWorkbench] = useState<WorkbenchData | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [loadingQueue, setLoadingQueue] = useState(true);
-  const [loadingWorkbench, setLoadingWorkbench] = useState(false);
+  const [loadingWorkbench, setLoadingWorkbench] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedItem = useMemo(() => 
-    workbench?.items.find(i => i.itemId === selectedItemId), 
+  const selectedItem = useMemo(() =>
+    workbench?.items.find(i => i.itemId === selectedItemId),
     [workbench, selectedItemId]);
 
-  const loadQueue = async () => {
-    setLoadingQueue(true);
-    try {
-      const data = await getAssociationQueue(tenantCode);
-      setQueue(data);
-      
-      // Support deep linking from ReceiptsList
-      const params = new URLSearchParams(location.search);
-      const targetReceiptId = params.get('receiptId');
-      
-      if (targetReceiptId) {
-        setSelectedReceiptId(targetReceiptId);
-      } else if (data.length > 0 && !selectedReceiptId) {
-        setSelectedReceiptId(data[0].receiptId);
-      }
-    } catch (err) {
-      setError(toUiErrorMessage(err, 'Não foi possível carregar a fila de associação.'));
-    } finally {
-      setLoadingQueue(false);
-    }
-  };
-
-  const loadWorkbench = async (receiptId: string) => {
+  const loadWorkbench = async (id: string) => {
     setLoadingWorkbench(true);
     try {
-      const data = await getAssociationWorkbench(tenantCode, receiptId);
+      const data = await getAssociationWorkbench(tenantCode, id);
       setWorkbench(data);
       if (data.items.length > 0) {
         const firstPending = data.items.find(i => i.associationStatus === 'Pending' || i.associationStatus === 'Conflict');
@@ -128,133 +100,71 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
   };
 
   useEffect(() => {
-    void loadQueue();
-  }, [tenantCode, location.search]);
-
-  useEffect(() => {
-    if (selectedReceiptId) {
-      void loadWorkbench(selectedReceiptId);
-    }
-  }, [selectedReceiptId]);
-
-  const handleSelectReceipt = (receiptId: string) => {
-    setSelectedReceiptId(receiptId);
-    setWorkbench(null);
-    setSelectedItemId(null);
-  };
+    void loadWorkbench(receiptId);
+  }, [tenantCode, receiptId]);
 
   const handleDecisionSuccess = (updatedItem: any) => {
     if (!workbench) return;
 
     // 1. Update the local items state
-    const newItems: WorkbenchItem[] = workbench.items.map(i => 
+    const newItems: WorkbenchItem[] = workbench.items.map(i =>
       i.itemId === updatedItem.itemId ? { ...i, ...updatedItem } : i
     );
-    
+
     // 2. Recalculate release status locally to provide immediate feedback
-    const unresolvedCount = newItems.filter(x => 
+    const unresolvedCount = newItems.filter(x =>
       x.associationStatus !== 'Mapped' && x.associationStatus !== 'CreatedAndMapped'
     ).length;
 
     const canRelease = unresolvedCount === 0;
-    const releaseBlockers = unresolvedCount > 0 
-      ? [`${unresolvedCount} item(s) exigem decisões de associação.`] 
+    const releaseBlockers = unresolvedCount > 0
+      ? [`${unresolvedCount} item(s) exigem decisões de associação.`]
       : [];
 
     // 3. Simple check to advance to next item
-    const nextItem = newItems.find((i, idx) => 
-      idx > newItems.findIndex(x => x.itemId === updatedItem.itemId) && 
+    const nextItem = newItems.find((i, idx) =>
+      idx > newItems.findIndex(x => x.itemId === updatedItem.itemId) &&
       (i.associationStatus === 'Pending' || i.associationStatus === 'Conflict' || i.associationStatus === 'ReviewLater')
     );
 
     // 4. Update the entire workbench state
-    setWorkbench({ 
-      ...workbench, 
+    setWorkbench({
+      ...workbench,
       receipt: {
         ...workbench.receipt,
         canReleaseToConference: canRelease,
         releaseBlockers: releaseBlockers
       },
-      items: newItems 
+      items: newItems
     });
 
     if (nextItem) {
       setSelectedItemId(nextItem.itemId);
     }
-
-    // Refresh queue in background for the sidebar
-    void getAssociationQueue(tenantCode).then(setQueue);
   };
 
   return (
     <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
-      <ModuleHeader 
-        label="BANCADA DE ASSOCIAÇÃO" 
+      <ModuleHeader
+        label="BANCADA DE ASSOCIAÇÃO"
         icon={<AssociationIcon size={20} />}
+        action={
+          <Button
+            startIcon={<ChevronLeft size={16} />}
+            onClick={onClose}
+            size="small"
+            sx={{ fontWeight: 700 }}
+          >
+            Voltar para Recebimentos
+          </Button>
+        }
       />
 
-      {/* Layout Principal: Fila | Grid | Decisão */}
+      {/* Layout Principal: Grid | Decisão */}
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-        
-        {/* Sidebar: Fila de Recebimentos */}
-        <Box sx={{ width: { xs: '100%', md: '25%' }, borderRight: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
-          <Box sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-            <Typography variant="overline" sx={{ fontWeight: 800 }}>NOTAS PENDENTES ({queue.length})</Typography>
-          </Box>
-          <Divider />
-          <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
-            {loadingQueue ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress size={24} /></Box>
-            ) : (
-              <List sx={{ p: 0 }}>
-                {queue.map((item) => (
-                  <ListItemButton 
-                    key={item.receiptId}
-                    selected={selectedReceiptId === item.receiptId}
-                    onClick={() => handleSelectReceipt(item.receiptId)}
-                    sx={{ 
-                      borderBottom: 1, 
-                      borderColor: 'divider',
-                      py: 2,
-                      '&.Mui-selected': {
-                        borderLeft: 4,
-                        borderColor: 'primary.main',
-                      }
-                    }}
-                  >
-                    <ListItemText 
-                      primary={
-                        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{item.receiptNumber}</Typography>
-                          <Chip 
-                            size="small" 
-                            label={`${item.resolvedItems}/${item.totalItems}`} 
-                            color={item.blockingItems === 0 ? "success" : "warning"}
-                            variant={selectedReceiptId === item.receiptId ? "filled" : "outlined"}
-                          />
-                        </Stack>
-                      }
-                      secondary={
-                        <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
-                          <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'block' }}>{item.supplierName}</Typography>
-                          <Typography variant="caption" color="text.disabled" component="span">Doc: {item.documentNumber}</Typography>
-                        </Box>
-                      }
-                    />
-                  </ListItemButton>
-                ))}
-              </List>
-            )}
-          </Box>
-          <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Button fullWidth startIcon={<RefreshIconLucide />} onClick={loadQueue} size="small">
-              Atualizar Fila
-            </Button>
-          </Box>
-        </Box>
 
-        {/* Centro: Grid de Itens da NF-e */}
-        <Box sx={{ flexGrow: 1, width: { xs: '100%', md: '50%' }, display: 'flex', flexDirection: 'column', bgcolor: 'grey.50' }}>
+        {/* Centro: Grid de Itens da NF-e (~60%) */}
+        <Box sx={{ flexGrow: 1, width: { xs: '100%', md: '60%' }, display: 'flex', flexDirection: 'column', bgcolor: 'grey.50' }}>
           {loadingWorkbench ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><CircularProgress /></Box>
           ) : workbench ? (
@@ -266,17 +176,15 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
                     <Typography variant="caption" color="text.secondary">{workbench.receipt.supplierName} • {workbench.items.length} itens</Typography>
                   </Box>
                   <Authorized permission="supplychain.write">
-                    <Button 
-                      variant="contained" 
-                      color="primary" 
+                    <Button
+                      variant="contained"
+                      color="primary"
                       disabled={!workbench.receipt.canReleaseToConference}
                       startIcon={<ReleaseIconLucide />}
                       onClick={async () => {
                         try {
-                          await releaseToConference(tenantCode, workbench.receipt.id, { expectedVersion: workbench.receipt.version }); 
-                          void loadQueue();
-                          setWorkbench(null);
-                          setSelectedReceiptId(null);
+                          await releaseToConference(tenantCode, workbench.receipt.id, { expectedVersion: workbench.receipt.version });
+                          onReleased();
                         } catch (err) {
                           setError(toUiErrorMessage(err, 'Não foi possível liberar o recebimento para conferência.'));
                         }
@@ -303,9 +211,9 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
                     {workbench.items.map((item) => {
                       const isSelected = selectedItemId === item.itemId;
                       return (
-                        <TableRow 
-                          key={item.itemId} 
-                          hover 
+                        <TableRow
+                          key={item.itemId}
+                          hover
                           selected={isSelected}
                           onClick={() => setSelectedItemId(item.itemId)}
                           sx={{ cursor: 'pointer' }}
@@ -346,19 +254,19 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', p: 4, textAlign: 'center' }}>
               <Box>
                 <Box sx={{ color: 'text.disabled', mb: 2 }}><HelpIcon size={64} /></Box>
-                <Typography variant="h5" color="text.secondary">Selecione uma nota para iniciar a associação</Typography>
+                <Typography variant="h5" color="text.secondary">Não foi possível carregar a bancada</Typography>
               </Box>
             </Box>
           )}
         </Box>
 
-        {/* Side Panel: Painel de Decisão */}
-        <Box sx={{ width: { xs: '100%', md: '25%' }, borderLeft: 1, borderColor: 'divider', bgcolor: 'background.paper', overflowY: 'auto' }}>
+        {/* Side Panel: Painel de Decisão (~40%) */}
+        <Box sx={{ width: { xs: '100%', md: '40%' }, borderLeft: 1, borderColor: 'divider', bgcolor: 'background.paper', overflowY: 'auto' }}>
           {selectedItem ? (
             <DecisionPanel
               key={selectedItem.itemId}
               tenantCode={tenantCode}
-              receiptId={selectedReceiptId!}
+              receiptId={receiptId}
               item={selectedItem}
               onSuccess={handleDecisionSuccess}
             />
@@ -379,11 +287,11 @@ export function AssociationWorkbenchPage({ tenantCode }: AssociationWorkbenchPag
   );
 }
 
-function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: { 
-  tenantCode: string, 
-  receiptId: string, 
-  item: WorkbenchItem, 
-  onSuccess: (updated: any) => void 
+function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
+  tenantCode: string,
+  receiptId: string,
+  item: WorkbenchItem,
+  onSuccess: (updated: any) => void
 }) {
   const theme = useTheme();
   const [tab, setTab] = useState<'match' | 'create'>('match');
@@ -434,7 +342,7 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
   const handleOverrideSku = async () => {
     const corrected = window.prompt("SKU do Fornecedor Corrigido:", item.supplierProductCode);
     if (!corrected || corrected === item.supplierProductCode) return;
-    
+
     const reason = window.prompt("Motivo da correção (obrigatório):");
     if (!reason) return;
 
@@ -475,7 +383,7 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
 
       <Divider sx={{ mb: 3 }} />
 
-      <Authorized 
+      <Authorized
         permission="supplychain.write"
         fallback={
           <Alert severity="info" variant="outlined" sx={{ fontWeight: 600 }}>
@@ -484,17 +392,17 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
         }
       >
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-          <Button 
-            fullWidth 
-            variant={tab === 'match' ? 'contained' : 'outlined'} 
+          <Button
+            fullWidth
+            variant={tab === 'match' ? 'contained' : 'outlined'}
             onClick={() => setTab('match')}
             size="small"
           >
             Vincular Existente
           </Button>
-          <Button 
-            fullWidth 
-            variant={tab === 'create' ? 'contained' : 'outlined'} 
+          <Button
+            fullWidth
+            variant={tab === 'create' ? 'contained' : 'outlined'}
             onClick={() => setTab('create')}
             size="small"
           >
@@ -510,8 +418,8 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                 <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800 }}>SUGESTÕES DA IA</Typography>
                 <List sx={{ mt: 1, p: 0 }}>
                   {item.suggestions.map(s => (
-                    <ListItemButton 
-                      key={s.materialCode} 
+                    <ListItemButton
+                      key={s.materialCode}
                       onClick={() => {
                         setSelectedMaterial({
                           materialCode: s.materialCode,
@@ -521,17 +429,17 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                           unitOfMeasure: s.stockUnit
                         });
                       }}
-                      sx={{ 
-                        px: 1.5, 
-                        py: 1, 
-                        border: 1, 
-                        borderColor: 'divider', 
-                        borderRadius: 1, 
+                      sx={{
+                        px: 1.5,
+                        py: 1,
+                        border: 1,
+                        borderColor: 'divider',
+                        borderRadius: 1,
                         mb: 1,
                         bgcolor: selectedMaterial?.materialCode === s.materialCode ? alpha(theme.palette.primary.main, 0.05) : 'transparent'
                       }}
                     >
-                      <ListItemText 
+                      <ListItemText
                         primary={<Typography variant="body2" sx={{ fontWeight: 700 }}>{s.officialName}</Typography>}
                         secondary={
                           <Box component="span" sx={{ display: 'block' }}>
@@ -566,11 +474,11 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                 <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800 }}>FATOR DE CONVERSÃO</Typography>
                 <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center' }}>
                   <Typography variant="body2">1 {item.supplierUnit} =</Typography>
-                  <TextField 
-                    type="number" 
-                    size="small" 
-                    sx={{ width: 80 }} 
-                    value={conversionFactor} 
+                  <TextField
+                    type="number"
+                    size="small"
+                    sx={{ width: 80 }}
+                    value={conversionFactor}
                     onChange={e => setConversionFactor(Number(e.target.value))}
                   />
                   <Typography variant="body2">{selectedMaterial.unitOfMeasure}</Typography>
@@ -578,11 +486,11 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
                 <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
                   Entrada no estoque: {(item.quantity * conversionFactor).toFixed(4)} {selectedMaterial.unitOfMeasure}
                 </Typography>
-                
-                <Button 
-                  fullWidth 
-                  variant="contained" 
-                  sx={{ mt: 2, fontWeight: 800 }} 
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  sx={{ mt: 2, fontWeight: 800 }}
                   startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <SaveIcon size={16} />}
                   disabled={isSubmitting || conversionFactor <= 0}
                   onClick={() => handleMapExisting(selectedMaterial)}
@@ -595,7 +503,7 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
         )}
 
         {tab === 'create' && (
-          <CreateMaterialForm 
+          <CreateMaterialForm
             tenantCode={tenantCode}
             receiptId={receiptId}
             item={item}
@@ -608,10 +516,10 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
         <Box sx={{ mt: 4 }}>
           <Divider />
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-            <Button 
-              fullWidth 
-              size="small" 
-              startIcon={<ReviewLaterIcon size={14} />} 
+            <Button
+              fullWidth
+              size="small"
+              startIcon={<ReviewLaterIcon size={14} />}
               onClick={async () => {
                 const reason = window.prompt("Motivo para revisar depois:");
                 if (reason) {
@@ -626,10 +534,10 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
             >
               Revisar Depois
             </Button>
-            <Button 
-              fullWidth 
-              size="small" 
-              color="inherit" 
+            <Button
+              fullWidth
+              size="small"
+              color="inherit"
               startIcon={<IgnoreIcon size={14} />}
               onClick={async () => {
                 const reason = window.prompt("Motivo para ignorar o item:");
@@ -652,11 +560,11 @@ function DecisionPanel({ tenantCode, receiptId, item, onSuccess }: {
   );
 }
 
-function CreateMaterialForm({ tenantCode, receiptId, item, onSuccess }: { 
-  tenantCode: string, 
-  receiptId: string, 
-  item: WorkbenchItem, 
-  onSuccess: (updated: any) => void 
+function CreateMaterialForm({ tenantCode, receiptId, item, onSuccess }: {
+  tenantCode: string,
+  receiptId: string,
+  item: WorkbenchItem,
+  onSuccess: (updated: any) => void
 }) {
   const [formData, setFormData] = useState({
     materialCode: item.supplierProductCode,
@@ -696,12 +604,12 @@ function CreateMaterialForm({ tenantCode, receiptId, item, onSuccess }: {
         <TextField label="Unidade Base" sx={{ flex: 1 }} size="small" value={formData.unitOfMeasure} onChange={e => setFormData({...formData, unitOfMeasure: e.target.value})} />
         <TextField label="Fator Conv." type="number" sx={{ flex: 1 }} size="small" value={formData.conversionFactor} onChange={e => setFormData({...formData, conversionFactor: Number(e.target.value)})} />
       </Stack>
-      <TextField 
-        select 
-        label="Categoria" 
-        fullWidth 
-        size="small" 
-        value={formData.category} 
+      <TextField
+        select
+        label="Categoria"
+        fullWidth
+        size="small"
+        value={formData.category}
         onChange={e => setFormData({...formData, category: e.target.value})}
       >
         <MenuItem value="RawMaterial">Matéria-Prima</MenuItem>
@@ -713,10 +621,10 @@ function CreateMaterialForm({ tenantCode, receiptId, item, onSuccess }: {
         <TextField label="NCM" sx={{ flex: 1 }} size="small" value={formData.ncm} onChange={e => setFormData({...formData, ncm: e.target.value})} />
         <TextField label="GTIN" sx={{ flex: 1 }} size="small" value={formData.gtin} onChange={e => setFormData({...formData, gtin: e.target.value})} />
       </Stack>
-      <Button 
-        variant="contained" 
-        color="primary" 
-        fullWidth 
+      <Button
+        variant="contained"
+        color="primary"
+        fullWidth
         startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <AddIcon size={16} />}
         disabled={isSubmitting}
         onClick={handleSubmit}

@@ -263,7 +263,8 @@ public sealed class InventoryBalance : AggregateRoot<Guid>
         Quantity = quantity;
         LotNumber = lotNumber?.Trim();
         ExpirationDate = expirationDate;
-        Status = isApproved ? InventoryBalanceStatus.Available : InventoryBalanceStatus.Blocked;
+        // A zero-quantity balance is never usable regardless of approval — mark it Blocked.
+        Status = (isApproved && quantity > 0) ? InventoryBalanceStatus.Available : InventoryBalanceStatus.Blocked;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

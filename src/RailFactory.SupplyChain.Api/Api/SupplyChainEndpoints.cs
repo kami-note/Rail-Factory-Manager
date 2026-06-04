@@ -415,8 +415,16 @@ public static class SupplyChainEndpoints
         if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
         using var reader = new StreamReader(file.OpenReadStream());
         var xmlContent = await reader.ReadToEndAsync(cancellationToken);
-        var result = await importXml.ExecuteAsync("system", xmlContent, Guid.NewGuid().ToString(), cancellationToken);
-        return Results.Ok(result);
+        
+        try
+        {
+            var result = await importXml.ExecuteAsync("system", xmlContent, Guid.NewGuid().ToString(), cancellationToken);
+            return Results.Ok(result);
+        }
+        catch (ReceiptAlreadyExistsException ex)
+        {
+            return ToProblemResult("receipt.already_exists", ex.Message);
+        }
     }
 
     private static async Task<IResult> HandlePreviewXmlReceipt(
@@ -444,8 +452,19 @@ public static class SupplyChainEndpoints
             documents.Add(new ImportXmlReceiptBatchDocument(file.FileName, await reader.ReadToEndAsync(cancellationToken)));
         }
         
-        var result = await importBatch.ExecuteAsync("system", documents, Guid.NewGuid().ToString(), cancellationToken);
-        return Results.Ok(result);
+        try
+        {
+            var result = await importBatch.ExecuteAsync("system", documents, Guid.NewGuid().ToString(), cancellationToken);
+            return Results.Ok(result);
+        }
+        catch (ImportXmlReceiptBatchValidationException ex)
+        {
+            return Results.Problem(
+                title: "Operation failed",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?> { ["code"] = "batch.validation_failed", ["errors"] = ex.Errors });
+        }
     }
 
     private static async Task<IResult> HandleStartConference(
@@ -533,7 +552,7 @@ public static class SupplyChainEndpoints
             statusCode: code switch
             {
                 "receipt.not_found" or "association.item_not_found" or "supplier.not_found" => StatusCodes.Status404NotFound,
-                "association.invalid_receipt_status" or "conference.already_started" => StatusCodes.Status409Conflict,
+                "association.invalid_receipt_status" or "conference.already_started" or "receipt.already_exists" => StatusCodes.Status409Conflict,
                 "concurrency_error" or "association.conflict" => StatusCodes.Status412PreconditionFailed,
                 _ => StatusCodes.Status400BadRequest
             },

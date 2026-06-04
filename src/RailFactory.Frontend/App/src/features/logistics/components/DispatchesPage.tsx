@@ -15,6 +15,7 @@ import { useCarriers } from '../hooks/useCarriers';
 import { CreateDispatchModal } from './CreateDispatchModal';
 import type { Dispatch, DispatchStatus, FiscalStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { TechnicalIdFormatter, CurrencyFormatter } from '../../../shared/lib/utils/formatters';
 
 type Props = { tenantCode: string };
 type ConfirmAction = { dispatchId: string; action: string; label: string };
@@ -184,7 +185,9 @@ export function DispatchesPage({ tenantCode }: Props) {
                     <FiscalChip status={d.fiscalStatus} />
                   </TableCell>
                   <TableCell align="right">
-                    {d.freightValueBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                      {CurrencyFormatter.format(d.freightValueBrl)}
+                    </Typography>
                   </TableCell>
                   <TableCell>{new Date(d.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>

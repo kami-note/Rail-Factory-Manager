@@ -12,6 +12,8 @@ export type Receipt = {
   id: string;
   receiptNumber: string;
   documentNumber: string;
+  supplierName: string;
+  issuedAt: string;
   accessKey?: string;
   totalValue?: number;
   status: DisplayStatus;

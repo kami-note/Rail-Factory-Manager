@@ -9,6 +9,8 @@ public record MaterialReceiptListItemResponse(
     Guid Id,
     string ReceiptNumber,
     string DocumentNumber,
+    string SupplierName,
+    DateTime IssuedAt,
     string? AccessKey,
     decimal? TotalValue,
     DisplayStatus Status,

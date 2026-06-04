@@ -14,6 +14,7 @@ import { ResponsiveCenteredModal } from '../../../shared/components/ResponsiveCe
 import { ImportXmlForm } from './ImportXmlForm';
 import { ReceiptsList } from './ReceiptsList';
 import { ConferenceWorkspace } from './ConferenceWorkspace';
+import { AssociationWorkspace } from './AssociationWorkspace';
 
 type ReceiptsWorkspaceProps = {
   tenantCode: string;
@@ -31,6 +32,7 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
   const isCompact = useMediaQuery(theme.breakpoints.down('sm'));
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeConferenceReceiptId, setActiveConferenceReceiptId] = useState<string | null>(null);
+  const [activeAssociationReceiptId, setActiveAssociationReceiptId] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const isImportXmlRoute = location.pathname.endsWith('/import-xml');
@@ -52,14 +54,24 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
-      {!activeConferenceReceiptId && (
+      {!activeConferenceReceiptId && !activeAssociationReceiptId && (
         <Box sx={{ mb: 4 }}>
           <Stack direction={{ xs: 'column', md: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'center' } }} spacing={2}>
             <Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.02em' }}>
-                RECEBIMENTOS
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 900, 
+                  letterSpacing: '-0.03em',
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  mb: 0.5
+                }}
+              >
+                Recebimentos
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
                 Gerencie notas fiscais de entrada e o status das conferências físicas.
               </Typography>
             </Box>
@@ -88,7 +100,17 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
         </Box>
       )}
 
-      {activeConferenceReceiptId ? (
+      {activeAssociationReceiptId ? (
+        <AssociationWorkspace
+          tenantCode={tenantCode}
+          receiptId={activeAssociationReceiptId}
+          onClose={() => setActiveAssociationReceiptId(null)}
+          onReleased={() => {
+            setActiveAssociationReceiptId(null);
+            setRefreshKey(prev => prev + 1);
+          }}
+        />
+      ) : activeConferenceReceiptId ? (
         <ConferenceWorkspace
           tenantCode={tenantCode}
           receiptId={activeConferenceReceiptId}
@@ -104,6 +126,7 @@ export function ReceiptsWorkspace({ tenantCode, requestedDrawer = null }: Receip
             tenantCode={tenantCode}
             refreshKey={refreshKey}
             onStartConference={(id) => setActiveConferenceReceiptId(id)}
+            onStartAssociation={(id) => setActiveAssociationReceiptId(id)}
           />
         </Box>
       )}
