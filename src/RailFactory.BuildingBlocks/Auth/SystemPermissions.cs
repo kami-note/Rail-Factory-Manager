@@ -48,6 +48,8 @@ public static class SystemPermissions
     {
         public const string Read = "logistics.read";
         public const string Write = "logistics.write";
+        /// <summary>Emitir, reemitir e consultar documentos fiscais NF-e de saída.</summary>
+        public const string Fiscal = "logistics.fiscal";
     }
 
     public static class Tenancy
@@ -77,6 +79,7 @@ public static class SystemPermissions
         yield return Fleet.Write;
         yield return Logistics.Read;
         yield return Logistics.Write;
+        yield return Logistics.Fiscal;
         yield return Tenancy.Admin;
     }
 }

@@ -1,3 +1,5 @@
+using RailFactory.SupplyChain.Api.Domain;
+
 namespace RailFactory.SupplyChain.Api.Application.Ports;
 
 public interface INfeProvider
@@ -14,7 +16,8 @@ public sealed record ParsedReceiptDocument(
     DateOnly ReceiptDate,
     string SupplierFiscalId,
     string SupplierName,
-    IReadOnlyCollection<ParsedReceiptItem> Items);
+    IReadOnlyCollection<ParsedReceiptItem> Items,
+    FiscalEnvironment? FiscalEnvironment = null);
 
 public sealed record ParsedReceiptItem(
     string MaterialCode,

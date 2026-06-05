@@ -30,7 +30,8 @@ public sealed class ListReceipts(ISupplyChainRepository repository)
                 AccessKey: receipt.AccessKey,
                 TotalValue: receipt.TotalValue,
                 Status: receipt.Status.ToDisplayStatus(),
-                ItemCount: receipt.Items.Count
+                ItemCount: receipt.Items.Count,
+                FiscalEnvironment: receipt.FiscalEnvironment
             ));
         }
 

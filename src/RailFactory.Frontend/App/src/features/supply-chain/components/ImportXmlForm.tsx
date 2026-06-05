@@ -199,6 +199,9 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
                 onClick={(e) => ((e.target as HTMLInputElement).value = '')}
               />
               <UploadCloud size={48} color={theme.palette.primary.main} style={{ marginBottom: 16 }} />
+              <Typography variant="overline" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', mb: 1 }}>
+                PASSO 1 DE 2: UPLOAD
+              </Typography>
               <Typography variant="body1" sx={{ fontWeight: 700 }}>
                 Clique ou arraste arquivos XML aqui
               </Typography>
@@ -220,7 +223,7 @@ export function ImportXmlForm({ tenantCode, showTitle = true }: ImportXmlFormPro
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="overline" sx={{ fontWeight: 800, color: 'text.secondary' }}>
-                PRÉ-VISUALIZAÇÃO DA NOTA
+                PASSO 2 DE 2: PRÉ-VISUALIZAÇÃO DA NOTA
               </Typography>
               <Button size="small" variant="outlined" color="error" onClick={removeFiles} startIcon={<X size={14} />}>
                 Cancelar

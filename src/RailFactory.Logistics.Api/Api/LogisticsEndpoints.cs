@@ -65,6 +65,9 @@ public static class LogisticsEndpoints
         // Dispatches
         secure.MapGet("/dispatches", HandleListDispatches)
             .RequirePermission(SystemPermissions.Logistics.Read);
+
+        secure.MapGet("/dispatches/fiscal", HandleListFiscalDispatches)
+            .RequirePermission(SystemPermissions.Logistics.Read);
         secure.MapGet("/dispatches/{id:guid}", HandleGetDispatch)
             .RequirePermission(SystemPermissions.Logistics.Read);
         secure.MapPost("/dispatches", HandleCreateDispatch)
@@ -80,9 +83,12 @@ public static class LogisticsEndpoints
         secure.MapGet("/shipment-orders/heatmap", HandleGetDeliveryHeatmap)
             .RequirePermission(SystemPermissions.Logistics.Read);
 
-        // Fiscal document emission
+        // Fiscal document emission and retry — require dedicated fiscal permission
         secure.MapPost("/dispatches/{id:guid}/fiscal-document", HandleIssueFiscalDocument)
-            .RequirePermission(SystemPermissions.Logistics.Write);
+            .RequirePermission(SystemPermissions.Logistics.Fiscal);
+
+        secure.MapPut("/dispatches/{id:guid}/retry-fiscal", HandleRetryFiscalEmission)
+            .RequirePermission(SystemPermissions.Logistics.Fiscal);
 
         // Inbound webhooks — public endpoint, no auth (providers POST here).
         // Tenant is in the URL so providers don't need to send any custom headers.
@@ -204,6 +210,30 @@ public static class LogisticsEndpoints
         return Results.Ok(dispatches.Select(MapDispatchResponse));
     }
 
+    private static async Task<IResult> HandleListFiscalDispatches(
+        IDispatchRepository repo,
+        HttpContext ctx,
+        CancellationToken ct,
+        int page = 1,
+        int pageSize = 30)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var statuses = ctx.Request.Query["status"]
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Select(s => s!)
+            .ToList();
+        var (items, total) = await repo.ListFiscalAsync(page, pageSize, statuses, ct);
+        return Results.Ok(new
+        {
+            items = items.Select(MapDispatchResponse),
+            total,
+            page,
+            pageSize,
+            totalPages = (int)Math.Ceiling((double)total / pageSize)
+        });
+    }
+
     private static async Task<IResult> HandleGetDispatch(Guid id, IDispatchRepository repo, CancellationToken ct)
     {
         var dispatch = await repo.GetByIdAsync(id, ct);
@@ -299,7 +329,7 @@ public static class LogisticsEndpoints
         d.Id, d.ShipmentOrderId, d.CarrierId, d.VehicleId, d.DriverPersonId,
         d.TrackingCode, d.FreightValueBrl,
         Status = d.Status.ToString(),
-        d.FiscalExternalId, d.FiscalStatus,
+        d.FiscalExternalId, d.FiscalStatus, d.FiscalAccessKey, d.FiscalErrorMessage,
         d.ConferencedAt, d.DispatchedAt, d.DeliveredAt, d.CreatedAt
     };
 
@@ -317,6 +347,20 @@ public static class LogisticsEndpoints
             : result.Error.Code.EndsWith("not_found", StringComparison.Ordinal)
                 ? Results.NotFound(new { error = result.Error.Message })
                 : Results.BadRequest(new { error = result.Error.Message });
+    }
+
+    private static async Task<IResult> HandleRetryFiscalEmission(
+        Guid id,
+        RetryFiscalEmission useCase,
+        CancellationToken ct)
+    {
+        try
+        {
+            await useCase.ExecuteAsync(id, ct);
+            return Results.Accepted();
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
     }
 
     // ── Inbound Webhooks ─────────────────────────────────────────────────────

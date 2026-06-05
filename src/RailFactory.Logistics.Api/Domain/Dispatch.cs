@@ -21,6 +21,7 @@ public sealed class Dispatch
     public string? FiscalExternalId { get; private set; }
     public string? FiscalAccessKey { get; private set; }
     public string? FiscalStatus { get; private set; }
+    public string? FiscalErrorMessage { get; private set; }
 
     private Dispatch() { }
 
@@ -72,10 +73,22 @@ public sealed class Dispatch
         Status = DispatchStatus.Returned;
     }
 
-    public void UpdateFiscalStatus(string externalId, string fiscalStatus, string? accessKey)
+    public void UpdateFiscalStatus(string externalId, string fiscalStatus, string? accessKey, string? errorMessage = null)
     {
         FiscalExternalId = externalId;
         FiscalStatus = fiscalStatus;
         FiscalAccessKey = accessKey;
+        FiscalErrorMessage = errorMessage;
+    }
+
+    // Clears all fiscal fields so the outbox dispatcher retries emission from scratch.
+    public void RequestFiscalRetry()
+    {
+        if (Status != DispatchStatus.InTransit)
+            throw new InvalidOperationException("Only InTransit dispatches can have their fiscal emission retried.");
+        FiscalStatus = null;
+        FiscalErrorMessage = null;
+        FiscalAccessKey = null;
+        FiscalExternalId = null;
     }
 }

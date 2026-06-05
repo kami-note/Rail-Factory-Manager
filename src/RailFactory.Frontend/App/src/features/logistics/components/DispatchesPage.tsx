@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Box, Button, Chip, CircularProgress, Paper,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Tooltip, IconButton, Stack, Typography,
+  Tooltip, IconButton, Typography,
 } from '@mui/material';
-import { CheckCircle, FileCheck2, Package, Plus, Truck } from 'lucide-react';
+import { CheckCircle, Package, Plus, Truck } from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { ConfirmDialog } from '../../../shared/components/common/ConfirmDialog';
@@ -13,7 +13,8 @@ import { useDispatches } from '../hooks/useDispatches';
 import { useShipmentOrders } from '../hooks/useShipmentOrders';
 import { useCarriers } from '../hooks/useCarriers';
 import { CreateDispatchModal } from './CreateDispatchModal';
-import type { Dispatch, DispatchStatus, FiscalStatus } from '../types';
+import { FiscalStatusCell } from './FiscalStatusCell';
+import type { Dispatch, DispatchStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 import { TechnicalIdFormatter, CurrencyFormatter } from '../../../shared/lib/utils/formatters';
 
@@ -33,33 +34,6 @@ const STATUS_COLOR: Record<DispatchStatus, 'default' | 'warning' | 'success' | '
   Delivered: 'success',
   Returned: 'error',
 };
-
-const FISCAL_COLOR: Record<string, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
-  processando: 'info', processando_autorizacao: 'info',
-  autorizado: 'success', CONCLUIDO: 'success',
-  erro_autorizacao: 'error', REJEITADO: 'error',
-  cancelado: 'default', CANCELADO: 'default',
-};
-
-const FISCAL_LABEL: Record<string, string> = {
-  processando: 'Processando', processando_autorizacao: 'Processando',
-  autorizado: 'Autorizada', CONCLUIDO: 'Autorizada',
-  erro_autorizacao: 'Erro', REJEITADO: 'Rejeitada',
-  cancelado: 'Cancelada', CANCELADO: 'Cancelada',
-};
-
-function FiscalChip({ status }: { status?: FiscalStatus }) {
-  if (!status) return <span style={{ color: '#bbb', fontSize: 12 }}>—</span>;
-  return (
-    <Chip
-      icon={<FileCheck2 size={12} />}
-      label={FISCAL_LABEL[status] ?? status}
-      color={FISCAL_COLOR[status] ?? 'default'}
-      size="small"
-      variant="outlined"
-    />
-  );
-}
 
 export function DispatchesPage({ tenantCode }: Props) {
   const { data: dispatchData, loading, error: fetchError } = useDispatches(tenantCode);
@@ -166,7 +140,7 @@ export function DispatchesPage({ tenantCode }: Props) {
                     {d.trackingCode}
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" fontWeight={600}>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
                       {order?.orderNumber ?? '—'}
                     </Typography>
                     {order?.recipientName && (
@@ -182,7 +156,7 @@ export function DispatchesPage({ tenantCode }: Props) {
                     />
                   </TableCell>
                   <TableCell>
-                    <FiscalChip status={d.fiscalStatus} />
+                    <FiscalStatusCell status={d.fiscalStatus} accessKey={d.fiscalAccessKey} externalId={d.fiscalExternalId} errorMessage={d.fiscalErrorMessage} />
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" sx={{ fontWeight: 800 }}>

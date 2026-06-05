@@ -51,7 +51,8 @@ public sealed class ImportXmlReceiptBatch(
                             .Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure, x.UnitPrice, x.OriginalDescription, x.Ncm, x.Ean))
                             .ToList(),
                         correlationId,
-                        ct);
+                        ct,
+                        fiscalEnvironment: document.Parsed.FiscalEnvironment);
 
                     await repository.SaveChangesAsync(ct);
 

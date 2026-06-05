@@ -141,6 +141,7 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.FiscalExternalId).HasMaxLength(200);
             entity.Property(x => x.FiscalAccessKey).HasMaxLength(100);
             entity.Property(x => x.FiscalStatus).HasMaxLength(50);
+            entity.Property(x => x.FiscalErrorMessage).HasMaxLength(500);
             entity.HasIndex(x => x.TrackingCode).IsUnique();
             entity.HasIndex(x => x.ShipmentOrderId);
             entity.HasIndex(x => x.Status);

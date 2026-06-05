@@ -19,6 +19,20 @@ public sealed class PostgresDispatchRepository(LogisticsDbContext db) : IDispatc
             .Take(pageSize)
             .ToListAsync(ct);
 
+    public async Task<(List<Dispatch> Items, int Total)> ListFiscalAsync(int page, int pageSize, IReadOnlyList<string> statuses, CancellationToken ct)
+    {
+        var query = db.Dispatches.AsNoTracking().Where(x => x.FiscalStatus != null);
+        if (statuses.Count > 0)
+            query = query.Where(x => statuses.Contains(x.FiscalStatus!));
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(x => x.DispatchedAt ?? x.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return (items, total);
+    }
+
     public async Task SaveAsync(Dispatch dispatch, CancellationToken ct)
     {
         if (db.Entry(dispatch).State == EntityState.Detached)

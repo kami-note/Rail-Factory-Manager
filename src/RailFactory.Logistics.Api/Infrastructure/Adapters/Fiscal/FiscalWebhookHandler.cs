@@ -58,6 +58,19 @@ internal static class FiscalWebhookHandlerCore
             (root.TryGetProperty("chave", out var ckProp) ? ckProp.GetString() : null)
             ?? (root.TryGetProperty("chave_nfe", out var cnfeProp) ? cnfeProp.GetString() : null);
 
+        // PlugNotas: "erros[0].mensagem" | FocusNFe: "erros[0].mensagem" or "motivo"
+        string? errorMessage = null;
+        if (root.TryGetProperty("erros", out var errosProp) && errosProp.ValueKind == JsonValueKind.Array)
+        {
+            var first = errosProp.EnumerateArray().FirstOrDefault();
+            if (first.ValueKind == JsonValueKind.Object && first.TryGetProperty("mensagem", out var msgProp))
+                errorMessage = msgProp.GetString();
+        }
+        else if (root.TryGetProperty("motivo", out var motivoProp))
+        {
+            errorMessage = motivoProp.GetString();
+        }
+
         var dispatch = await db.Dispatches
             .FirstOrDefaultAsync(d => d.FiscalExternalId == externalId, cancellationToken);
 
@@ -69,7 +82,7 @@ internal static class FiscalWebhookHandlerCore
             return;
         }
 
-        dispatch.UpdateFiscalStatus(externalId, status, accessKey);
+        dispatch.UpdateFiscalStatus(externalId, status, accessKey, errorMessage);
         await db.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(

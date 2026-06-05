@@ -3,7 +3,7 @@ import {
   Alert, Box, Button, Chip, CircularProgress, Divider,
   IconButton, Paper, Stack, Switch, Tooltip, Typography, Grid, Avatar
 } from '@mui/material';
-import { Plug, Plus, Settings2, ExternalLink, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Plug, Plus, Settings2, ExternalLink, ShieldAlert, CheckCircle2, Copy, Link } from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { listIntegrations, enableIntegration, disableIntegration } from '../api/integrations';
@@ -14,6 +14,60 @@ import { toUiErrorMessage } from '../../../shared/lib/http';
 type Props = { tenantCode: string };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as IntegrationCategory[];
+
+function WebhookUrlBox({ tenantCode, category, providerType }: { tenantCode: string; category: string; providerType: string }) {
+  const [copied, setCopied] = useState(false);
+  const baseUrl = window.location.origin;
+  const serviceMap: Record<string, string> = { fiscal: 'logistics', payment: 'logistics' };
+  const service = serviceMap[category] ?? category;
+  const webhookUrl = `${baseUrl}/api/${service}/webhooks/${providerType}/${tenantCode}`;
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(webhookUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Box
+      sx={{
+        p: 1.5,
+        borderRadius: 1.5,
+        bgcolor: 'grey.50',
+        border: '1px dashed',
+        borderColor: 'divider',
+      }}
+    >
+      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 0.5 }}>
+        <Link size={12} color="#888" />
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '0.6rem' }}>
+          URL do Webhook (configure no painel do provider)
+        </Typography>
+      </Stack>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            fontFamily: 'monospace',
+            fontSize: 10,
+            color: 'text.primary',
+            wordBreak: 'break-all',
+            flexGrow: 1,
+            lineHeight: 1.4,
+          }}
+        >
+          {webhookUrl}
+        </Typography>
+        <Tooltip title={copied ? 'Copiado!' : 'Copiar URL'}>
+          <IconButton size="small" onClick={handleCopy} sx={{ flexShrink: 0, color: copied ? 'success.main' : 'text.secondary' }}>
+            {copied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    </Box>
+  );
+}
 
 export function IntegrationsPage({ tenantCode }: Props) {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
@@ -155,16 +209,21 @@ export function IntegrationsPage({ tenantCode }: Props) {
                   </Typography>
 
                   {integration && (
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 'auto' }}>
-                      <Chip
-                        icon={integration.isEnabled ? <CheckCircle2 size={14} /> : undefined}
-                        label={integration.isEnabled ? 'Sincronização Ativa' : 'Pausada'}
-                        color={integration.isEnabled ? 'success' : 'default'}
-                        size="small"
-                        sx={{ fontWeight: 600 }}
-                      />
-                      <Chip label={`Atualizado: ${new Date(integration.updatedAt).toLocaleDateString('pt-BR')}`} size="small" variant="outlined" />
-                    </Box>
+                    <Stack spacing={1.5} sx={{ mt: 'auto' }}>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip
+                          icon={integration.isEnabled ? <CheckCircle2 size={14} /> : undefined}
+                          label={integration.isEnabled ? 'Sincronização Ativa' : 'Pausada'}
+                          color={integration.isEnabled ? 'success' : 'default'}
+                          size="small"
+                          sx={{ fontWeight: 600 }}
+                        />
+                        <Chip label={`Atualizado: ${new Date(integration.updatedAt).toLocaleDateString('pt-BR')}`} size="small" variant="outlined" />
+                      </Box>
+                      {(category === 'fiscal' || category === 'payment') && providerType && providerType !== 'mock' && (
+                        <WebhookUrlBox tenantCode={tenantCode} category={category} providerType={providerType} />
+                      )}
+                    </Stack>
                   )}
                 </Box>
 

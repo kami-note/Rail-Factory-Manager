@@ -32,6 +32,9 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
     /// </summary>
     public string? AccessKey { get; private set; }
 
+    /// <summary>SEFAZ tpAmb. Null when unknown (legacy/manual entry).</summary>
+    public FiscalEnvironment? FiscalEnvironment { get; private set; }
+
     /// <summary>
     /// Total fiscal value of the receipt.
     /// </summary>
@@ -83,7 +86,8 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
         string? accessKey,
         decimal? totalValue,
         string? rawXml,
-        DateOnly receiptDate)
+        DateOnly receiptDate,
+        FiscalEnvironment? fiscalEnvironment = null)
         : base(id)
     {
         ReceiptNumber = receiptNumber;
@@ -93,6 +97,7 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
         TotalValue = totalValue;
         RawXml = rawXml;
         ReceiptDate = receiptDate;
+        FiscalEnvironment = fiscalEnvironment;
         Status = MaterialReceiptStatus.Registered;
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = CreatedAt;
@@ -118,7 +123,8 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
         string? accessKey,
         decimal? totalValue,
         string? rawXml,
-        DateOnly receiptDate)
+        DateOnly receiptDate,
+        FiscalEnvironment? fiscalEnvironment = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(receiptNumber);
         ArgumentException.ThrowIfNullOrWhiteSpace(documentNumber);
@@ -131,7 +137,8 @@ public sealed class MaterialReceipt : AggregateRoot<Guid>
             accessKey?.Trim(),
             totalValue,
             rawXml,
-            receiptDate);
+            receiptDate,
+            fiscalEnvironment);
     }
 
     /// <summary>

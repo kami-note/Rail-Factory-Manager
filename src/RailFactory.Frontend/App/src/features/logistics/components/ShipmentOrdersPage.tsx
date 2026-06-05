@@ -3,18 +3,7 @@ import {
   Alert, Box, Button, Chip, CircularProgress,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, IconButton,
 } from '@mui/material';
-import { FileCheck2, PackageCheck, Plus, XCircle } from 'lucide-react';
-
-function FiscalStatusCell({ dispatch }: { dispatch?: Dispatch }) {
-  if (!dispatch?.fiscalStatus) return <span style={{ color: '#999', fontSize: 12 }}>—</span>;
-  const color = FISCAL_COLOR[dispatch.fiscalStatus] ?? 'default';
-  const label = FISCAL_LABEL[dispatch.fiscalStatus] ?? dispatch.fiscalStatus;
-  return (
-    <Tooltip title={dispatch.fiscalExternalId ?? ''}>
-      <Chip icon={<FileCheck2 size={12} />} label={label} color={color} size="small" variant="outlined" />
-    </Tooltip>
-  );
-}
+import { PackageCheck, Plus, XCircle } from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { ConfirmDialog } from '../../../shared/components/common/ConfirmDialog';
@@ -23,7 +12,8 @@ import { useShipmentOrders } from '../hooks/useShipmentOrders';
 import { useDispatches } from '../hooks/useDispatches';
 import { CreateShipmentOrderModal } from './CreateShipmentOrderModal';
 import { AddShipmentItemModal } from './AddShipmentItemModal';
-import type { Dispatch, FiscalStatus, ShipmentItem, ShipmentOrder, ShipmentOrderStatus } from '../types';
+import { FiscalStatusCell } from './FiscalStatusCell';
+import type { Dispatch, ShipmentItem, ShipmentOrder, ShipmentOrderStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 
 type Props = { tenantCode: string };
@@ -37,21 +27,6 @@ const STATUS_LABELS: Record<ShipmentOrderStatus, string> = {
 const STATUS_COLOR: Record<ShipmentOrderStatus, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
   Draft: 'default', Picking: 'info', Packing: 'warning',
   ReadyToShip: 'success', Shipped: 'success', Cancelled: 'error',
-};
-
-const FISCAL_COLOR: Record<string, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
-  processando: 'info', processando_autorizacao: 'info',
-  autorizado: 'success', CONCLUIDO: 'success',
-  erro_autorizacao: 'error', REJEITADO: 'error',
-  cancelado: 'default', CANCELADO: 'default',
-  denegado: 'error', DENEGADO: 'error',
-};
-const FISCAL_LABEL: Record<string, string> = {
-  processando: 'Processando', processando_autorizacao: 'Processando',
-  autorizado: 'Autorizada', CONCLUIDO: 'Autorizada',
-  erro_autorizacao: 'Erro', REJEITADO: 'Rejeitada',
-  cancelado: 'Cancelada', CANCELADO: 'Cancelada',
-  denegado: 'Denegada', DENEGADO: 'Denegada',
 };
 
 export function ShipmentOrdersPage({ tenantCode }: Props) {
@@ -142,16 +117,18 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
           </TableHead>
           <TableBody>
             {orders.length === 0 && (
-              <TableRow><TableCell colSpan={6} align="center">Nenhuma ordem cadastrada.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} align="center">Nenhuma ordem cadastrada.</TableCell></TableRow>
             )}
-            {orders.map(o => (
+            {orders.map(o => {
+              const dispatch = dispatchByOrder.get(o.id);
+              return (
               <TableRow key={o.id}>
                 <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700 }}>{o.orderNumber}</TableCell>
                 <TableCell>
                   <Chip label={STATUS_LABELS[o.status]} color={STATUS_COLOR[o.status]} size="small" />
                 </TableCell>
                 <TableCell>
-                  <FiscalStatusCell dispatch={dispatchByOrder.get(o.id)} />
+                  <FiscalStatusCell status={dispatch?.fiscalStatus} accessKey={dispatch?.fiscalAccessKey} externalId={dispatch?.fiscalExternalId} errorMessage={dispatch?.fiscalErrorMessage} />
                 </TableCell>
                 <TableCell>{o.items.length}</TableCell>
                 <TableCell sx={{ fontSize: 12 }}>{o.recipientName ?? o.recipientCnpj ?? '-'}</TableCell>
@@ -188,7 +165,8 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
                   )}
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>

@@ -79,6 +79,7 @@ public sealed class SupplyChainDbContext(DbContextOptions<SupplyChainDbContext> 
             entity.Property(x => x.AccessKey).HasMaxLength(44);
             entity.Property(x => x.TotalValue).HasColumnType("numeric(18,2)");
             entity.Property(x => x.RawXml).HasColumnType("text");
+            entity.Property(x => x.FiscalEnvironment).HasConversion<int?>();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.CreatedAt).IsRequired();
             entity.Property(x => x.UpdatedAt).IsRequired();

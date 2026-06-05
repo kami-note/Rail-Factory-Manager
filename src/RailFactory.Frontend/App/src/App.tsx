@@ -3,13 +3,13 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import { AuthSessionProvider, buildLoginHref, logout, useAuthSession } from './features/auth';
 import { ProtectedDashboardLayout } from './shared/layouts/ProtectedDashboardLayout';
 import { OverviewPanel, Status } from './features/dashboard';
-import { ReceiptsWorkspace } from './features/supply-chain';
+import { ReceiptsWorkspace, AssociationWorkbenchPage } from './features/supply-chain';
 import { InventoryStocksPage, MaterialDetailsPage } from './features/inventory';
 import { RolesManagementPage, UsersManagementPage, AuditPage } from './features/iam';
 import { WorkCentersPage, BomsPage, ProductionOrdersPage } from './features/production';
 import { PeoplePage } from './features/hr';
 import { VehiclesPage, MaintenancePage, FuelingPage } from './features/fleet';
-import { CarriersPage, DispatchesPage, ShipmentOrdersPage } from './features/logistics';
+import { CarriersPage, DispatchesPage, FiscalMonitorPage, ShipmentOrdersPage } from './features/logistics';
 import { IntegrationsPage } from './features/integrations';
 import { TenantManagementPage } from './features/tenants';
 import { TenantSelector } from './shared/components/TenantSelector';
@@ -217,7 +217,8 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
           <Routes>
             <Route index element={<OverviewPanel status={status} statusError={statusError} tenantCode={tenantCode} onNavigate={navigateTo} />} />
             <Route path="receipts" element={<ReceiptsWorkspace tenantCode={tenantCode} />} />
-<Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />
+            <Route path="supply-chain/association" element={<AssociationWorkbenchPage tenantCode={tenantCode} />} />
+            <Route path="import-xml" element={<ReceiptsWorkspace tenantCode={tenantCode} requestedDrawer="xml" />} />
             <Route path="inventory" element={<InventoryStocksPage tenantCode={tenantCode} />} />
             <Route path="inventory/materials/:materialCode" element={<MaterialDetailsPage tenantCode={tenantCode} />} />
             <Route path="iam/users" element={<UsersManagementPage tenantCode={tenantCode} />} />
@@ -233,6 +234,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
             <Route path="logistics/carriers" element={<CarriersPage tenantCode={tenantCode} />} />
             <Route path="logistics/shipment-orders" element={<ShipmentOrdersPage tenantCode={tenantCode} />} />
             <Route path="logistics/dispatches" element={<DispatchesPage tenantCode={tenantCode} />} />
+            <Route path="logistics/nfe-monitor" element={<FiscalMonitorPage tenantCode={tenantCode} />} />
             <Route path="settings/integrations" element={<IntegrationsPage tenantCode={tenantCode} />} />
             <Route path="settings/tenants" element={<TenantManagementPage tenantCode={tenantCode} />} />
             <Route path="*" element={<Navigate to="/app" replace />} />
