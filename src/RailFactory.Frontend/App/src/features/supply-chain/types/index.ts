@@ -18,6 +18,8 @@ export type Receipt = {
   totalValue?: number;
   status: DisplayStatus;
   itemCount: number;
+  /** 1 = Produção, 2 = Homologação (SEFAZ tpAmb). Null = desconhecido. */
+  fiscalEnvironment?: 1 | 2;
 };
 
 export type PendingBalance = {

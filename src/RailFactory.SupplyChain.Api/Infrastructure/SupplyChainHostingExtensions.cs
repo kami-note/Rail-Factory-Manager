@@ -1,3 +1,5 @@
+using RailFactory.SupplyChain.Api.Api.ExceptionHandling;
+
 namespace RailFactory.SupplyChain.Api.Infrastructure;
 
 public static class SupplyChainHostingExtensions
@@ -5,6 +7,7 @@ public static class SupplyChainHostingExtensions
     public static WebApplicationBuilder AddSupplyChainHosting(this WebApplicationBuilder builder)
     {
         ValidateInternalApiKey(builder.Configuration);
+        builder.Services.AddExceptionHandler<GlobalDomainExceptionHandler>();
         builder.AddServiceDefaults();
         builder.Services.AddInternalTokenAuthentication(builder.Configuration);
         builder.AddTenantResolution();

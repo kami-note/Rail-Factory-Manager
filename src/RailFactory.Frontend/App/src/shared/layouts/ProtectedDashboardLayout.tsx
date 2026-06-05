@@ -18,7 +18,7 @@ import {
   Avatar,
   IconButton
 } from '@mui/material';
-import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, Wrench, Fuel, PackageCheck, ScrollText, Plug, SendHorizonal, Building2 } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, Wrench, Fuel, PackageCheck, ScrollText, Plug, SendHorizonal, Building2, FileCheck2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { usePermissions } from '../../features/auth';
 import { SystemPermissions } from '../types/permissions';
@@ -66,6 +66,7 @@ const navGroups: NavGroup[] = [
       { href: '/app/logistics/carriers', label: 'TRANSPORTADORAS', icon: <Truck size={18} />, permission: SystemPermissions.Logistics.Read },
       { href: '/app/logistics/shipment-orders', label: 'EXPEDIÇÃO', icon: <PackageCheck size={18} />, permission: SystemPermissions.Logistics.Read },
       { href: '/app/logistics/dispatches', label: 'DESPACHOS', icon: <SendHorizonal size={18} />, permission: SystemPermissions.Logistics.Read },
+      { href: '/app/logistics/nfe-monitor', label: 'MONITOR NF-e', icon: <FileCheck2 size={18} />, permission: SystemPermissions.Logistics.Read },
     ]
   },
   {

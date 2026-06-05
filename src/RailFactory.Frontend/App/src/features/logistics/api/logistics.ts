@@ -103,6 +103,11 @@ export async function transitionDispatch(tenantCode: string, id: string, action:
   if (!r.ok) throw new Error(await r.text());
 }
 
+export async function retryFiscalEmission(tenantCode: string, dispatchId: string): Promise<void> {
+  const r = await fetch(`${BASE}/dispatches/${dispatchId}/retry-fiscal`, { method: 'PUT', credentials: 'include', headers: buildTenantHeaders(tenantCode) });
+  if (!r.ok) throw new Error(await r.text());
+}
+
 export async function issueFiscalDocument(tenantCode: string, dispatchId: string, body: {
   natureOfOperation: string;
   emitter: { cnpjOrCpf: string; name: string; email: string; address: { street: string; number: string; complement?: string; district: string; city: string; state: string; zipCode: string }; ieStateRegistration?: string };

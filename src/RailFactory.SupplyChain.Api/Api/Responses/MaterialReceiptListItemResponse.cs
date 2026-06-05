@@ -1,4 +1,5 @@
 using RailFactory.BuildingBlocks.Presentation;
+using RailFactory.SupplyChain.Api.Domain;
 
 namespace RailFactory.SupplyChain.Api.Api.Responses;
 
@@ -14,4 +15,5 @@ public record MaterialReceiptListItemResponse(
     string? AccessKey,
     decimal? TotalValue,
     DisplayStatus Status,
-    int ItemCount);
+    int ItemCount,
+    FiscalEnvironment? FiscalEnvironment = null);

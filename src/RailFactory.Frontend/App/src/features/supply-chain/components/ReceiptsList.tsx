@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box,
+  Chip,
   Typography,
   CircularProgress,
   IconButton,
@@ -20,14 +21,15 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material';
-import { 
-  FileText as DescriptionIcon, 
-  Play as PlayArrowIcon, 
-  CheckCircle2 as CheckCircleIcon, 
+import {
+  FileText as DescriptionIcon,
+  Play as PlayArrowIcon,
+  CheckCircle2 as CheckCircleIcon,
   Info as InfoOutlinedIcon,
   GitPullRequest as ResolveIcon,
   Building2,
   Calendar,
+  FlaskConical,
   Hash,
   Search as SearchIcon
 } from 'lucide-react';
@@ -104,7 +106,6 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference, on
         void fetchReceipts();
       }
     } catch (err) {
-      console.error(err);
       setActionError(toUiErrorMessage(err, 'Não foi possível iniciar a conferência deste recebimento.'));
     }
   };
@@ -132,7 +133,6 @@ export function ReceiptsList({ tenantCode, refreshKey = 0, onStartConference, on
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      console.error(err);
       setActionError(toUiErrorMessage(err, 'Não foi possível baixar o XML deste recebimento.'));
     }
   };
@@ -326,7 +326,19 @@ function ReceiptCard({
     >
       <CardContent sx={{ flexGrow: 1, p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <StatusChip status={receipt.status} />
+          <Stack spacing={0.5} sx={{ alignItems: 'flex-start' }}>
+            <StatusChip status={receipt.status} />
+            {receipt.fiscalEnvironment === 2 && (
+              <Chip
+                icon={<FlaskConical size={11} />}
+                label="HOMOLOGAÇÃO"
+                size="small"
+                color="warning"
+                variant="outlined"
+                sx={{ fontWeight: 800, fontSize: '0.6rem', height: 18, '& .MuiChip-label': { px: 0.75 } }}
+              />
+            )}
+          </Stack>
           <Stack direction="row" spacing={0.5} sx={{ color: 'text.secondary', alignItems: 'center' }}>
             <Calendar size={14} />
             <Typography variant="caption" sx={{ fontWeight: 600 }}>
@@ -464,7 +476,7 @@ function ReceiptCard({
               onClick={onContinueConference}
               sx={{ borderRadius: 2, fontWeight: 700 }}
             >
-              Contar
+              Contar / Retomar
             </Button>
           )}
         </Stack>

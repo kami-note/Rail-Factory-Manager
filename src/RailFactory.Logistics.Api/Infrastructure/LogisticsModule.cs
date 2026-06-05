@@ -58,8 +58,9 @@ public static class LogisticsModule
         services.AddScoped<IInboundWebhookHandler, PlugNotasFiscalWebhookHandler>();
         services.AddScoped<IInboundWebhookHandler, FocusNfeFiscalWebhookHandler>();
 
-        // Fiscal document use case
+        // Fiscal document use cases
         services.AddScoped<IssueFiscalDocument>();
+        services.AddScoped<RetryFiscalEmission>();
 
         // Webhook event repository
         services.AddScoped<IInboundWebhookEventRepository, PostgresInboundWebhookEventRepository>();

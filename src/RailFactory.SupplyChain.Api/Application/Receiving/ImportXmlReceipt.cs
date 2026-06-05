@@ -32,7 +32,8 @@ public sealed class ImportXmlReceipt(
             parsed.ReceiptDate,
             parsed.Items.Select(x => new StageReceiptItemInput(x.MaterialCode, x.Quantity, x.UnitOfMeasure, x.UnitPrice, x.OriginalDescription, x.Ncm, x.Ean)).ToList(),
             correlationId,
-            cancellationToken);
+            cancellationToken,
+            fiscalEnvironment: parsed.FiscalEnvironment);
 
         await repository.SaveChangesAsync(cancellationToken);
         return receipt.Id;

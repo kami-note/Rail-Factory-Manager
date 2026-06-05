@@ -50,7 +50,8 @@ public sealed class MaterialReceiptWriter(
         DateOnly receiptDate,
         IReadOnlyCollection<StageReceiptItemInput> items,
         string correlationId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        FiscalEnvironment? fiscalEnvironment = null)
     {
         var existingReceipt = await repository.GetReceiptByReceiptNumberAsync(receiptNumber, cancellationToken);
         if (existingReceipt is not null)
@@ -58,7 +59,7 @@ public sealed class MaterialReceiptWriter(
             throw new ReceiptAlreadyExistsException(receiptNumber);
         }
 
-        var receipt = MaterialReceipt.Create(receiptNumber, supplier.Id, documentNumber, accessKey, totalValue, rawXml, receiptDate);
+        var receipt = MaterialReceipt.Create(receiptNumber, supplier.Id, documentNumber, accessKey, totalValue, rawXml, receiptDate, fiscalEnvironment);
         bool requiresAssociation = false;
 
         foreach (var item in items)

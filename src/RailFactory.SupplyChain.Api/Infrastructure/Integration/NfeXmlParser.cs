@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using RailFactory.SupplyChain.Api.Application.Ports;
+using RailFactory.SupplyChain.Api.Domain;
 
 namespace RailFactory.SupplyChain.Api.Infrastructure.Integration;
 
@@ -43,16 +44,21 @@ internal sealed class NfeXmlParser
         var totalValueStr = OptionalChildValue(icmsTot, "vNF");
         var totalValue = totalValueStr != null ? ParseDecimal(totalValueStr) : (decimal?)null;
 
+        FiscalEnvironment? fiscalEnvironment = null;
+        if (int.TryParse(OptionalChildValue(ide, "tpAmb"), out var tpAmb) && Enum.IsDefined(typeof(FiscalEnvironment), tpAmb))
+            fiscalEnvironment = (FiscalEnvironment)tpAmb;
+
         return new ParsedReceiptDocument(
-            $"NFE-{accessKey}",
-            accessKey,
-            accessKey,
-            totalValue,
-            OptionalChildValue(ide, "natOp"),
-            ParseDate(issuedAt),
-            supplierFiscalId,
-            supplierName,
-            parsedItems);
+            ReceiptNumber: $"NFE-{accessKey}",
+            DocumentNumber: accessKey,
+            AccessKey: accessKey,
+            TotalValue: totalValue,
+            OperationNature: OptionalChildValue(ide, "natOp"),
+            ReceiptDate: ParseDate(issuedAt),
+            SupplierFiscalId: supplierFiscalId,
+            SupplierName: supplierName,
+            Items: parsedItems,
+            FiscalEnvironment: fiscalEnvironment);
     }
 
     private static ParsedReceiptItem ParseItem(XElement detail)

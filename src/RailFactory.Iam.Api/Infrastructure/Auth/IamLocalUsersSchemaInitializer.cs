@@ -168,13 +168,15 @@ public sealed class IamLocalUsersSchemaInitializer(
             Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
             TenantCode = tenantCode,
             Name = "Operador de Logística",
-            Description = "Acesso para leitura e escrita em estoque, recebimentos e frota.",
+            Description = "Gerencia expedição, despachos, transportadoras, recebimentos e estoque.",
             Permissions =
             [
                 SystemPermissions.Inventory.Read,
                 SystemPermissions.Inventory.Write,
                 SystemPermissions.SupplyChain.Read,
                 SystemPermissions.SupplyChain.Write,
+                SystemPermissions.Logistics.Read,
+                SystemPermissions.Logistics.Write,
                 SystemPermissions.Hr.Read,
                 SystemPermissions.Fleet.Read,
                 SystemPermissions.Fleet.Write,
@@ -197,6 +199,7 @@ public sealed class IamLocalUsersSchemaInitializer(
                 SystemPermissions.Iam.Read,
                 SystemPermissions.Hr.Read,
                 SystemPermissions.Fleet.Read,
+                SystemPermissions.Logistics.Read,
             ],
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
@@ -236,7 +239,24 @@ public sealed class IamLocalUsersSchemaInitializer(
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        dbContext.Roles.AddRange(adminRole, operatorRole, viewerRole, hrFleetRole, productionRole);
+        var fiscalRole = new IamTenantRoleRecord
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000006"),
+            TenantCode = tenantCode,
+            Name = "Responsável Fiscal",
+            Description = "Gerencia documentos fiscais NF-e de saída: emissão, reemissão e monitor fiscal. Consulta logística e estoque.",
+            Permissions =
+            [
+                SystemPermissions.Logistics.Read,
+                SystemPermissions.Logistics.Fiscal,
+                SystemPermissions.Inventory.Read,
+                SystemPermissions.SupplyChain.Read,
+            ],
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        dbContext.Roles.AddRange(adminRole, operatorRole, viewerRole, hrFleetRole, productionRole, fiscalRole);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

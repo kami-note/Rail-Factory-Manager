@@ -188,23 +188,12 @@ public static class SupplyChainEndpoints
         CancellationToken cancellationToken)
     {
         var actor = userContext.Email.Value;
-        try
-        {
-            var result = await associateItem.ExecuteAsync(
-                receiptId, itemId, request.ExpectedVersion, request.InternalMaterialCode, request.ConversionFactor,
-                actor,
-                cancellationToken);
+        var result = await associateItem.ExecuteAsync(
+            receiptId, itemId, request.ExpectedVersion, request.InternalMaterialCode, request.ConversionFactor,
+            actor,
+            cancellationToken);
 
-            return Results.Ok(result);
-        }
-        catch (AssociationValidationException ex)
-        {
-            return ToProblemResult(ex.Code, ex.Message);
-        }
-        catch (AssociationConflictException ex)
-        {
-            return ToProblemResult("association.conflict", ex.Message);
-        }
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleCreateMaterialAndAssociate(
@@ -216,41 +205,18 @@ public static class SupplyChainEndpoints
         CancellationToken cancellationToken)
     {
         var actor = userContext.Email;
-        try
-        {
-            var result = await createAndAssociate.ExecuteAsync(
+        var result = await createAndAssociate.ExecuteAsync(
 
-                receiptId, itemId, request.ExpectedVersion,
-                new CreateMaterialInput(
-                    request.MaterialCode, request.OfficialName, request.Description,
-                    request.UnitOfMeasure, request.ProcurementType, request.Category,
-                    request.Gtin, request.Ncm),
-                request.ConversionFactor,
-                actor,
-                cancellationToken);
+            receiptId, itemId, request.ExpectedVersion,
+            new CreateMaterialInput(
+                request.MaterialCode, request.OfficialName, request.Description,
+                request.UnitOfMeasure, request.ProcurementType, request.Category,
+                request.Gtin, request.Ncm),
+            request.ConversionFactor,
+            actor,
+            cancellationToken);
 
-            return Results.Ok(result);
-        }
-        catch (AssociationValidationException ex)
-        {
-            return ToProblemResult(ex.Code, ex.Message);
-        }
-        catch (AssociationConflictException ex)
-        {
-            return ToProblemResult("association.conflict", ex.Message);
-        }
-        catch (RemoteServiceConflictException ex)
-        {
-            return Results.Problem(
-                title: "SKU já existe no inventário",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status409Conflict,
-                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
-        }
-        catch (RemoteServiceValidationException ex)
-        {
-            return ToProblemResult(ex.Code, ex.Message);
-        }
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleReviewAssociationItemLater(
@@ -262,24 +228,13 @@ public static class SupplyChainEndpoints
         CancellationToken cancellationToken)
     {
         var actor = userContext.Email.Value;
-        try
-        {
-            var result = await reviewLater.ExecuteAsync(
-                receiptId, itemId, request.ExpectedVersion, 
-                ControlledAssociationDecision.ReviewLater, request.Reason, 
-                actor,
-                cancellationToken);
+        var result = await reviewLater.ExecuteAsync(
+            receiptId, itemId, request.ExpectedVersion, 
+            ControlledAssociationDecision.ReviewLater, request.Reason, 
+            actor,
+            cancellationToken);
 
-            return Results.Ok(result);
-        }
-        catch (AssociationValidationException ex)
-        {
-            return ToProblemResult(ex.Code, ex.Message);
-        }
-        catch (AssociationConflictException ex)
-        {
-            return ToProblemResult("association.conflict", ex.Message);
-        }
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleIgnoreAssociationItem(
@@ -291,24 +246,13 @@ public static class SupplyChainEndpoints
         CancellationToken cancellationToken)
     {
         var actor = userContext.Email.Value;
-        try
-        {
-            var result = await ignoreItem.ExecuteAsync(
-                receiptId, itemId, request.ExpectedVersion, 
-                ControlledAssociationDecision.Ignored, request.Reason, 
-                actor,
-                cancellationToken);
+        var result = await ignoreItem.ExecuteAsync(
+            receiptId, itemId, request.ExpectedVersion, 
+            ControlledAssociationDecision.Ignored, request.Reason, 
+            actor,
+            cancellationToken);
 
-            return Results.Ok(result);
-        }
-        catch (AssociationValidationException ex)
-        {
-            return ToProblemResult(ex.Code, ex.Message);
-        }
-        catch (AssociationConflictException ex)
-        {
-            return ToProblemResult("association.conflict", ex.Message);
-        }
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleOverrideSupplierSku(
@@ -320,24 +264,13 @@ public static class SupplyChainEndpoints
         CancellationToken cancellationToken)
     {
         var actor = userContext.Email.Value;
-        try
-        {
-            var result = await overrideSku.ExecuteAsync(
-                receiptId, itemId, request.ExpectedVersion, 
-                request.CorrectedCode, request.Reason, 
-                actor,
-                cancellationToken);
+        var result = await overrideSku.ExecuteAsync(
+            receiptId, itemId, request.ExpectedVersion, 
+            request.CorrectedCode, request.Reason, 
+            actor,
+            cancellationToken);
 
-            return Results.Ok(result);
-        }
-        catch (AssociationValidationException ex)
-        {
-            return ToProblemResult(ex.Code, ex.Message);
-        }
-        catch (AssociationConflictException ex)
-        {
-            return ToProblemResult("association.conflict", ex.Message);
-        }
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleReleaseToConference(
@@ -348,35 +281,12 @@ public static class SupplyChainEndpoints
         CancellationToken cancellationToken)
     {
         var actor = userContext.Email.Value;
-        try
-        {
-            var result = await releaseToConference.ExecuteAsync(
-                receiptId, request.ExpectedVersion,
-                actor,
-                cancellationToken);
+        var result = await releaseToConference.ExecuteAsync(
+            receiptId, request.ExpectedVersion,
+            actor,
+            cancellationToken);
 
-            return Results.Ok(result);
-        }
-        catch (AssociationValidationException ex)
-        {
-            return ToProblemResult(ex.Code, ex.Message);
-        }
-        catch (AssociationConflictException ex)
-        {
-            return ToProblemResult("association.conflict", ex.Message);
-        }
-        catch (AssociationReleaseBlockedException ex)
-        {
-            return Results.Problem(
-                title: "Release blocked",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status409Conflict,
-                extensions: new Dictionary<string, object?> 
-                { 
-                    ["code"] = "association.release_blocked",
-                    ["blockers"] = ex.Blockers
-                });
-        }
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleCreateMapping(
@@ -416,15 +326,8 @@ public static class SupplyChainEndpoints
         using var reader = new StreamReader(file.OpenReadStream());
         var xmlContent = await reader.ReadToEndAsync(cancellationToken);
         
-        try
-        {
-            var result = await importXml.ExecuteAsync("system", xmlContent, Guid.NewGuid().ToString(), cancellationToken);
-            return Results.Ok(result);
-        }
-        catch (ReceiptAlreadyExistsException ex)
-        {
-            return ToProblemResult("receipt.already_exists", ex.Message);
-        }
+        var result = await importXml.ExecuteAsync("system", xmlContent, Guid.NewGuid().ToString(), cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandlePreviewXmlReceipt(
@@ -452,19 +355,8 @@ public static class SupplyChainEndpoints
             documents.Add(new ImportXmlReceiptBatchDocument(file.FileName, await reader.ReadToEndAsync(cancellationToken)));
         }
         
-        try
-        {
-            var result = await importBatch.ExecuteAsync("system", documents, Guid.NewGuid().ToString(), cancellationToken);
-            return Results.Ok(result);
-        }
-        catch (ImportXmlReceiptBatchValidationException ex)
-        {
-            return Results.Problem(
-                title: "Operation failed",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status400BadRequest,
-                extensions: new Dictionary<string, object?> { ["code"] = "batch.validation_failed", ["errors"] = ex.Errors });
-        }
+        var result = await importBatch.ExecuteAsync("system", documents, Guid.NewGuid().ToString(), cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleStartConference(
@@ -474,15 +366,8 @@ public static class SupplyChainEndpoints
         CancellationToken cancellationToken)
     {
         var actor = userContext.Email.Value;
-        try
-        {
-            var result = await startConference.ExecuteAsync(id, actor, cancellationToken);
-            return Results.Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return ToProblemResult("association.invalid_receipt_status", ex.Message);
-        }
+        var result = await startConference.ExecuteAsync(id, actor, cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleCloseConference(
@@ -493,21 +378,14 @@ public static class SupplyChainEndpoints
         CancellationToken cancellationToken)
     {
         var actor = userContext.Email.Value;
-        try
-        {
-            var result = await closeConference.ExecuteAsync(
-                id, 
-                actor, 
-                request.Results.Select(i => new CloseConferenceItemInput(i.ItemId, i.CountedQuantity, i.ConfirmedLotNumber, i.ConfirmedExpirationDate)).ToList(),
-                Guid.NewGuid().ToString(),
-                cancellationToken);
+        var result = await closeConference.ExecuteAsync(
+            id, 
+            actor, 
+            request.Results.Select(i => new CloseConferenceItemInput(i.ItemId, i.CountedQuantity, i.ConfirmedLotNumber, i.ConfirmedExpirationDate)).ToList(),
+            Guid.NewGuid().ToString(),
+            cancellationToken);
 
-            return Results.Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return ToProblemResult("conference.invalid_operation", ex.Message);
-        }
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetConferenceItems(

@@ -63,7 +63,25 @@ export type FiscalStatus =
   | 'erro_autorizacao' | 'REJEITADO'
   | 'cancelado' | 'CANCELADO'
   | 'denegado' | 'DENEGADO'
-  | string;
+  | string; // open for future provider-specific statuses
+
+export const FISCAL_COLOR: Record<string, 'default' | 'info' | 'success' | 'error'> = {
+  processando: 'info', processando_autorizacao: 'info',
+  autorizado: 'success', CONCLUIDO: 'success',
+  erro_autorizacao: 'error', REJEITADO: 'error',
+  cancelado: 'default', CANCELADO: 'default',
+  denegado: 'error', DENEGADO: 'error',
+};
+
+export const FISCAL_LABEL: Record<string, string> = {
+  processando: 'Processando', processando_autorizacao: 'Processando',
+  autorizado: 'Autorizada', CONCLUIDO: 'Autorizada',
+  erro_autorizacao: 'Erro', REJEITADO: 'Rejeitada',
+  cancelado: 'Cancelada', CANCELADO: 'Cancelada',
+  denegado: 'Denegada', DENEGADO: 'Denegada',
+};
+
+export const RETRYABLE_FISCAL_STATUSES = new Set<string>(['erro_autorizacao', 'REJEITADO']);
 
 export interface Dispatch {
   id: string;
@@ -77,6 +95,7 @@ export interface Dispatch {
   fiscalExternalId?: string;
   fiscalAccessKey?: string;
   fiscalStatus?: FiscalStatus;
+  fiscalErrorMessage?: string;
   conferencedAt?: string;
   dispatchedAt?: string;
   deliveredAt?: string;
