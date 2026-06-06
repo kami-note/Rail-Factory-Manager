@@ -9,6 +9,9 @@ public sealed class PostgresVehicleRepository(FleetDbContext context) : IVehicle
     public async Task AddAsync(Vehicle vehicle, CancellationToken cancellationToken)
         => await context.Vehicles.AddAsync(vehicle, cancellationToken);
 
+    public async Task AddAssignmentAsync(DriverAssignment assignment, CancellationToken cancellationToken)
+        => await context.DriverAssignments.AddAsync(assignment, cancellationToken);
+
     public Task<Vehicle?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         => context.Vehicles.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 

@@ -8,7 +8,7 @@ import { InventoryStocksPage, MaterialDetailsPage } from './features/inventory';
 import { RolesManagementPage, UsersManagementPage, AuditPage } from './features/iam';
 import { WorkCentersPage, BomsPage, ProductionOrdersPage } from './features/production';
 import { PeoplePage } from './features/hr';
-import { VehiclesPage, MaintenancePage, FuelingPage } from './features/fleet';
+import { FleetPage } from './features/fleet';
 import { CarriersPage, DispatchesPage, FiscalMonitorPage, ShipmentOrdersPage } from './features/logistics';
 import { IntegrationsPage } from './features/integrations';
 import { TenantManagementPage } from './features/tenants';
@@ -228,9 +228,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
             <Route path="production/boms" element={<BomsPage tenantCode={tenantCode} />} />
             <Route path="production/orders" element={<ProductionOrdersPage tenantCode={tenantCode} />} />
             <Route path="hr/people" element={<PeoplePage tenantCode={tenantCode} />} />
-            <Route path="fleet/vehicles" element={<VehiclesPage tenantCode={tenantCode} />} />
-            <Route path="fleet/maintenance" element={<MaintenancePage tenantCode={tenantCode} />} />
-            <Route path="fleet/fueling" element={<FuelingPage tenantCode={tenantCode} />} />
+            <Route path="fleet" element={<FleetPage tenantCode={tenantCode} />} />
             <Route path="logistics/carriers" element={<CarriersPage tenantCode={tenantCode} />} />
             <Route path="logistics/shipment-orders" element={<ShipmentOrdersPage tenantCode={tenantCode} />} />
             <Route path="logistics/dispatches" element={<DispatchesPage tenantCode={tenantCode} />} />

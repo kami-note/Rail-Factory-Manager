@@ -72,9 +72,7 @@ const navGroups: NavGroup[] = [
   {
     title: 'FROTA',
     items: [
-      { href: '/app/fleet/vehicles', label: 'VEÍCULOS', icon: <Truck size={18} />, permission: SystemPermissions.Fleet.Read },
-      { href: '/app/fleet/maintenance', label: 'MANUTENÇÃO', icon: <Wrench size={18} />, permission: SystemPermissions.Fleet.Read },
-      { href: '/app/fleet/fueling', label: 'ABASTECIMENTO', icon: <Fuel size={18} />, permission: SystemPermissions.Fleet.Read },
+      { href: '/app/fleet', label: 'FROTA', icon: <Truck size={18} />, permission: SystemPermissions.Fleet.Read },
     ]
   },
   {

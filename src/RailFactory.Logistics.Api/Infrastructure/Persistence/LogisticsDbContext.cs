@@ -129,8 +129,8 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.HasKey(x => x.Id);
             entity.Property(x => x.ShipmentOrderId).IsRequired();
             entity.Property(x => x.CarrierId).IsRequired();
-            entity.Property(x => x.VehicleId).IsRequired();
-            entity.Property(x => x.DriverPersonId).IsRequired();
+            entity.Property(x => x.VehicleId);
+            entity.Property(x => x.DriverPersonId);
             entity.Property(x => x.TrackingCode).HasMaxLength(20).IsRequired();
             entity.Property(x => x.FreightValueBrl).HasColumnType("numeric(12,2)").IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
