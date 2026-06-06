@@ -230,6 +230,7 @@ public sealed class LogisticsFiscalDispatcher(
         credentials.TryGetString("emitter_complement", out var complement);
         credentials.TryGetString("emitter_district", out var district);
         credentials.TryGetString("emitter_city", out var city);
+        credentials.TryGetString("emitter_city_ibge", out var cityIbge);
         credentials.TryGetString("emitter_state", out var state);
         credentials.TryGetString("emitter_zip", out var zip);
 
@@ -244,7 +245,8 @@ public sealed class LogisticsFiscalDispatcher(
                 District: district,
                 City: city,
                 State: state,
-                ZipCode: zip),
+                ZipCode: zip,
+                CityIbgeCode: string.IsNullOrEmpty(cityIbge) ? null : cityIbge),
             IeStateRegistration: string.IsNullOrEmpty(ie) ? null : ie);
     }
 }

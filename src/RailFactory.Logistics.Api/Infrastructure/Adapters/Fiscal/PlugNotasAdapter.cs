@@ -29,8 +29,22 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
                 emitente = new
                 {
                     cpfCnpj = request.Emitter.CnpjOrCpf,
+                    razaoSocial = request.Emitter.Name,
                     inscricaoEstadual = request.Emitter.IeStateRegistration,
-                    email = request.Emitter.Email
+                    email = request.Emitter.Email,
+                    endereco = new
+                    {
+                        logradouro = request.Emitter.Address.Street,
+                        numero = request.Emitter.Address.Number,
+                        complemento = request.Emitter.Address.Complement,
+                        bairro = request.Emitter.Address.District,
+                        municipio = request.Emitter.Address.City,
+                        codigoCidade = request.Emitter.Address.CityIbgeCode,
+                        uf = request.Emitter.Address.State,
+                        cep = request.Emitter.Address.ZipCode,
+                        codigoPais = request.Emitter.Address.CountryCode,
+                        pais = "Brasil"
+                    }
                 },
                 destinatario = new
                 {
@@ -44,9 +58,11 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
                         complemento = request.Recipient.Address.Complement,
                         bairro = request.Recipient.Address.District,
                         municipio = request.Recipient.Address.City,
+                        codigoCidade = request.Recipient.Address.CityIbgeCode,
                         uf = request.Recipient.Address.State,
                         cep = request.Recipient.Address.ZipCode,
-                        codigoPais = request.Recipient.Address.CountryCode
+                        codigoPais = request.Recipient.Address.CountryCode,
+                        pais = "Brasil"
                     }
                 },
                 produtos = request.Items.Select((item, i) => new
