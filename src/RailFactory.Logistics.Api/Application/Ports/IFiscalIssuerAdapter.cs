@@ -2,7 +2,8 @@ namespace RailFactory.Logistics.Api.Application.Ports;
 
 public sealed record NfeAddress(
     string Street, string Number, string? Complement,
-    string District, string City, string State, string ZipCode, string CountryCode = "1058");
+    string District, string City, string State, string ZipCode,
+    string CountryCode = "1058", string? CityIbgeCode = null);
 
 public sealed record NfeParty(
     string CnpjOrCpf, string Name, string Email, NfeAddress Address, string? IeStateRegistration = null);

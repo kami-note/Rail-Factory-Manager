@@ -10,13 +10,19 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-
+            migrationBuilder.AddColumn<string>(
+                name: "FiscalErrorMessage",
+                table: "dispatches",
+                type: "text",
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-
+            migrationBuilder.DropColumn(
+                name: "FiscalErrorMessage",
+                table: "dispatches");
         }
     }
 }

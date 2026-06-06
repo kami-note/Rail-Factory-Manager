@@ -46,6 +46,7 @@ export const PROVIDER_SCHEMAS: Record<string, ProviderSchema> = {
       { key: 'emitter_city', label: 'Município' },
       { key: 'emitter_state', label: 'UF', placeholder: 'SP' },
       { key: 'emitter_zip', label: 'CEP' },
+      { key: 'emitter_city_ibge', label: 'Código IBGE Município', placeholder: '3550308', hint: 'Código IBGE da cidade (ex: São Paulo = 3550308). Obrigatório para PlugNotas.' },
     ],
     webhookFields: [
       { key: 'webhook_secret', label: 'Segredo Webhook (opcional)', secret: true, hint: 'Usado para validar chamadas recebidas do PlugNotas' },
