@@ -4,7 +4,7 @@ using RailFactory.Logistics.Api.Domain;
 namespace RailFactory.Logistics.Api.Application.Dispatches;
 
 public sealed record CreateDispatchInput(
-    Guid ShipmentOrderId, Guid CarrierId, Guid? VehicleId, Guid? DriverPersonId);
+    Guid ShipmentOrderId, Guid CarrierId, Guid VehicleId, Guid DriverPersonId);
 
 public sealed class CreateDispatch(
     IShipmentOrderRepository orders, ICarrierRepository carriers, IDispatchRepository dispatches)

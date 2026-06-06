@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert, Box, Button, Chip, CircularProgress, Paper,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -12,11 +12,17 @@ import { transitionDispatch } from '../api/logistics';
 import { useDispatches } from '../hooks/useDispatches';
 import { useShipmentOrders } from '../hooks/useShipmentOrders';
 import { useCarriers } from '../hooks/useCarriers';
+import { useVehicles } from '../../fleet/hooks/useVehicles';
+import { usePeople } from '../../hr/hooks/usePeople';
 import { CreateDispatchModal } from './CreateDispatchModal';
 import { FiscalStatusCell } from './FiscalStatusCell';
 import type { Dispatch, DispatchStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
-import { TechnicalIdFormatter, CurrencyFormatter } from '../../../shared/lib/utils/formatters';
+import { RelativeDateFormatter, CurrencyFormatter } from '../../../shared/lib/utils/formatters';
+
+function toIdMap<T extends { id: string }>(items: T[] | null | undefined) {
+  return new Map(items?.map(x => [x.id, x]) ?? []);
+}
 
 type Props = { tenantCode: string };
 type ConfirmAction = { dispatchId: string; action: string; label: string };
@@ -39,27 +45,24 @@ export function DispatchesPage({ tenantCode }: Props) {
   const { data: dispatchData, loading, error: fetchError } = useDispatches(tenantCode);
   const { data: orders } = useShipmentOrders(tenantCode);
   const { data: carriers } = useCarriers(tenantCode);
+  const { data: vehicles } = useVehicles(tenantCode);
+  const { data: people } = usePeople(tenantCode);
 
-  const [dispatches, setDispatches] = useState<Dispatch[]>([]);
+  const [localDispatches, setLocalDispatches] = useState<Dispatch[] | null>(null);
+  const dispatches = localDispatches ?? dispatchData ?? [];
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  useEffect(() => { if (dispatchData) setDispatches(dispatchData); }, [dispatchData]);
-
-  const orderMap = useMemo(
-    () => new Map(orders?.map(o => [o.id, o]) ?? []),
-    [orders]
-  );
-  const carrierMap = useMemo(
-    () => new Map(carriers?.map(c => [c.id, c]) ?? []),
-    [carriers]
-  );
+  const orderMap   = useMemo(() => toIdMap(orders),   [orders]);
+  const carrierMap = useMemo(() => toIdMap(carriers),  [carriers]);
+  const vehicleMap = useMemo(() => toIdMap(vehicles),  [vehicles]);
+  const personMap  = useMemo(() => toIdMap(people),    [people]);
 
   const handleCreated = (dispatch: Dispatch) => {
-    setDispatches(prev => [dispatch, ...prev]);
+    setLocalDispatches(prev => [dispatch, ...(prev ?? dispatchData ?? [])]);
     setCreateOpen(false);
     setSuccess(`Despacho ${dispatch.trackingCode} criado.`);
   };
@@ -80,7 +83,7 @@ export function DispatchesPage({ tenantCode }: Props) {
       };
       const newStatus = actionToStatus[confirm.action];
       if (newStatus) {
-        setDispatches(prev => prev.map(d =>
+        setLocalDispatches(prev => (prev ?? dispatchData ?? []).map(d =>
           d.id === confirm.dispatchId ? { ...d, status: newStatus } : d
         ));
       }
@@ -116,6 +119,8 @@ export function DispatchesPage({ tenantCode }: Props) {
               <TableCell>Rastreio</TableCell>
               <TableCell>Ordem</TableCell>
               <TableCell>Transportadora</TableCell>
+              <TableCell>Veículo</TableCell>
+              <TableCell>Motorista</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>NF-e</TableCell>
               <TableCell align="right">Frete (R$)</TableCell>
@@ -126,7 +131,7 @@ export function DispatchesPage({ tenantCode }: Props) {
           <TableBody>
             {dispatches.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   Nenhum despacho cadastrado.
                 </TableCell>
               </TableRow>
@@ -134,6 +139,8 @@ export function DispatchesPage({ tenantCode }: Props) {
             {dispatches.map(d => {
               const order = orderMap.get(d.shipmentOrderId);
               const carrier = carrierMap.get(d.carrierId);
+              const vehicle = d.vehicleId ? vehicleMap.get(d.vehicleId) : undefined;
+              const driver = d.driverPersonId ? personMap.get(d.driverPersonId) : undefined;
               return (
                 <TableRow key={d.id} hover>
                   <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
@@ -149,6 +156,12 @@ export function DispatchesPage({ tenantCode }: Props) {
                   </TableCell>
                   <TableCell>{carrier?.name ?? '—'}</TableCell>
                   <TableCell>
+                    {vehicle
+                      ? <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>{vehicle.plate}</Typography>
+                      : <Typography variant="body2" color="text.secondary">—</Typography>}
+                  </TableCell>
+                  <TableCell>{driver?.name ?? '—'}</TableCell>
+                  <TableCell>
                     <Chip
                       label={STATUS_LABEL[d.status]}
                       color={STATUS_COLOR[d.status]}
@@ -163,7 +176,7 @@ export function DispatchesPage({ tenantCode }: Props) {
                       {CurrencyFormatter.format(d.freightValueBrl)}
                     </Typography>
                   </TableCell>
-                  <TableCell>{new Date(d.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell>{RelativeDateFormatter.format(d.createdAt, false)}</TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                     {d.status === 'Pending' && !d.conferencedAt && (
                       <Tooltip title="Conferir">

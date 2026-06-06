@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert, Box, Button, Chip, CircularProgress,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, IconButton,
@@ -15,6 +15,7 @@ import { AddShipmentItemModal } from './AddShipmentItemModal';
 import { FiscalStatusCell } from './FiscalStatusCell';
 import type { Dispatch, ShipmentItem, ShipmentOrder, ShipmentOrderStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { RelativeDateFormatter } from '../../../shared/lib/utils/formatters';
 
 type Props = { tenantCode: string };
 type ConfirmAction = { type: string; id: string; label: string };
@@ -32,7 +33,8 @@ const STATUS_COLOR: Record<ShipmentOrderStatus, 'default' | 'info' | 'warning' |
 export function ShipmentOrdersPage({ tenantCode }: Props) {
   const { data, loading, error: fetchError } = useShipmentOrders(tenantCode);
   const { data: dispatchData } = useDispatches(tenantCode);
-  const [orders, setOrders] = useState<ShipmentOrder[]>([]);
+  const [localOrders, setLocalOrders] = useState<ShipmentOrder[] | null>(null);
+  const orders = localOrders ?? data ?? [];
 
   // Map shipmentOrderId → dispatch for fiscal status lookup
   const dispatchByOrder = useMemo(() => {
@@ -47,23 +49,21 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  useEffect(() => { if (data) setOrders(data); }, [data]);
-
   const handleCreated = (o: ShipmentOrder) => {
-    setOrders(prev => [o, ...prev]);
+    setLocalOrders(prev => [o, ...(prev ?? data ?? [])]);
     setCreateOpen(false);
     setSuccess(`Ordem "${o.orderNumber}" criada com sucesso.`);
   };
 
   const handleItemAdded = (orderId: string, item: ShipmentItem) => {
-    setOrders(prev => prev.map(o =>
+    setLocalOrders(prev => (prev ?? data ?? []).map(o =>
       o.id === orderId ? { ...o, items: [...o.items, item] } : o
     ));
     setAddItemOrder(null);
     setSuccess('Item adicionado com sucesso.');
   };
 
-  const handleTransition = (id: string, action: string, newStatus: ShipmentOrderStatus, label: string) => {
+  const handleTransition = (id: string, action: string, label: string) => {
     setConfirm({ type: action, id, label });
   };
 
@@ -77,7 +77,7 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
         'ready-to-ship': 'ReadyToShip', 'cancel': 'Cancelled',
       };
       const newStatus = actionToStatus[confirm.type];
-      if (newStatus) setOrders(prev => prev.map(o => o.id === confirm.id ? { ...o, status: newStatus } : o));
+      if (newStatus) setLocalOrders(prev => (prev ?? data ?? []).map(o => o.id === confirm.id ? { ...o, status: newStatus } : o));
       setSuccess(`Operação "${confirm.label}" realizada.`);
     } catch (err) {
       setMutationError(toUiErrorMessage(err, 'Erro ao alterar status.'));
@@ -132,7 +132,7 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
                 </TableCell>
                 <TableCell>{o.items.length}</TableCell>
                 <TableCell sx={{ fontSize: 12 }}>{o.recipientName ?? o.recipientCnpj ?? '-'}</TableCell>
-                <TableCell>{new Date(o.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                <TableCell>{RelativeDateFormatter.format(o.createdAt, false)}</TableCell>
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                   {o.status === 'Draft' && (
                     <Tooltip title="Adicionar Item">
@@ -143,22 +143,22 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
                   )}
                   {o.status === 'Draft' && (
                     <Tooltip title="Iniciar Separação">
-                      <Button size="small" onClick={() => handleTransition(o.id, 'start-picking', 'Picking', 'Iniciar Separação')}>Separar</Button>
+                      <Button size="small" onClick={() => handleTransition(o.id, 'start-picking', 'Iniciar Separação')}>Separar</Button>
                     </Tooltip>
                   )}
                   {o.status === 'Picking' && (
                     <Tooltip title="Iniciar Embalagem">
-                      <Button size="small" onClick={() => handleTransition(o.id, 'start-packing', 'Packing', 'Iniciar Embalagem')}>Embalar</Button>
+                      <Button size="small" onClick={() => handleTransition(o.id, 'start-packing', 'Iniciar Embalagem')}>Embalar</Button>
                     </Tooltip>
                   )}
                   {o.status === 'Packing' && (
                     <Tooltip title="Marcar Pronto p/ Despacho">
-                      <Button size="small" color="success" onClick={() => handleTransition(o.id, 'ready-to-ship', 'ReadyToShip', 'Pronto p/ Despacho')}>Pronto</Button>
+                      <Button size="small" color="success" onClick={() => handleTransition(o.id, 'ready-to-ship', 'Pronto p/ Despacho')}>Pronto</Button>
                     </Tooltip>
                   )}
                   {['Draft', 'Picking', 'Packing'].includes(o.status) && (
                     <Tooltip title="Cancelar">
-                      <IconButton size="small" color="error" onClick={() => handleTransition(o.id, 'cancel', 'Cancelled', 'Cancelar')}>
+                      <IconButton size="small" color="error" onClick={() => handleTransition(o.id, 'cancel', 'Cancelar')}>
                         <XCircle size={15} />
                       </IconButton>
                     </Tooltip>
