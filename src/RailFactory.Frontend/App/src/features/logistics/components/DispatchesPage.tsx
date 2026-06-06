@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Alert, Box, Button, Chip, CircularProgress, Paper,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Box, Button, Chip, CircularProgress, Paper,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
   Tooltip, IconButton, Typography,
 } from '@mui/material';
-import { CheckCircle, Package, Plus, Truck } from 'lucide-react';
+import { CheckCircle, Package, Plus, Printer, Truck } from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { ConfirmDialog } from '../../../shared/components/common/ConfirmDialog';
@@ -15,7 +15,10 @@ import { useCarriers } from '../hooks/useCarriers';
 import { useVehicles } from '../../fleet/hooks/useVehicles';
 import { usePeople } from '../../hr/hooks/usePeople';
 import { CreateDispatchModal } from './CreateDispatchModal';
+import { ConferenceModal } from './ConferenceModal';
+import { DispatchPrintView } from './DispatchPrintView';
 import { FiscalStatusCell } from './FiscalStatusCell';
+import { SnackbarAlert } from '../../../shared/components/common/SnackbarAlert';
 import type { Dispatch, DispatchStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 import { RelativeDateFormatter, CurrencyFormatter } from '../../../shared/lib/utils/formatters';
@@ -53,13 +56,26 @@ export function DispatchesPage({ tenantCode }: Props) {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [conferenceDispatch, setConferenceDispatch] = useState<Dispatch | null>(null);
+  const [printDispatch, setPrintDispatch] = useState<Dispatch | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
 
   const orderMap   = useMemo(() => toIdMap(orders),   [orders]);
   const carrierMap = useMemo(() => toIdMap(carriers),  [carriers]);
   const vehicleMap = useMemo(() => toIdMap(vehicles),  [vehicles]);
   const personMap  = useMemo(() => toIdMap(people),    [people]);
+
+  const handleConferenced = () => {
+    if (!conferenceDispatch) return;
+    setLocalDispatches(prev => (prev ?? dispatchData ?? []).map(d =>
+      d.id === conferenceDispatch.id ? { ...d, conferencedAt: new Date().toISOString() } : d
+    ));
+    setSuccess(`Despacho ${conferenceDispatch.trackingCode} conferido.`);
+    setConferenceDispatch(null);
+  };
 
   const handleCreated = (dispatch: Dispatch) => {
     setLocalDispatches(prev => [dispatch, ...(prev ?? dispatchData ?? [])]);
@@ -73,26 +89,26 @@ export function DispatchesPage({ tenantCode }: Props) {
 
   const handleConfirm = async () => {
     if (!confirm) return;
-    setConfirming(true); setMutationError(null); setSuccess(null);
+    const { dispatchId, action, label } = confirm;
+    setMutationError(null); setSuccess(null);
+    setConfirm(null);
+    setProcessingId(dispatchId);
     try {
-      await transitionDispatch(tenantCode, confirm.dispatchId, confirm.action);
+      await transitionDispatch(tenantCode, dispatchId, action);
       const actionToStatus: Record<string, DispatchStatus> = {
-        conference: 'Pending',
-        ship: 'InTransit',
-        deliver: 'Delivered',
+        conference: 'Pending', ship: 'InTransit', deliver: 'Delivered',
       };
-      const newStatus = actionToStatus[confirm.action];
+      const newStatus = actionToStatus[action];
       if (newStatus) {
         setLocalDispatches(prev => (prev ?? dispatchData ?? []).map(d =>
-          d.id === confirm.dispatchId ? { ...d, status: newStatus } : d
+          d.id === dispatchId ? { ...d, status: newStatus } : d
         ));
       }
-      setSuccess(`"${confirm.label}" realizado com sucesso.`);
+      setSuccess(`"${label}" realizado com sucesso.`);
     } catch (err) {
       setMutationError(toUiErrorMessage(err, 'Erro ao atualizar despacho.'));
     } finally {
-      setConfirming(false);
-      setConfirm(null);
+      setProcessingId(null);
     }
   };
 
@@ -101,16 +117,15 @@ export function DispatchesPage({ tenantCode }: Props) {
 
   return (
     <Box sx={{ p: 3 }}>
-      <ModuleHeader label="Despachos" icon={<Truck size={20} />} />
-
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-        <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>
-          Novo Despacho
-        </Button>
-      </Box>
-
-      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>{success}</Alert>}
-      {mutationError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setMutationError(null)}>{mutationError}</Alert>}
+      <ModuleHeader
+        label="Despachos"
+        icon={<Truck size={20} />}
+        action={
+          <Button variant="contained" size="small" startIcon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>
+            Novo Despacho
+          </Button>
+        }
+      />
 
       <TableContainer component={Paper} elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
         <Table size="small">
@@ -118,7 +133,6 @@ export function DispatchesPage({ tenantCode }: Props) {
             <TableRow>
               <TableCell>Rastreio</TableCell>
               <TableCell>Ordem</TableCell>
-              <TableCell>Transportadora</TableCell>
               <TableCell>Veículo</TableCell>
               <TableCell>Motorista</TableCell>
               <TableCell>Status</TableCell>
@@ -131,16 +145,16 @@ export function DispatchesPage({ tenantCode }: Props) {
           <TableBody>
             {dispatches.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   Nenhum despacho cadastrado.
                 </TableCell>
               </TableRow>
             )}
-            {dispatches.map(d => {
+            {dispatches.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(d => {
               const order = orderMap.get(d.shipmentOrderId);
-              const carrier = carrierMap.get(d.carrierId);
               const vehicle = d.vehicleId ? vehicleMap.get(d.vehicleId) : undefined;
               const driver = d.driverPersonId ? personMap.get(d.driverPersonId) : undefined;
+              const isProcessing = processingId === d.id;
               return (
                 <TableRow key={d.id} hover>
                   <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
@@ -154,7 +168,6 @@ export function DispatchesPage({ tenantCode }: Props) {
                       <Typography variant="caption" color="text.secondary">{order.recipientName}</Typography>
                     )}
                   </TableCell>
-                  <TableCell>{carrier?.name ?? '—'}</TableCell>
                   <TableCell>
                     {vehicle
                       ? <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>{vehicle.plate}</Typography>
@@ -178,12 +191,20 @@ export function DispatchesPage({ tenantCode }: Props) {
                   </TableCell>
                   <TableCell>{RelativeDateFormatter.format(d.createdAt, false)}</TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    <Tooltip title="Imprimir Romaneio">
+                      <IconButton
+                        size="small"
+                        onClick={() => setPrintDispatch(d)}
+                      >
+                        <Printer size={15} />
+                      </IconButton>
+                    </Tooltip>
                     {d.status === 'Pending' && !d.conferencedAt && (
-                      <Tooltip title="Conferir">
+                      <Tooltip title="Conferir itens">
                         <IconButton
                           size="small"
                           color="primary"
-                          onClick={() => handleTransition(d.id, 'conference', 'Conferir')}
+                          onClick={() => setConferenceDispatch(d)}
                         >
                           <CheckCircle size={15} />
                         </IconButton>
@@ -195,11 +216,12 @@ export function DispatchesPage({ tenantCode }: Props) {
                           size="small"
                           variant="contained"
                           color="warning"
-                          startIcon={<Package size={13} />}
+                          disabled={isProcessing}
+                          startIcon={isProcessing ? <CircularProgress size={13} color="inherit" /> : <Package size={13} />}
                           onClick={() => handleTransition(d.id, 'ship', 'Despachar')}
                           sx={{ fontSize: 12 }}
                         >
-                          Despachar
+                          {isProcessing ? 'Despachando...' : 'Despachar'}
                         </Button>
                       </Tooltip>
                     )}
@@ -209,11 +231,12 @@ export function DispatchesPage({ tenantCode }: Props) {
                           size="small"
                           variant="outlined"
                           color="success"
-                          startIcon={<CheckCircle size={13} />}
+                          disabled={isProcessing}
+                          startIcon={isProcessing ? <CircularProgress size={13} color="inherit" /> : <CheckCircle size={13} />}
                           onClick={() => handleTransition(d.id, 'deliver', 'Entregar')}
                           sx={{ fontSize: 12 }}
                         >
-                          Entregue
+                          {isProcessing ? 'Salvando...' : 'Entregue'}
                         </Button>
                       </Tooltip>
                     )}
@@ -223,14 +246,50 @@ export function DispatchesPage({ tenantCode }: Props) {
             })}
           </TableBody>
         </Table>
+        {dispatches.length > rowsPerPage && (
+          <TablePagination
+            component="div"
+            count={dispatches.length}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            rowsPerPageOptions={[25, 50, 100]}
+            onPageChange={(_, p) => setPage(p)}
+            onRowsPerPageChange={e => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            labelRowsPerPage="Por página:"
+            labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+          />
+        )}
       </TableContainer>
 
-      <CreateDispatchModal
-        open={createOpen}
-        tenantCode={tenantCode}
-        onCreated={handleCreated}
-        onClose={() => setCreateOpen(false)}
-      />
+      {createOpen && (
+        <CreateDispatchModal
+          open
+          tenantCode={tenantCode}
+          onCreated={handleCreated}
+          onClose={() => setCreateOpen(false)}
+        />
+      )}
+
+      {conferenceDispatch && orderMap.get(conferenceDispatch.shipmentOrderId) && (
+        <ConferenceModal
+          dispatch={conferenceDispatch}
+          order={orderMap.get(conferenceDispatch.shipmentOrderId)!}
+          tenantCode={tenantCode}
+          onConferenced={handleConferenced}
+          onClose={() => setConferenceDispatch(null)}
+        />
+      )}
+
+      {printDispatch && orderMap.get(printDispatch.shipmentOrderId) && (
+        <DispatchPrintView
+          dispatch={printDispatch}
+          order={orderMap.get(printDispatch.shipmentOrderId)!}
+          vehicle={printDispatch.vehicleId ? vehicleMap.get(printDispatch.vehicleId) : undefined}
+          driver={printDispatch.driverPersonId ? personMap.get(printDispatch.driverPersonId) : undefined}
+          carrier={carrierMap.get(printDispatch.carrierId)}
+          onClose={() => setPrintDispatch(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={!!confirm}
@@ -242,10 +301,12 @@ export function DispatchesPage({ tenantCode }: Props) {
         }
         confirmLabel={confirm?.label ?? 'Confirmar'}
         severity={confirm?.action === 'ship' ? 'warning' : 'primary'}
-        loading={confirming}
         onConfirm={handleConfirm}
         onCancel={() => setConfirm(null)}
       />
+
+      <SnackbarAlert message={success} severity="success" onClose={() => setSuccess(null)} />
+      <SnackbarAlert message={mutationError} severity="error" onClose={() => setMutationError(null)} duration={6000} />
     </Box>
   );
 }

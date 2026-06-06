@@ -99,7 +99,6 @@ public sealed class Vehicle : AggregateRoot<Guid>
 
         var assignment = DriverAssignment.Create(Id, driverPersonId, startDate, endDate, notes);
         _assignments.Add(assignment);
-        UpdatedAt = DateTimeOffset.UtcNow;
         return assignment;
     }
 }
