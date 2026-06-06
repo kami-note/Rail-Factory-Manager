@@ -11,6 +11,7 @@ import { Authorized } from '../../auth';
 import { retryFiscalEmission } from '../api/logistics';
 import { FiscalStatusCell } from './FiscalStatusCell';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { RelativeDateFormatter, TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
 import { RETRYABLE_FISCAL_STATUSES } from '../types';
 import { useFiscalDispatches } from '../hooks/useFiscalDispatches';
 import {
@@ -21,9 +22,7 @@ import type { Dispatch } from '../types';
 
 type Props = { tenantCode: string };
 
-function copyText(text: string) {
-  void navigator.clipboard.writeText(text);
-}
+const copyText = (text: string) => void TechnicalIdFormatter.copyToClipboard(text);
 
 export function FiscalMonitorPage({ tenantCode }: Props) {
   const [filter, setFilter] = useState<FiscalFilterKey>('all');
@@ -164,7 +163,7 @@ export function FiscalMonitorPage({ tenantCode }: Props) {
                     ) : <span style={{ color: '#bbb', fontSize: 12 }}>—</span>}
                   </TableCell>
                   <TableCell sx={{ color: 'text.secondary', fontSize: 12 }}>
-                    {d.dispatchedAt ? new Date(d.dispatchedAt).toLocaleString('pt-BR') : '—'}
+                    {RelativeDateFormatter.format(d.dispatchedAt)}
                   </TableCell>
                   <TableCell align="right">
                     {RETRYABLE_FISCAL_STATUSES.has(d.fiscalStatus ?? '') && (

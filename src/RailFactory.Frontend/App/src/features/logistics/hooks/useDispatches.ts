@@ -1,15 +1,10 @@
 import { useQuery } from '../../../shared/lib/useQuery';
-import { buildTenantHeaders } from '../../../shared/lib/http';
+import { listDispatches } from '../api/logistics';
 import type { Dispatch } from '../types';
 
 export function useDispatches(tenantCode: string) {
   return useQuery<Dispatch[]>(
-    (signal) =>
-      fetch('/api/logistics/dispatches', {
-        signal,
-        credentials: 'include',
-        headers: buildTenantHeaders(tenantCode),
-      }).then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.statusText)))),
+    (signal) => listDispatches(tenantCode, signal),
     [tenantCode],
     'Falha ao carregar despachos'
   );

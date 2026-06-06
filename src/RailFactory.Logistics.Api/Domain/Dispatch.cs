@@ -7,8 +7,8 @@ public sealed class Dispatch
     public Guid Id { get; private set; }
     public Guid ShipmentOrderId { get; private set; }
     public Guid CarrierId { get; private set; }
-    public Guid? VehicleId { get; private set; }
-    public Guid? DriverPersonId { get; private set; }
+    public Guid VehicleId { get; private set; }
+    public Guid DriverPersonId { get; private set; }
     public string TrackingCode { get; private set; } = string.Empty;
     public decimal FreightValueBrl { get; private set; }
     public DispatchStatus Status { get; private set; }
@@ -26,7 +26,7 @@ public sealed class Dispatch
     private Dispatch() { }
 
     public static Dispatch Create(Guid shipmentOrderId, Guid carrierId,
-        Guid? vehicleId, Guid? driverPersonId, decimal freightValueBrl)
+        Guid vehicleId, Guid driverPersonId, decimal freightValueBrl)
     {
         var trackingCode = $"RF-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
         return new Dispatch

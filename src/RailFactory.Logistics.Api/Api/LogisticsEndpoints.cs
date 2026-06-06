@@ -121,17 +121,11 @@ public static class LogisticsEndpoints
         catch (ArgumentException ex) { return Results.BadRequest(new { Error = ex.Message }); }
     }
 
-    private static async Task<IResult> HandleActivateCarrier(Guid id, ActivateCarrier useCase, CancellationToken ct)
-    {
-        try { await useCase.ExecuteAsync(id, ct); return Results.NoContent(); }
-        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
-    }
+    private static Task<IResult> HandleActivateCarrier(Guid id, ActivateCarrier useCase, CancellationToken ct)
+        => ExecuteTransitionAsync(id, useCase.ExecuteAsync, ct);
 
-    private static async Task<IResult> HandleDeactivateCarrier(Guid id, DeactivateCarrier useCase, CancellationToken ct)
-    {
-        try { await useCase.ExecuteAsync(id, ct); return Results.NoContent(); }
-        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
-    }
+    private static Task<IResult> HandleDeactivateCarrier(Guid id, DeactivateCarrier useCase, CancellationToken ct)
+        => ExecuteTransitionAsync(id, useCase.ExecuteAsync, ct);
 
     // ── Shipment Orders ───────────────────────────────────────────────────────
 
@@ -315,6 +309,10 @@ public static class LogisticsEndpoints
         o.Id, o.OrderNumber, o.ProductionOrderRef, o.Notes,
         Status = o.Status.ToString(),
         o.DeliveryLatitudeDeg, o.DeliveryLongitudeDeg, o.DeliveryCity,
+        o.RecipientCnpj, o.RecipientName, o.RecipientEmail,
+        o.RecipientStreet, o.RecipientNumber, o.RecipientDistrict,
+        o.RecipientCity, o.RecipientState, o.RecipientZipCode,
+        o.NatureOfOperation,
         o.CreatedAt, o.UpdatedAt,
         Items = o.Items.Select(i => new
         {

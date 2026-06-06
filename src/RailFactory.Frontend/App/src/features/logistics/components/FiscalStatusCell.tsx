@@ -3,6 +3,7 @@ import { Box, Chip, Stack, Tooltip, Typography } from '@mui/material';
 import { Copy, FileCheck2 } from 'lucide-react';
 import { FISCAL_COLOR, FISCAL_LABEL } from '../types';
 import type { FiscalStatus } from '../types';
+import { TechnicalIdFormatter } from '../../../shared/lib/utils/formatters';
 
 const AUTHORIZED_STATUSES = new Set<string>(['autorizado', 'CONCLUIDO']);
 const EMPTY = <Typography variant="caption" sx={{ color: '#bbb' }}>—</Typography>;
@@ -22,9 +23,7 @@ export function FiscalStatusCell({ status, accessKey, externalId, errorMessage }
   const isAuthorized = AUTHORIZED_STATUSES.has(status);
   const tooltipTitle = errorMessage ? `Erro SEFAZ: ${errorMessage}` : (externalId ? `ID Externo: ${externalId}` : '');
 
-  const copyKey = () => {
-    if (accessKey) void navigator.clipboard.writeText(accessKey);
-  };
+  const copyKey = () => { if (accessKey) void TechnicalIdFormatter.copyToClipboard(accessKey); };
 
   return (
     <Stack spacing={0.5} sx={{ alignItems: 'flex-start' }}>
