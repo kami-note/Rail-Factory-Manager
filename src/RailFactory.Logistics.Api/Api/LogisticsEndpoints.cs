@@ -337,6 +337,7 @@ public static class LogisticsEndpoints
         Status = d.Status.ToString(),
         d.FiscalExternalId, d.FiscalStatus, d.FiscalAccessKey, d.FiscalErrorMessage,
         d.MdfeExternalId, d.MdfeStatus, d.MdfeAccessKey, d.MdfeErrorMessage,
+        d.ShippingExternalId, d.ShippingStatus, d.ShippingLabelUrl, d.ShippingErrorMessage,
         d.VehiclePlate, d.VehicleRntrc, d.DriverCpf, d.DriverName,
         d.ConferencedAt, d.DispatchedAt, d.DeliveredAt, d.CreatedAt
     };
@@ -403,12 +404,13 @@ public static class LogisticsEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        // Fetch stored credentials for this tenant's fiscal integration to get the webhook secret.
-        using var config = await integrationClient.GetConfigAsync(tenantCode, "fiscal", ct);
+        // Fetch stored credentials for this tenant's integration category to get the webhook secret.
+        using var config = await integrationClient.GetConfigAsync(tenantCode, validator.Category, ct);
         if (config is null)
         {
             logger.LogWarning(
-                "No fiscal integration configured for tenant {TenantCode}. Webhook rejected.", tenantCode);
+                "No {Category} integration configured for tenant {TenantCode}. Webhook rejected.",
+                validator.Category, tenantCode);
             return Results.Unauthorized();
         }
 

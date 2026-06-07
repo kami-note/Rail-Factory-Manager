@@ -12,6 +12,7 @@ namespace RailFactory.Logistics.Api.Infrastructure.Adapters.Fiscal;
 public sealed class FocusNfeWebhookSignatureValidator : IWebhookSignatureValidator
 {
     public string Provider => "focusnfe";
+    public string Category => "fiscal";
     public string CredentialKey => "webhook_secret";
 
     public bool IsValid(string rawBody, HttpRequest request, string storedSecret)

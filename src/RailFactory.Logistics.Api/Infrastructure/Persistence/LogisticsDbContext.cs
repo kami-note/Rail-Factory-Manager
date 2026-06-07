@@ -147,6 +147,10 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.MdfeAccessKey).HasMaxLength(100);
             entity.Property(x => x.MdfeStatus).HasMaxLength(50);
             entity.Property(x => x.MdfeErrorMessage).HasMaxLength(500);
+            entity.Property(x => x.ShippingExternalId).HasMaxLength(200);
+            entity.Property(x => x.ShippingStatus).HasMaxLength(50);
+            entity.Property(x => x.ShippingLabelUrl).HasMaxLength(2000);
+            entity.Property(x => x.ShippingErrorMessage).HasMaxLength(500);
             entity.Property(x => x.VehiclePlate).HasMaxLength(15);
             entity.Property(x => x.VehicleRntrc).HasMaxLength(20);
             entity.Property(x => x.DriverCpf).HasMaxLength(20);
@@ -155,6 +159,7 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.HasIndex(x => x.ShipmentOrderId);
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.FiscalExternalId);
+            entity.HasIndex(x => x.ShippingExternalId);
             entity.HasIndex(x => x.CreatedAt);
         });
 

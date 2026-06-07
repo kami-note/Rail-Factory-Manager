@@ -11,6 +11,7 @@ namespace RailFactory.Logistics.Api.Infrastructure.Adapters.Fiscal;
 public sealed class PlugNotasWebhookSignatureValidator : IWebhookSignatureValidator
 {
     public string Provider => "plugnotas";
+    public string Category => "fiscal";
     public string CredentialKey => "api_key";
 
     public bool IsValid(string rawBody, HttpRequest request, string storedSecret)

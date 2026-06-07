@@ -18,7 +18,7 @@ const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as IntegrationCategory[];
 function WebhookUrlBox({ tenantCode, category, providerType }: { tenantCode: string; category: string; providerType: string }) {
   const [copied, setCopied] = useState(false);
   const baseUrl = window.location.origin;
-  const serviceMap: Record<string, string> = { fiscal: 'logistics', payment: 'logistics' };
+  const serviceMap: Record<string, string> = { fiscal: 'logistics', payment: 'logistics', shipping: 'logistics' };
   const service = serviceMap[category] ?? category;
   const webhookUrl = `${baseUrl}/api/${service}/webhooks/${providerType}/${tenantCode}`;
 
@@ -220,7 +220,7 @@ export function IntegrationsPage({ tenantCode }: Props) {
                         />
                         <Chip label={`Atualizado: ${new Date(integration.updatedAt).toLocaleDateString('pt-BR')}`} size="small" variant="outlined" />
                       </Box>
-                      {(category === 'fiscal' || category === 'payment') && providerType && providerType !== 'mock' && (
+                      {(category === 'fiscal' || category === 'payment' || category === 'shipping') && providerType && providerType !== 'mock' && (
                         <WebhookUrlBox tenantCode={tenantCode} category={category} providerType={providerType} />
                       )}
                     </Stack>
