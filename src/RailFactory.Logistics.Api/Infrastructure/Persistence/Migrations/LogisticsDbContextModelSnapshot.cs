@@ -143,6 +143,26 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ShipmentOrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ShippingErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ShippingExternalId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ShippingLabelUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ShippingStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ShippingTrackingCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(24)
@@ -171,6 +191,8 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("FiscalExternalId");
 
                     b.HasIndex("ShipmentOrderId");
+
+                    b.HasIndex("ShippingExternalId");
 
                     b.HasIndex("Status");
 
