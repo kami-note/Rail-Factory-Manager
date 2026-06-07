@@ -211,12 +211,14 @@ export function DispatchesPage({ tenantCode }: Props) {
                   <TableCell>
                     {d.shippingStatus ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Chip
-                          label={ME_STATUS_LABEL[d.shippingStatus] ?? d.shippingStatus}
-                          size="small"
-                          color={d.shippingStatus === 'order.delivered' ? 'success' : d.shippingStatus === 'error' ? 'error' : 'default'}
-                          variant="outlined"
-                        />
+                        <Tooltip title={d.shippingErrorMessage ?? d.shippingTrackingCode ?? ''}>
+                          <Chip
+                            label={ME_STATUS_LABEL[d.shippingStatus] ?? d.shippingStatus}
+                            size="small"
+                            color={d.shippingStatus === 'order.delivered' ? 'success' : d.shippingStatus === 'error' ? 'error' : 'default'}
+                            variant="outlined"
+                          />
+                        </Tooltip>
                         {d.shippingLabelUrl && (
                           <Tooltip title="Abrir etiqueta">
                             <IconButton size="small" component="a" href={d.shippingLabelUrl} target="_blank" rel="noopener noreferrer">

@@ -109,7 +109,10 @@ public sealed class LogisticsShippingDispatcher(
                 logger.LogError(ex,
                     "Shipping label request failed for message {MessageId} (tenant {TenantCode}).",
                     message.Id, tenant.Code);
-                message.MarkTransientFailure(ex.Message);
+                if (message.AttemptCount >= 4)
+                    message.MarkDeadLetter(ex.Message);
+                else
+                    message.MarkTransientFailure(ex.Message);
             }
         }
 
@@ -185,6 +188,9 @@ public sealed class LogisticsShippingDispatcher(
             InsuredValueBrl: insuredValue > 0 ? insuredValue : 1m);
 
         var result = await adapter.RequestLabelAsync(labelRequest, cancellationToken);
+
+        if (result.Status == "error")
+            throw new InvalidOperationException(result.ErrorMessage ?? "Shipping provider returned an error.");
 
         dispatch.UpdateShippingStatus(result.ExternalId, result.Status, result.LabelUrl, result.TrackingCode, result.ErrorMessage);
 

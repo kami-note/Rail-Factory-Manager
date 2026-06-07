@@ -68,8 +68,7 @@ public static class LogisticsModule
         services.AddScoped<IInboundWebhookHandler, PlugNotasFiscalWebhookHandler>();
         services.AddScoped<IInboundWebhookHandler, FocusNfeFiscalWebhookHandler>();
 
-        // Shipping adapter factory + signature validators
-        services.AddScoped<ITenantAdapterFactory<IShippingAdapter>, ShippingAdapterFactory>();
+        // Shipping signature validators
         services.AddSingleton<IWebhookSignatureValidator, MelhorEnvioWebhookSignatureValidator>();
 
         // Shipping webhook handlers
