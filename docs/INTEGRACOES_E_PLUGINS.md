@@ -24,9 +24,10 @@ Os plugins abaixo foram mapeados e homologados quanto à disponibilidade de APIs
 ### 2.1. Fiscal e Tributário (SEFAZ)
 *Responsabilidade: `Logistics.Api` (Emissão Outbound) e `SupplyChain.Api` (Captura Inbound)*
 
-*   🔌 **Plugin: PlugNotas (Recomendado)**
+*   ✅ **Plugin: PlugNotas (Implementado)**
     *   **Funcionalidade:** Emissão de NFe, CTe e MDFe abstrata (envio via JSON e webhooks assíncronos).
     *   **Developer Experience:** Excelente. Possui um **Sandbox gratuito e público** (`api.sandbox.plugnotas.com.br`) com token genérico liberado, permitindo codificar e testar imediatamente sem contrato.
+    *   **Status:** Adapter, dispatcher, webhook handler e UI implementados. Pendente: cadastrar emitente no painel sandbox para autorização real.
 *   🔌 **Plugin: Focus NFe**
     *   **Funcionalidade:** Emissão fiscal.
     *   **Developer Experience:** Possui ambiente de homologação (`homologacao.focusnfe.com.br`) e Collections públicas do Postman, emitindo notas sem validade tributária para testes.
@@ -43,9 +44,10 @@ Os plugins abaixo foram mapeados e homologados quanto à disponibilidade de APIs
 ### 2.3. Logística e Gestão de Frete (TMS)
 *Responsabilidade: `Logistics.Api`*
 
-*   🔌 **Plugin: Melhor Envio**
+*   ✅ **Plugin: Melhor Envio (Implementado)**
     *   **Funcionalidade:** Cotação e geração de etiquetas para encomendas fracionadas (Correios/Jadlog).
     *   **Developer Experience:** Muito boa. Possui o `sandbox.melhorenvio.com.br` com saldo fictício. O sistema avança o status do pacote automaticamente (Postado -> Entregue) a cada 15 minutos para testarmos a rastreabilidade.
+    *   **Status:** Adapter (fluxo cart→checkout→generate→print), dispatcher, webhook handler (HMAC-SHA256) e UI implementados. Coluna Etiqueta na tela de Despachos com link para PDF e tracking code. Pendente: criar conta no sandbox e obter access_token OAuth2.
 *   🔌 **Plugin: Intelipost / RoutEasy**
     *   **Funcionalidade:** Hub logístico corporativo e roteirização otimizada para a frota do módulo `Fleet`.
     *   **Developer Experience:** Acesso ao Sandbox geralmente restrito após acordo comercial.
