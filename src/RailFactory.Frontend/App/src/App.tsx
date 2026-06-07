@@ -9,7 +9,7 @@ import { RolesManagementPage, UsersManagementPage, AuditPage } from './features/
 import { WorkCentersPage, BomsPage, ProductionOrdersPage } from './features/production';
 import { PeoplePage } from './features/hr';
 import { FleetPage } from './features/fleet';
-import { CarriersPage, DispatchesPage, FiscalMonitorPage, ShipmentOrdersPage } from './features/logistics';
+import { CarriersPage, DispatchesPage, FiscalMonitorPage, FiscalSettingsPage, ShipmentOrdersPage } from './features/logistics';
 import { IntegrationsPage } from './features/integrations';
 import { TenantManagementPage } from './features/tenants';
 import { TenantSelector } from './shared/components/TenantSelector';
@@ -233,6 +233,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
             <Route path="logistics/shipment-orders" element={<ShipmentOrdersPage tenantCode={tenantCode} />} />
             <Route path="logistics/dispatches" element={<DispatchesPage tenantCode={tenantCode} />} />
             <Route path="logistics/nfe-monitor" element={<FiscalMonitorPage tenantCode={tenantCode} />} />
+            <Route path="logistics/fiscal-settings" element={<FiscalSettingsPage tenantCode={tenantCode} />} />
             <Route path="settings/integrations" element={<IntegrationsPage tenantCode={tenantCode} />} />
             <Route path="settings/tenants" element={<TenantManagementPage tenantCode={tenantCode} />} />
             <Route path="*" element={<Navigate to="/app" replace />} />

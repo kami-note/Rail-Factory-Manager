@@ -36,9 +36,10 @@ type Props = {
   carrierName?: string;
   onClose: () => void;
   onTransition: (id: string, action: string, label: string) => void;
+  onCreateDispatch?: (orderId: string) => void;
 };
 
-export function ShipmentOrderDetailPanel({ order, dispatch, carrierName, onClose, onTransition }: Props) {
+export function ShipmentOrderDetailPanel({ order, dispatch, carrierName, onClose, onTransition, onCreateDispatch }: Props) {
   const totalWeight = order.items.reduce((s, i) => s + i.weightKg * i.quantity, 0);
   const totalVolume = order.items.reduce((s, i) => s + i.volumeCbm * i.quantity, 0);
   const totalValue = order.items.every(i => !i.unitValue) ? null
@@ -246,13 +247,18 @@ export function ShipmentOrderDetailPanel({ order, dispatch, carrierName, onClose
         {['Draft', 'Picking', 'Packing'].includes(order.status) && (
           <Stack spacing={1} sx={{ px: 2.5, py: 2, borderTop: 1, borderColor: 'divider' }}>
             {order.status === 'Draft' && (
-              <Button
-                fullWidth variant="contained" color="info"
-                startIcon={<PackageOpen size={16} />}
-                onClick={() => { onTransition(order.id, 'start-picking', 'Iniciar Separação'); onClose(); }}
-              >
-                Iniciar Separação
-              </Button>
+              <Tooltip title={order.items.length === 0 ? 'Adicione pelo menos 1 item antes de separar' : ''}>
+                <span>
+                  <Button
+                    fullWidth variant="contained" color="info"
+                    startIcon={<PackageOpen size={16} />}
+                    disabled={order.items.length === 0}
+                    onClick={() => { onTransition(order.id, 'start-picking', 'Iniciar Separação'); onClose(); }}
+                  >
+                    Iniciar Separação
+                  </Button>
+                </span>
+              </Tooltip>
             )}
             {order.status === 'Picking' && (
               <Button
@@ -285,13 +291,23 @@ export function ShipmentOrderDetailPanel({ order, dispatch, carrierName, onClose
         )}
 
         {order.status === 'ReadyToShip' && (
-          <Stack sx={{ px: 2.5, py: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Truck size={16} color="var(--mui-palette-success-main, #2e7d32)" />
-              <Typography variant="body2" sx={{ fontWeight: 700, color: 'success.main' }}>
-                Pronta para despacho — crie o despacho na aba Despachos.
-              </Typography>
-            </Stack>
+          <Stack spacing={1} sx={{ px: 2.5, py: 2, borderTop: 1, borderColor: 'divider' }}>
+            {onCreateDispatch ? (
+              <Button
+                fullWidth variant="contained" color="success"
+                startIcon={<Truck size={16} />}
+                onClick={() => { onCreateDispatch(order.id); onClose(); }}
+              >
+                Criar Despacho
+              </Button>
+            ) : (
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                <Truck size={16} color="var(--mui-palette-success-main, #2e7d32)" />
+                <Typography variant="body2" sx={{ fontWeight: 700, color: 'success.main' }}>
+                  Pronta para despacho — crie o despacho na aba Despachos.
+                </Typography>
+              </Stack>
+            )}
           </Stack>
         )}
 

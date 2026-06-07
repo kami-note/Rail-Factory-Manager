@@ -1,5 +1,5 @@
 import { buildTenantHeaders, fetchJsonOrThrow } from '../../../shared/lib/http';
-import type { Carrier, Dispatch, ShipmentOrder, ShipmentItem } from '../types';
+import type { Carrier, Dispatch, ShipmentOrder, ShipmentItem, TenantFiscalProfile } from '../types';
 
 const BASE = '/api/logistics';
 
@@ -107,6 +107,7 @@ export async function transitionShipmentOrder(tenantCode: string, id: string, ac
 
 export async function createDispatch(tenantCode: string, body: {
   shipmentOrderId: string; carrierId: string; vehicleId: string; driverPersonId: string;
+  vehiclePlate?: string; vehicleRntrc?: string; driverCpf?: string; driverName?: string;
 }): Promise<Dispatch> {
   return fetchJsonOrThrow<Dispatch>(
     `${BASE}/dispatches`,
@@ -149,5 +150,26 @@ export async function issueFiscalDocument(tenantCode: string, dispatchId: string
     `${BASE}/dispatches/${dispatchId}/fiscal-document`,
     { method: 'POST', credentials: 'include', headers: { ...buildTenantHeaders(tenantCode), 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
     'Erro ao emitir documento fiscal'
+  );
+}
+
+// ── Fiscal Profile ─────────────────────────────────────────────────────────────
+
+export async function getFiscalProfile(tenantCode: string, signal?: AbortSignal): Promise<TenantFiscalProfile | null> {
+  const res = await fetch(`${BASE}/fiscal-profile`, {
+    credentials: 'include',
+    headers: buildTenantHeaders(tenantCode),
+    signal,
+  });
+  if (res.status === 204) return null;
+  if (!res.ok) throw new Error('Erro ao carregar perfil fiscal');
+  return res.json();
+}
+
+export async function upsertFiscalProfile(tenantCode: string, body: Omit<TenantFiscalProfile, 'updatedAt'>): Promise<TenantFiscalProfile> {
+  return fetchJsonOrThrow<TenantFiscalProfile>(
+    `${BASE}/fiscal-profile`,
+    { method: 'PUT', credentials: 'include', headers: { ...buildTenantHeaders(tenantCode), 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+    'Erro ao salvar perfil fiscal'
   );
 }

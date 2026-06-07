@@ -8,6 +8,7 @@ using RailFactory.Logistics.Api.Application.Dispatches;
 using RailFactory.Logistics.Api.Application.Ports;
 using RailFactory.Logistics.Api.Application.Shipments;
 using RailFactory.Logistics.Api.Application.Fiscal;
+using RailFactory.Logistics.Api.Application.FiscalProfiles;
 using RailFactory.Logistics.Api.Infrastructure.Adapters.Fiscal;
 using RailFactory.Logistics.Api.Infrastructure.Integration;
 using RailFactory.Logistics.Api.Infrastructure.Persistence;
@@ -64,6 +65,10 @@ public static class LogisticsModule
 
         // Webhook event repository
         services.AddScoped<IInboundWebhookEventRepository, PostgresInboundWebhookEventRepository>();
+
+        services.AddScoped<IFiscalProfileRepository, PostgresFiscalProfileRepository>();
+        services.AddScoped<GetFiscalProfile>();
+        services.AddScoped<UpsertFiscalProfile>();
 
         services.AddScoped<ICarrierRepository, PostgresCarrierRepository>();
         services.AddScoped<IShipmentOrderRepository, PostgresShipmentOrderRepository>();

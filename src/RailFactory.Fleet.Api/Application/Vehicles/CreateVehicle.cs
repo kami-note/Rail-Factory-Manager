@@ -4,7 +4,7 @@ using RailFactory.Fleet.Api.Domain;
 namespace RailFactory.Fleet.Api.Application.Vehicles;
 
 public sealed record CreateVehicleInput(
-    string Plate, string Chassis, string Renavam,
+    string Plate, string Chassis, string Renavam, string? Rntrc,
     string Type, decimal MaxWeightKg, decimal MaxVolumeCbm, DateOnly LicenseExpiry);
 
 public sealed class CreateVehicle(IVehicleRepository repository)
@@ -18,7 +18,7 @@ public sealed class CreateVehicle(IVehicleRepository repository)
         if (await repository.ExistsByPlateAsync(plate, cancellationToken))
             throw new InvalidOperationException($"A vehicle with plate '{plate}' already exists.");
 
-        var vehicle = Vehicle.Create(plate, input.Chassis, input.Renavam, type,
+        var vehicle = Vehicle.Create(plate, input.Chassis, input.Renavam, input.Rntrc, type,
             input.MaxWeightKg, input.MaxVolumeCbm, input.LicenseExpiry);
 
         await repository.AddAsync(vehicle, cancellationToken);

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using RailFactory.BuildingBlocks.Events;
 using RailFactory.Logistics.Api.Application.Ports;
 using RailFactory.Logistics.Api.Domain;
 using RailFactory.Logistics.Api.Infrastructure.Persistence;
@@ -71,22 +72,60 @@ internal static class FiscalWebhookHandlerCore
             errorMessage = motivoProp.GetString();
         }
 
+        string? trackingCode = null;
+        if (externalId.StartsWith("NF-RF-", StringComparison.OrdinalIgnoreCase))
+            trackingCode = externalId[3..];
+        else if (externalId.StartsWith("MDFE-RF-", StringComparison.OrdinalIgnoreCase))
+            trackingCode = externalId[5..];
+        else if (externalId.StartsWith("RF-", StringComparison.OrdinalIgnoreCase))
+            trackingCode = externalId;
+
         var dispatch = await db.Dispatches
-            .FirstOrDefaultAsync(d => d.FiscalExternalId == externalId, cancellationToken);
+            .FirstOrDefaultAsync(d =>
+                d.FiscalExternalId == externalId ||
+                d.MdfeExternalId == externalId ||
+                (trackingCode != null && d.TrackingCode == trackingCode), cancellationToken);
 
         if (dispatch is null)
         {
             logger.LogWarning(
-                "No dispatch found with FiscalExternalId='{ExternalId}' (provider '{Provider}').",
+                "No dispatch found matching correlation ID '{ExternalId}' (provider '{Provider}').",
                 externalId, webhookEvent.Provider);
             return;
         }
 
-        dispatch.UpdateFiscalStatus(externalId, status, accessKey, errorMessage);
+        bool isMdfe = externalId.StartsWith("MDFE-", StringComparison.OrdinalIgnoreCase) || externalId == dispatch.MdfeExternalId;
+
+        if (isMdfe)
+        {
+            dispatch.UpdateMdfeStatus(externalId, status, accessKey, errorMessage);
+        }
+        else
+        {
+            dispatch.UpdateFiscalStatus(externalId, status, accessKey, errorMessage);
+
+            // If NF-e is now authorized and the dispatch has vehicle data, queue MDF-e emission
+            if (IsNfeAuthorized(status) && !string.IsNullOrEmpty(dispatch.VehiclePlate) && string.IsNullOrEmpty(dispatch.MdfeExternalId))
+            {
+                var mdfePayload = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    dispatchId = dispatch.Id,
+                    shipmentOrderId = dispatch.ShipmentOrderId,
+                    nfeAccessKey = accessKey ?? dispatch.FiscalAccessKey,
+                });
+                db.OutboxMessages.Add(LogisticsOutboxMessage.Create(
+                    IntegrationConstants.LogisticsEvents.MdfeEmissionRequested,
+                    mdfePayload));
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "Dispatch {DispatchId} fiscal status updated to '{Status}' via {Provider} webhook.",
             dispatch.Id, status, webhookEvent.Provider);
     }
+
+    private static bool IsNfeAuthorized(string status) =>
+        status is "autorizado" or "CONCLUIDO" or "authorized";
 }

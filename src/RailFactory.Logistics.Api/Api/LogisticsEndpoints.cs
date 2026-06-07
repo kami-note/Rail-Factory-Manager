@@ -8,6 +8,7 @@ using RailFactory.Logistics.Api.Api.Requests;
 using RailFactory.Logistics.Api.Application.Carriers;
 using RailFactory.Logistics.Api.Application.Dispatches;
 using RailFactory.Logistics.Api.Application.Fiscal;
+using RailFactory.Logistics.Api.Application.FiscalProfiles;
 using RailFactory.Logistics.Api.Application.Ports;
 using RailFactory.Logistics.Api.Application.Shipments;
 using RailFactory.Logistics.Api.Domain;
@@ -88,6 +89,12 @@ public static class LogisticsEndpoints
             .RequirePermission(SystemPermissions.Logistics.Fiscal);
 
         secure.MapPut("/dispatches/{id:guid}/retry-fiscal", HandleRetryFiscalEmission)
+            .RequirePermission(SystemPermissions.Logistics.Fiscal);
+
+        // Tenant fiscal profile
+        secure.MapGet("/fiscal-profile", HandleGetFiscalProfile)
+            .RequirePermission(SystemPermissions.Logistics.Read);
+        secure.MapPut("/fiscal-profile", HandleUpsertFiscalProfile)
             .RequirePermission(SystemPermissions.Logistics.Fiscal);
 
         // Inbound webhooks — public endpoint, no auth (providers POST here).
@@ -240,7 +247,8 @@ public static class LogisticsEndpoints
         try
         {
             var dispatch = await useCase.ExecuteAsync(
-                new CreateDispatchInput(req.ShipmentOrderId, req.CarrierId, req.VehicleId, req.DriverPersonId), ct);
+                new CreateDispatchInput(req.ShipmentOrderId, req.CarrierId, req.VehicleId, req.DriverPersonId,
+                    req.VehiclePlate, req.VehicleRntrc, req.DriverCpf, req.DriverName), ct);
             return Results.Created($"{ApiGroup}/dispatches/{dispatch.Id}", MapDispatchResponse(dispatch));
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
@@ -328,6 +336,8 @@ public static class LogisticsEndpoints
         d.TrackingCode, d.FreightValueBrl,
         Status = d.Status.ToString(),
         d.FiscalExternalId, d.FiscalStatus, d.FiscalAccessKey, d.FiscalErrorMessage,
+        d.MdfeExternalId, d.MdfeStatus, d.MdfeAccessKey, d.MdfeErrorMessage,
+        d.VehiclePlate, d.VehicleRntrc, d.DriverCpf, d.DriverName,
         d.ConferencedAt, d.DispatchedAt, d.DeliveredAt, d.CreatedAt
     };
 
@@ -445,4 +455,37 @@ public static class LogisticsEndpoints
 
         return Results.Ok(new { status = "accepted" });
     }
+
+    // ── Fiscal Profile ────────────────────────────────────────────────────────
+
+    private static async Task<IResult> HandleGetFiscalProfile(GetFiscalProfile useCase, CancellationToken ct)
+    {
+        var profile = await useCase.ExecuteAsync(ct);
+        if (profile is null) return Results.NoContent();
+        return Results.Ok(MapFiscalProfileResponse(profile));
+    }
+
+    private static async Task<IResult> HandleUpsertFiscalProfile(
+        UpsertFiscalProfileRequest req, UpsertFiscalProfile useCase, CancellationToken ct)
+    {
+        var profile = await useCase.ExecuteAsync(new UpsertFiscalProfileInput(
+            req.CfopPadraoIntraestadual, req.CfopPadraoInterestadual, req.UfOrigem,
+            req.IcmsRate, req.IcmsCst, req.PisCst, req.CofinsCst,
+            req.IpiRate, req.IcmsOrigin), ct);
+        return Results.Ok(MapFiscalProfileResponse(profile));
+    }
+
+    private static object MapFiscalProfileResponse(Domain.TenantFiscalProfile p) => new
+    {
+        p.CfopPadraoIntraestadual,
+        p.CfopPadraoInterestadual,
+        p.UfOrigem,
+        p.IcmsRate,
+        p.IcmsCst,
+        p.PisCst,
+        p.CofinsCst,
+        p.IpiRate,
+        p.IcmsOrigin,
+        p.UpdatedAt,
+    };
 }

@@ -38,6 +38,7 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
   const [plate, setPlate] = useState('');
   const [chassis, setChassis] = useState('');
   const [renavam, setRenavam] = useState('');
+  const [rntrc, setRntrc] = useState('');
   const [type, setType] = useState('Truck');
   const [maxWeightKg, setMaxWeightKg] = useState('');
   const [maxVolumeCbm, setMaxVolumeCbm] = useState('');
@@ -47,7 +48,7 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
 
   useEffect(() => {
     if (!open) {
-      setPlate(''); setChassis(''); setRenavam(''); setType('Truck');
+      setPlate(''); setChassis(''); setRenavam(''); setRntrc(''); setType('Truck');
       setMaxWeightKg(''); setMaxVolumeCbm(''); setLicenseExpiry('');
       setError(null); setSaving(false);
     }
@@ -70,6 +71,7 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
         plate: plate.trim().toUpperCase(),
         chassis: chassis.trim().toUpperCase(),
         renavam: renavam.trim(),
+        rntrc: rntrc.trim() || undefined,
         type,
         maxWeightKg: parseFloat(maxWeightKg),
         maxVolumeCbm: parseFloat(maxVolumeCbm),
@@ -128,15 +130,27 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
             />
           </Stack>
 
-          <TextField
-            label="Chassi"
-            size="small"
-            fullWidth
-            value={chassis}
-            onChange={e => setChassis(e.target.value.toUpperCase())}
-            placeholder="9BWZZZ377VT004251"
-            slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }}
-          />
+          <Stack direction="row" spacing={2}>
+            <TextField
+              label="Chassi"
+              size="small"
+              sx={{ flexGrow: 1 }}
+              value={chassis}
+              onChange={e => setChassis(e.target.value.toUpperCase())}
+              placeholder="9BWZZZ377VT004251"
+              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }}
+            />
+            <TextField
+              label="RNTRC"
+              size="small"
+              sx={{ width: 140 }}
+              value={rntrc}
+              onChange={e => setRntrc(e.target.value)}
+              placeholder="12345678"
+              helperText="Opcional — para MDF-e"
+              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }}
+            />
+          </Stack>
 
           <Stack direction="row" spacing={2}>
             <TextField

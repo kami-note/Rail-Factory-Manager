@@ -38,10 +38,42 @@ public sealed record NfeStatusResult(
     string? AccessKey,
     string? ErrorMessage);
 
+// ── MDF-e ─────────────────────────────────────────────────────────────────────
+
+public sealed record MdfeVehicle(string Plate, string? Rntrc);
+
+public sealed record MdfeDriver(string CpfCnpj, string Name);
+
+public sealed record MdfeNfeLink(string AccessKey, string Cte = "");
+
+public sealed record MdfeRequest(
+    string TenantId,
+    string RefCode,
+    MdfeVehicle Vehicle,
+    MdfeDriver Driver,
+    string UfInicio,
+    string UfFim,
+    IReadOnlyList<string> UfsPercorridas,
+    decimal TotalWeightKg,
+    decimal TotalValueBrl,
+    IReadOnlyList<MdfeNfeLink> NfeLinks,
+    string? WebhookCallbackUrl = null);
+
+public sealed record MdfeEmissionResult(
+    string ExternalId,
+    string Status,
+    string? AccessKey,
+    string? PdfUrl,
+    string? ErrorMessage);
+
+// ── Interface ─────────────────────────────────────────────────────────────────
+
 public interface IFiscalIssuerAdapter
 {
     string ProviderType { get; }
     Task<NfeEmissionResult> EmitirNfeAsync(NfeRequest request, CancellationToken cancellationToken = default);
     Task<NfeStatusResult> ConsultarStatusAsync(string externalId, CancellationToken cancellationToken = default);
     Task<bool> CancelarAsync(string externalId, string justificativa, CancellationToken cancellationToken = default);
+    Task<MdfeEmissionResult> EmitirMdfeAsync(MdfeRequest request, CancellationToken cancellationToken = default);
+    Task<bool> EncerrarMdfeAsync(string externalId, string ufEncerramento, CancellationToken cancellationToken = default);
 }

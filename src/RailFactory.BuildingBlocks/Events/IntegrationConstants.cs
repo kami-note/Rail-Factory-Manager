@@ -58,6 +58,12 @@ public static class IntegrationConstants
         /// Processed by LogisticsFiscalDispatcher.
         /// </summary>
         public const string FiscalEmissionRequested = "logistics.fiscal_emission_requested";
+
+        /// <summary>
+        /// Published once per dispatch after NF-e is authorized, when MDF-e emission is required.
+        /// Processed by LogisticsFiscalDispatcher.
+        /// </summary>
+        public const string MdfeEmissionRequested = "logistics.mdfe_emission_requested";
     }
 
     /// <summary>

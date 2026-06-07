@@ -4,11 +4,12 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
   Tooltip, IconButton, Typography,
 } from '@mui/material';
-import { CheckCircle, Package, Plus, Printer, Truck } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Package, Plus, Printer, RefreshCw, Truck } from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { ConfirmDialog } from '../../../shared/components/common/ConfirmDialog';
-import { transitionDispatch } from '../api/logistics';
+import { transitionDispatch, retryFiscalEmission } from '../api/logistics';
+import { RETRYABLE_FISCAL_STATUSES } from '../types';
 import { useDispatches } from '../hooks/useDispatches';
 import { useShipmentOrders } from '../hooks/useShipmentOrders';
 import { useCarriers } from '../hooks/useCarriers';
@@ -17,6 +18,7 @@ import { usePeople } from '../../hr/hooks/usePeople';
 import { CreateDispatchModal } from './CreateDispatchModal';
 import { ConferenceModal } from './ConferenceModal';
 import { DispatchPrintView } from './DispatchPrintView';
+import { DamdfePrintView } from './DamdfePrintView';
 import { FiscalStatusCell } from './FiscalStatusCell';
 import { SnackbarAlert } from '../../../shared/components/common/SnackbarAlert';
 import type { Dispatch, DispatchStatus } from '../types';
@@ -55,9 +57,11 @@ export function DispatchesPage({ tenantCode }: Props) {
   const dispatches = localDispatches ?? dispatchData ?? [];
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [conferenceDispatch, setConferenceDispatch] = useState<Dispatch | null>(null);
   const [printDispatch, setPrintDispatch] = useState<Dispatch | null>(null);
+  const [damdfeDispatch, setDamdfeDispatch] = useState<Dispatch | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -81,6 +85,19 @@ export function DispatchesPage({ tenantCode }: Props) {
     setLocalDispatches(prev => [dispatch, ...(prev ?? dispatchData ?? [])]);
     setCreateOpen(false);
     setSuccess(`Despacho ${dispatch.trackingCode} criado.`);
+  };
+
+  const handleRetryFiscal = async (dispatchId: string) => {
+    setRetryingId(dispatchId);
+    setMutationError(null);
+    try {
+      await retryFiscalEmission(tenantCode, dispatchId);
+      setSuccess('Reemissão de NF-e solicitada.');
+    } catch (err) {
+      setMutationError(toUiErrorMessage(err, 'Erro ao reemitir NF-e.'));
+    } finally {
+      setRetryingId(null);
+    }
   };
 
   const handleTransition = (dispatchId: string, action: string, label: string) => {
@@ -137,6 +154,7 @@ export function DispatchesPage({ tenantCode }: Props) {
               <TableCell>Motorista</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>NF-e</TableCell>
+              <TableCell>MDF-e</TableCell>
               <TableCell align="right">Frete (R$)</TableCell>
               <TableCell>Criado em</TableCell>
               <TableCell />
@@ -145,7 +163,7 @@ export function DispatchesPage({ tenantCode }: Props) {
           <TableBody>
             {dispatches.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   Nenhum despacho cadastrado.
                 </TableCell>
               </TableRow>
@@ -155,8 +173,10 @@ export function DispatchesPage({ tenantCode }: Props) {
               const vehicle = d.vehicleId ? vehicleMap.get(d.vehicleId) : undefined;
               const driver = d.driverPersonId ? personMap.get(d.driverPersonId) : undefined;
               const isProcessing = processingId === d.id;
+              const isRetrying = retryingId === d.id;
+              const hasFiscalError = !!d.fiscalStatus && RETRYABLE_FISCAL_STATUSES.has(d.fiscalStatus);
               return (
-                <TableRow key={d.id} hover>
+                <TableRow key={d.id} hover sx={hasFiscalError ? { bgcolor: 'error.50' } : undefined}>
                   <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
                     {d.trackingCode}
                   </TableCell>
@@ -184,6 +204,9 @@ export function DispatchesPage({ tenantCode }: Props) {
                   <TableCell>
                     <FiscalStatusCell status={d.fiscalStatus} accessKey={d.fiscalAccessKey} externalId={d.fiscalExternalId} errorMessage={d.fiscalErrorMessage} />
                   </TableCell>
+                  <TableCell>
+                    <FiscalStatusCell status={d.mdfeStatus ?? null} accessKey={d.mdfeAccessKey} externalId={d.mdfeExternalId} errorMessage={d.mdfeErrorMessage} label="MDF-e" />
+                  </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" sx={{ fontWeight: 800 }}>
                       {CurrencyFormatter.format(d.freightValueBrl)}
@@ -191,6 +214,25 @@ export function DispatchesPage({ tenantCode }: Props) {
                   </TableCell>
                   <TableCell>{RelativeDateFormatter.format(d.createdAt, false)}</TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    {hasFiscalError && (
+                      <Tooltip title={d.fiscalErrorMessage ? `Erro NF-e: ${d.fiscalErrorMessage}` : 'Erro na emissão da NF-e — clique para retentar'}>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          disabled={isRetrying}
+                          onClick={() => handleRetryFiscal(d.id)}
+                        >
+                          {isRetrying
+                            ? <CircularProgress size={15} color="inherit" />
+                            : <RefreshCw size={15} />}
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {hasFiscalError && (
+                      <Tooltip title="Erro na NF-e">
+                        <AlertTriangle size={14} color="var(--mui-palette-error-main, #d32f2f)" style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                      </Tooltip>
+                    )}
                     <Tooltip title="Imprimir Romaneio">
                       <IconButton
                         size="small"
@@ -199,6 +241,17 @@ export function DispatchesPage({ tenantCode }: Props) {
                         <Printer size={15} />
                       </IconButton>
                     </Tooltip>
+                    {d.mdfeExternalId && (
+                      <Tooltip title="Imprimir DA-MDF-e">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => setDamdfeDispatch(d)}
+                        >
+                          <Printer size={15} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     {d.status === 'Pending' && !d.conferencedAt && (
                       <Tooltip title="Conferir itens">
                         <IconButton
@@ -288,6 +341,16 @@ export function DispatchesPage({ tenantCode }: Props) {
           driver={printDispatch.driverPersonId ? personMap.get(printDispatch.driverPersonId) : undefined}
           carrier={carrierMap.get(printDispatch.carrierId)}
           onClose={() => setPrintDispatch(null)}
+        />
+      )}
+
+      {damdfeDispatch && orderMap.get(damdfeDispatch.shipmentOrderId) && (
+        <DamdfePrintView
+          dispatch={damdfeDispatch}
+          order={orderMap.get(damdfeDispatch.shipmentOrderId)!}
+          vehicle={damdfeDispatch.vehicleId ? vehicleMap.get(damdfeDispatch.vehicleId) : undefined}
+          driver={damdfeDispatch.driverPersonId ? personMap.get(damdfeDispatch.driverPersonId) : undefined}
+          onClose={() => setDamdfeDispatch(null)}
         />
       )}
 

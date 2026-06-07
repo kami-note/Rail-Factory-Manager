@@ -72,13 +72,15 @@ public sealed class LogisticsFiscalDispatcher(
         var pending = await db.OutboxMessages
             .FromSqlRaw("""
                 SELECT * FROM "logistics_outbox"
-                WHERE "EventType" = {0}
+                WHERE "EventType" IN ({0}, {1})
                   AND "DispatchedAt" IS NULL
                   AND "DeadLetteredAt" IS NULL
                 ORDER BY "OccurredAt" ASC
                 LIMIT 20
                 FOR UPDATE SKIP LOCKED
-                """, IntegrationConstants.LogisticsEvents.FiscalEmissionRequested)
+                """,
+                IntegrationConstants.LogisticsEvents.FiscalEmissionRequested,
+                IntegrationConstants.LogisticsEvents.MdfeEmissionRequested)
             .ToListAsync(cancellationToken);
 
         if (pending.Count == 0)
@@ -111,7 +113,10 @@ public sealed class LogisticsFiscalDispatcher(
         {
             try
             {
-                await ProcessMessageAsync(db, adapter, emitter, focusNfeCallbackUrl, message, tenant.Code, cancellationToken);
+                if (message.EventType == IntegrationConstants.LogisticsEvents.MdfeEmissionRequested)
+                    await ProcessMdfeMessageAsync(db, adapter, emitter, message, tenant.Code, cancellationToken);
+                else
+                    await ProcessMessageAsync(db, adapter, emitter, focusNfeCallbackUrl, message, tenant.Code, cancellationToken);
                 message.MarkDispatched();
             }
             catch (Exception ex)
@@ -167,10 +172,32 @@ public sealed class LogisticsFiscalDispatcher(
 
         if (string.IsNullOrWhiteSpace(order.RecipientCnpj))
         {
-            logger.LogWarning(
-                "Dispatch {DispatchId}: recipient CNPJ missing in shipment order. Skipping NF-e emission.",
-                dispatchId);
-            return;
+            throw new InvalidOperationException($"Recipient CNPJ is required in shipment order {order.OrderNumber} for NF-e emission.");
+        }
+
+        if (string.IsNullOrWhiteSpace(order.RecipientState))
+        {
+            throw new InvalidOperationException($"Recipient State is required in shipment order {order.OrderNumber} for NF-e emission.");
+        }
+
+        if (string.IsNullOrWhiteSpace(order.RecipientCity) && string.IsNullOrWhiteSpace(order.DeliveryCity))
+        {
+            throw new InvalidOperationException($"Recipient City is required in shipment order {order.OrderNumber} for NF-e emission.");
+        }
+
+        if (string.IsNullOrWhiteSpace(order.RecipientStreet))
+        {
+            throw new InvalidOperationException($"Recipient Street address is required in shipment order {order.OrderNumber} for NF-e emission.");
+        }
+
+        if (string.IsNullOrWhiteSpace(order.RecipientDistrict))
+        {
+            throw new InvalidOperationException($"Recipient District is required in shipment order {order.OrderNumber} for NF-e emission.");
+        }
+
+        if (string.IsNullOrWhiteSpace(order.RecipientZipCode))
+        {
+            throw new InvalidOperationException($"Recipient ZIP Code is required in shipment order {order.OrderNumber} for NF-e emission.");
         }
 
         var recipient = new NfeParty(
@@ -178,29 +205,47 @@ public sealed class LogisticsFiscalDispatcher(
             Name: order.RecipientName ?? "Destinatário",
             Email: order.RecipientEmail ?? string.Empty,
             Address: new NfeAddress(
-                Street: order.RecipientStreet ?? string.Empty,
+                Street: order.RecipientStreet!,
                 Number: order.RecipientNumber ?? "S/N",
                 Complement: null,
-                District: order.RecipientDistrict ?? string.Empty,
+                District: order.RecipientDistrict!,
                 City: order.RecipientCity ?? order.DeliveryCity ?? string.Empty,
-                State: order.RecipientState ?? string.Empty,
-                ZipCode: order.RecipientZipCode ?? string.Empty));
+                State: order.RecipientState!,
+                ZipCode: order.RecipientZipCode!));
 
-        var items = order.Items.Select(i => new NfeItem(
-            Code: i.MaterialCode,
-            Description: i.MaterialCode,
-            NcmCode: string.IsNullOrEmpty(i.NcmCode) ? "00000000" : i.NcmCode,
-            CfopCode: string.IsNullOrEmpty(i.CfopCode) ? "5102" : i.CfopCode,
-            UnitOfMeasure: i.UnitOfMeasure,
-            Quantity: i.Quantity,
-            UnitValue: i.UnitValue,
-            TaxBaseIcms: i.TaxBaseIcms,
-            IcmsRate: i.IcmsRate,
-            IpiRate: i.IpiRate,
-            IcmsOrigin: i.IcmsOrigin,
-            IcmsCst: string.IsNullOrEmpty(i.IcmsCst) ? "40" : i.IcmsCst,
-            PisCst: string.IsNullOrEmpty(i.PisCst) ? "07" : i.PisCst,
-            CofinsCst: string.IsNullOrEmpty(i.CofinsCst) ? "07" : i.CofinsCst)).ToList();
+        // Load fiscal profile to determine state transitions and default taxes
+        var fiscalProfile = await db.FiscalProfiles.FirstOrDefaultAsync(cancellationToken);
+        var ufOrigem = fiscalProfile?.UfOrigem ?? emitter.Address.State;
+        var ufDestino = order.RecipientState ?? ufOrigem;
+        var isInterestadual = !string.Equals(ufOrigem, ufDestino, StringComparison.OrdinalIgnoreCase);
+
+        var defaultCfop = isInterestadual
+            ? (fiscalProfile?.CfopPadraoInterestadual ?? "6102")
+            : (fiscalProfile?.CfopPadraoIntraestadual ?? "5102");
+
+        var items = order.Items.Select(i =>
+        {
+            if (string.IsNullOrWhiteSpace(i.NcmCode))
+            {
+                throw new InvalidOperationException($"NCM is required for item {i.MaterialCode} in shipment order {order.OrderNumber}.");
+            }
+
+            return new NfeItem(
+                Code: i.MaterialCode,
+                Description: i.MaterialCode,
+                NcmCode: i.NcmCode,
+                CfopCode: string.IsNullOrEmpty(i.CfopCode) ? defaultCfop : i.CfopCode,
+                UnitOfMeasure: i.UnitOfMeasure,
+                Quantity: i.Quantity,
+                UnitValue: i.UnitValue,
+                TaxBaseIcms: i.TaxBaseIcms,
+                IcmsRate: i.IcmsRate,
+                IpiRate: i.IpiRate,
+                IcmsOrigin: i.IcmsOrigin,
+                IcmsCst: string.IsNullOrEmpty(i.IcmsCst) ? (fiscalProfile?.IcmsCst ?? "40") : i.IcmsCst,
+                PisCst: string.IsNullOrEmpty(i.PisCst) ? (fiscalProfile?.PisCst ?? "07") : i.PisCst,
+                CofinsCst: string.IsNullOrEmpty(i.CofinsCst) ? (fiscalProfile?.CofinsCst ?? "07") : i.CofinsCst);
+        }).ToList();
 
         var nfeRequest = new NfeRequest(
             TenantId: tenantCode,
@@ -214,8 +259,102 @@ public sealed class LogisticsFiscalDispatcher(
         var result = await adapter.EmitirNfeAsync(nfeRequest, cancellationToken);
         dispatch.UpdateFiscalStatus(result.ExternalId, result.Status, result.AccessKey);
 
+        // If NF-e is authorized synchronously (mock) and vehicle data is present, queue MDF-e
+        if (IsNfeAuthorized(result.Status) && !string.IsNullOrEmpty(dispatch.VehiclePlate))
+        {
+            var mdfePayload = JsonSerializer.Serialize(new
+            {
+                dispatchId = dispatch.Id,
+                shipmentOrderId = dispatch.ShipmentOrderId,
+                nfeAccessKey = result.AccessKey,
+            });
+            db.OutboxMessages.Add(LogisticsOutboxMessage.Create(
+                IntegrationConstants.LogisticsEvents.MdfeEmissionRequested, mdfePayload));
+        }
+
         logger.LogInformation(
             "NF-e emitted for dispatch {DispatchId}: externalId={ExternalId} status={Status}",
+            dispatchId, result.ExternalId, result.Status);
+    }
+
+    private static bool IsNfeAuthorized(string status) =>
+        status is "autorizado" or "CONCLUIDO" or "authorized";
+
+    private async Task ProcessMdfeMessageAsync(
+        LogisticsDbContext db,
+        IFiscalIssuerAdapter adapter,
+        NfeParty emitter,
+        LogisticsOutboxMessage message,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        using var doc = JsonDocument.Parse(message.Payload);
+        var dispatchId = doc.RootElement.GetProperty("dispatchId").GetGuid();
+        var nfeAccessKey = doc.RootElement.TryGetProperty("nfeAccessKey", out var ak) ? ak.GetString() : null;
+
+        var dispatch = await db.Dispatches.FirstOrDefaultAsync(d => d.Id == dispatchId, cancellationToken);
+        if (dispatch is null)
+        {
+            logger.LogWarning("MDF-e emission: dispatch {DispatchId} not found.", dispatchId);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(dispatch.MdfeExternalId))
+        {
+            logger.LogInformation("Dispatch {DispatchId} already has MdfeExternalId. Skipping.", dispatchId);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(dispatch.VehiclePlate) || string.IsNullOrEmpty(dispatch.DriverCpf))
+        {
+            throw new InvalidOperationException($"Vehicle plate and driver CPF are required for dispatch {dispatchId} to emit MDF-e.");
+        }
+
+        var order = await db.ShipmentOrders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == dispatch.ShipmentOrderId, cancellationToken);
+
+        if (order is null)
+        {
+            logger.LogWarning("MDF-e emission: shipment order {OrderId} not found.", dispatch.ShipmentOrderId);
+            return;
+        }
+
+        // Load fiscal profile for UF origin and tenant CNPJ
+        var fiscalProfile = await db.FiscalProfiles.FirstOrDefaultAsync(cancellationToken);
+        var ufOrigem = fiscalProfile?.UfOrigem ?? emitter.Address.State;
+        var ufDestino = order.RecipientState ?? ufOrigem;
+
+        var ufsPercorridas = new List<string> { ufOrigem };
+        if (ufDestino != ufOrigem) ufsPercorridas.Add(ufDestino);
+
+        var totalKg = order.Items.Sum(i => i.WeightKg * i.Quantity);
+        var totalValue = order.Items.Sum(i => i.UnitValue * i.Quantity);
+
+        var resolvedNfeAccessKey = string.IsNullOrEmpty(nfeAccessKey) ? dispatch.FiscalAccessKey : nfeAccessKey;
+        if (string.IsNullOrEmpty(resolvedNfeAccessKey))
+        {
+            throw new InvalidOperationException($"MDF-e emission: NF-e access key is missing for dispatch {dispatchId}.");
+        }
+        var nfeLinks = new[] { new MdfeNfeLink(resolvedNfeAccessKey) };
+
+        var mdfeRequest = new MdfeRequest(
+            TenantId: emitter.CnpjOrCpf,
+            RefCode: $"MDFE-{dispatch.TrackingCode}",
+            Vehicle: new MdfeVehicle(dispatch.VehiclePlate, dispatch.VehicleRntrc),
+            Driver: new MdfeDriver(dispatch.DriverCpf, dispatch.DriverName ?? "Motorista"),
+            UfInicio: ufOrigem,
+            UfFim: ufDestino,
+            UfsPercorridas: ufsPercorridas,
+            TotalWeightKg: totalKg,
+            TotalValueBrl: totalValue,
+            NfeLinks: nfeLinks);
+
+        var result = await adapter.EmitirMdfeAsync(mdfeRequest, cancellationToken);
+        dispatch.UpdateMdfeStatus(result.ExternalId, result.Status, result.AccessKey, result.ErrorMessage);
+
+        logger.LogInformation(
+            "MDF-e emitted for dispatch {DispatchId}: externalId={ExternalId} status={Status}",
             dispatchId, result.ExternalId, result.Status);
     }
 

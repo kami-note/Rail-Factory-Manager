@@ -23,10 +23,24 @@ public sealed class Dispatch
     public string? FiscalStatus { get; private set; }
     public string? FiscalErrorMessage { get; private set; }
 
+    // MDF-e fields — populated after NF-e is authorized
+    public string? MdfeExternalId { get; private set; }
+    public string? MdfeAccessKey { get; private set; }
+    public string? MdfeStatus { get; private set; }
+    public string? MdfeErrorMessage { get; private set; }
+
+    // Vehicle/driver snapshot stored at creation for MDF-e (cross-service data)
+    public string? VehiclePlate { get; private set; }
+    public string? VehicleRntrc { get; private set; }
+    public string? DriverCpf { get; private set; }
+    public string? DriverName { get; private set; }
+
     private Dispatch() { }
 
     public static Dispatch Create(Guid shipmentOrderId, Guid carrierId,
-        Guid? vehicleId, Guid? driverPersonId, decimal freightValueBrl)
+        Guid? vehicleId, Guid? driverPersonId, decimal freightValueBrl,
+        string? vehiclePlate = null, string? vehicleRntrc = null,
+        string? driverCpf = null, string? driverName = null)
     {
         var trackingCode = $"RF-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
         return new Dispatch
@@ -39,7 +53,11 @@ public sealed class Dispatch
             TrackingCode = trackingCode,
             FreightValueBrl = freightValueBrl,
             Status = DispatchStatus.Pending,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            VehiclePlate = vehiclePlate,
+            VehicleRntrc = vehicleRntrc,
+            DriverCpf = driverCpf,
+            DriverName = driverName,
         };
     }
 
@@ -79,6 +97,14 @@ public sealed class Dispatch
         FiscalStatus = fiscalStatus;
         FiscalAccessKey = accessKey;
         FiscalErrorMessage = errorMessage;
+    }
+
+    public void UpdateMdfeStatus(string externalId, string mdfeStatus, string? accessKey, string? errorMessage = null)
+    {
+        MdfeExternalId = externalId;
+        MdfeStatus = mdfeStatus;
+        MdfeAccessKey = accessKey;
+        MdfeErrorMessage = errorMessage;
     }
 
     // Clears all fiscal fields so the outbox dispatcher retries emission from scratch.

@@ -93,7 +93,7 @@ public sealed class BasicXmlNfeProviderTests
             Assert.Equal(10.00m, item.TotalPrice);
             Assert.Equal("01012100", item.Ncm);
             Assert.Equal("5102", item.Cfop);
-            Assert.Equal("SEM GTIN", item.Ean);
+            Assert.Null(item.Ean);
         });
     }
 

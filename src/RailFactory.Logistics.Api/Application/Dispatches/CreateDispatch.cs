@@ -4,7 +4,9 @@ using RailFactory.Logistics.Api.Domain;
 namespace RailFactory.Logistics.Api.Application.Dispatches;
 
 public sealed record CreateDispatchInput(
-    Guid ShipmentOrderId, Guid CarrierId, Guid VehicleId, Guid DriverPersonId);
+    Guid ShipmentOrderId, Guid CarrierId, Guid VehicleId, Guid DriverPersonId,
+    string? VehiclePlate = null, string? VehicleRntrc = null,
+    string? DriverCpf = null, string? DriverName = null);
 
 public sealed class CreateDispatch(
     IShipmentOrderRepository orders, ICarrierRepository carriers, IDispatchRepository dispatches)
@@ -24,7 +26,8 @@ public sealed class CreateDispatch(
         var totalCbm = order.Items.Sum(i => i.VolumeCbm * i.Quantity);
         var freightBrl = Math.Max(totalKg * carrier.RatePerKg, totalCbm * carrier.RatePerCbm);
 
-        var dispatch = Dispatch.Create(order.Id, carrier.Id, input.VehicleId, input.DriverPersonId, freightBrl);
+        var dispatch = Dispatch.Create(order.Id, carrier.Id, input.VehicleId, input.DriverPersonId, freightBrl,
+            input.VehiclePlate, input.VehicleRntrc, input.DriverCpf, input.DriverName);
         await dispatches.SaveAsync(dispatch, ct);
 
         return dispatch;

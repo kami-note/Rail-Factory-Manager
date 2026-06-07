@@ -4,6 +4,7 @@ public sealed record CreateVehicleRequest(
     string Plate,
     string Chassis,
     string Renavam,
+    string? Rntrc,
     string Type,
     decimal MaxWeightKg,
     decimal MaxVolumeCbm,

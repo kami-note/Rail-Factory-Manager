@@ -26,6 +26,7 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
                 naturezaOperacao = request.NatureOfOperation,
                 finalidadeEmissao = 1,
                 consumidorFinal = true,
+                frete = new { modalidadeFrete = 0 },
                 emitente = new
                 {
                     cpfCnpj = request.Emitter.CnpjOrCpf,
@@ -106,7 +107,11 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
             ? doc.RootElement[0]
             : doc.RootElement;
 
-        var id = first.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? request.RefCode : request.RefCode;
+        if (!first.TryGetProperty("id", out var idProp) || string.IsNullOrEmpty(idProp.GetString()))
+        {
+            throw new InvalidOperationException("PlugNotas API did not return a valid document ID.");
+        }
+        var id = idProp.GetString()!;
         var status = first.TryGetProperty("status", out var stProp) ? stProp.GetString() ?? "processando" : "processando";
 
         return new NfeEmissionResult(id, status, null, null, null, null, null);
@@ -134,6 +139,71 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
         var body = new { justificativa };
         using var response = await httpClient.PostAsJsonAsync(
             $"/nfe/{Uri.EscapeDataString(externalId)}/cancelamento", body, JsonOptions, cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<MdfeEmissionResult> EmitirMdfeAsync(MdfeRequest request, CancellationToken cancellationToken = default)
+    {
+        var body = new[]
+        {
+            new
+            {
+                idIntegracao = request.RefCode,
+                emitente = new { cpfCnpj = request.TenantId },
+                veiculo = new { placa = request.Vehicle.Plate, rntrc = request.Vehicle.Rntrc },
+                condutor = new { cpf = request.Driver.CpfCnpj, nome = request.Driver.Name },
+                percurso = new
+                {
+                    ufInicio = request.UfInicio,
+                    ufFim = request.UfFim,
+                    ufPercurso = request.UfsPercorridas
+                },
+                documentos = request.NfeLinks.Select(n => new
+                {
+                    chaveNfe = n.AccessKey
+                }).ToArray(),
+                totais = new
+                {
+                    qtdNFe = request.NfeLinks.Count,
+                    pesoTotal = request.TotalWeightKg,
+                    valorTotalCarga = request.TotalValueBrl
+                },
+                urlNotificacao = request.WebhookCallbackUrl
+            }
+        };
+
+        using var response = await httpClient.PostAsJsonAsync("/mdfe", body, JsonOptions, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            return new MdfeEmissionResult(
+                request.RefCode, "rejected", null, null,
+                $"PlugNotas MDF-e {(int)response.StatusCode}: {errorBody[..Math.Min(500, errorBody.Length)]}");
+        }
+
+        using var doc = await JsonDocument.ParseAsync(
+            await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+
+        var first = doc.RootElement.ValueKind == JsonValueKind.Array
+            ? doc.RootElement[0]
+            : doc.RootElement;
+
+        if (!first.TryGetProperty("id", out var idProp) || string.IsNullOrEmpty(idProp.GetString()))
+        {
+            throw new InvalidOperationException("PlugNotas API did not return a valid MDF-e document ID.");
+        }
+        var id = idProp.GetString()!;
+        var status = first.TryGetProperty("status", out var stProp) ? stProp.GetString() ?? "processando" : "processando";
+
+        return new MdfeEmissionResult(id, status, null, null, null);
+    }
+
+    public async Task<bool> EncerrarMdfeAsync(string externalId, string ufEncerramento, CancellationToken cancellationToken = default)
+    {
+        var body = new { ufEncerramento, dataEncerramento = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd") };
+        using var response = await httpClient.PostAsJsonAsync(
+            $"/mdfe/{Uri.EscapeDataString(externalId)}/encerramento", body, JsonOptions, cancellationToken);
         return response.IsSuccessStatusCode;
     }
 }

@@ -11,6 +11,7 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
     public DbSet<Dispatch> Dispatches => Set<Dispatch>();
     public DbSet<LogisticsOutboxMessage> OutboxMessages => Set<LogisticsOutboxMessage>();
     public DbSet<InboundWebhookEvent> InboundWebhookEvents => Set<InboundWebhookEvent>();
+    public DbSet<TenantFiscalProfile> FiscalProfiles => Set<TenantFiscalProfile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -142,11 +143,36 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.FiscalAccessKey).HasMaxLength(100);
             entity.Property(x => x.FiscalStatus).HasMaxLength(50);
             entity.Property(x => x.FiscalErrorMessage).HasMaxLength(500);
+            entity.Property(x => x.MdfeExternalId).HasMaxLength(200);
+            entity.Property(x => x.MdfeAccessKey).HasMaxLength(100);
+            entity.Property(x => x.MdfeStatus).HasMaxLength(50);
+            entity.Property(x => x.MdfeErrorMessage).HasMaxLength(500);
+            entity.Property(x => x.VehiclePlate).HasMaxLength(15);
+            entity.Property(x => x.VehicleRntrc).HasMaxLength(20);
+            entity.Property(x => x.DriverCpf).HasMaxLength(20);
+            entity.Property(x => x.DriverName).HasMaxLength(200);
             entity.HasIndex(x => x.TrackingCode).IsUnique();
             entity.HasIndex(x => x.ShipmentOrderId);
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.FiscalExternalId);
             entity.HasIndex(x => x.CreatedAt);
+        });
+
+        modelBuilder.Entity<TenantFiscalProfile>(entity =>
+        {
+            entity.ToTable("tenant_fiscal_profile");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.CfopPadraoIntraestadual).HasMaxLength(5).IsRequired();
+            entity.Property(x => x.CfopPadraoInterestadual).HasMaxLength(5).IsRequired();
+            entity.Property(x => x.UfOrigem).HasMaxLength(2).IsRequired();
+            entity.Property(x => x.IcmsRate).HasColumnType("numeric(5,2)").IsRequired();
+            entity.Property(x => x.IcmsCst).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.PisCst).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.CofinsCst).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.IpiRate).HasColumnType("numeric(5,2)").IsRequired();
+            entity.Property(x => x.IcmsOrigin).IsRequired();
+            entity.Property(x => x.UpdatedAt).IsRequired();
         });
     }
 }

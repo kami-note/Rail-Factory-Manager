@@ -11,6 +11,7 @@ export type Vehicle = {
   plate: string;
   chassis: string;
   renavam: string;
+  rntrc?: string;
   maxWeightKg: number;
   maxVolumeCbm: number;
   licenseExpiry: string;
