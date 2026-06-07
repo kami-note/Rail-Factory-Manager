@@ -118,7 +118,7 @@ public sealed class Dispatch
     {
         ShippingExternalId = externalId;
         ShippingStatus = status;
-        ShippingLabelUrl = labelUrl;
+        if (labelUrl is not null) ShippingLabelUrl = labelUrl;
         if (trackingCode is not null) ShippingTrackingCode = trackingCode;
         ShippingErrorMessage = errorMessage;
     }

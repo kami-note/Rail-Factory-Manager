@@ -347,6 +347,25 @@ export function DispatchPrintView({ dispatch, order, vehicle, driver, carrier, o
             <div style={{ fontSize: 10, color: '#888' }}>NF-e não emitida ou chave não disponível.</div>
           )}
 
+          {(dispatch.shippingTrackingCode || dispatch.shippingLabelUrl) && (
+            <div style={{ marginTop: 8, display: 'flex', gap: 24 }}>
+              {dispatch.shippingTrackingCode && (
+                <div>
+                  <div className="rfp-field-label">Código de Rastreio</div>
+                  <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 12 }}>
+                    {dispatch.shippingTrackingCode}
+                  </div>
+                </div>
+              )}
+              {dispatch.shippingLabelUrl && (
+                <div>
+                  <div className="rfp-field-label">Etiqueta de Frete</div>
+                  <div style={{ fontSize: 10 }}>{dispatch.shippingLabelUrl}</div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="rfp-sig-row">
             <div className="rfp-sig-box">
               Assinatura e carimbo do recebedor

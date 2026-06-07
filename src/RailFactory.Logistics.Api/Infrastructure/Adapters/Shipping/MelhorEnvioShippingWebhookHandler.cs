@@ -51,7 +51,8 @@ public sealed class MelhorEnvioShippingWebhookHandler(
             return;
         }
 
-        dispatch.UpdateShippingStatus(externalId, meEvent, dispatch.ShippingLabelUrl, tracking);
+        // Pass null for labelUrl — UpdateShippingStatus only overwrites non-null values (preserves existing label URL)
+        dispatch.UpdateShippingStatus(externalId, meEvent, null, tracking);
 
         // Auto-deliver when ME confirms delivery
         if (meEvent == "order.delivered" && dispatch.Status == DispatchStatus.InTransit)
