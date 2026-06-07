@@ -86,6 +86,16 @@ public sealed class ShipDispatch(
             LogisticsOutboxMessage.Create(IntegrationConstants.LogisticsEvents.FiscalEmissionRequested, fiscalPayload),
             ct);
 
+        // Enqueue shipping label request — processed asynchronously by LogisticsShippingDispatcher
+        var shippingPayload = JsonSerializer.Serialize(new
+        {
+            dispatchId = dispatch.Id,
+            shipmentOrderId = order.Id
+        });
+        await outbox.AddAsync(
+            LogisticsOutboxMessage.Create(IntegrationConstants.LogisticsEvents.ShippingLabelRequested, shippingPayload),
+            ct);
+
         await dispatches.SaveAsync(dispatch, ct);
     }
 }

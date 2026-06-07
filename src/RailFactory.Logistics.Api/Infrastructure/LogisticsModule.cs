@@ -10,6 +10,7 @@ using RailFactory.Logistics.Api.Application.Shipments;
 using RailFactory.Logistics.Api.Application.Fiscal;
 using RailFactory.Logistics.Api.Application.FiscalProfiles;
 using RailFactory.Logistics.Api.Infrastructure.Adapters.Fiscal;
+using RailFactory.Logistics.Api.Infrastructure.Adapters.Shipping;
 using RailFactory.Logistics.Api.Infrastructure.Integration;
 using RailFactory.Logistics.Api.Infrastructure.Persistence;
 
@@ -31,6 +32,7 @@ public static class LogisticsModule
         services.AddHostedService<LogisticsWebhookDispatcher>();
         services.AddHostedService<InboundWebhookProcessor>();
         services.AddHostedService<LogisticsFiscalDispatcher>();
+        services.AddHostedService<LogisticsShippingDispatcher>();
         services.AddHttpClient("logistics-webhook")
             .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddSingleton<RabbitMqPublisher>(sp => new RabbitMqPublisher(
@@ -50,6 +52,13 @@ public static class LogisticsModule
             c.Timeout = TimeSpan.FromSeconds(30);
         }).AddStandardResilienceHandler();
 
+        // Named HTTP client for Melhor Envio
+        services.AddHttpClient("melhorenvio", c =>
+        {
+            c.BaseAddress = new Uri("https://www.melhorenvio.com.br");
+            c.Timeout = TimeSpan.FromSeconds(30);
+        }).AddStandardResilienceHandler();
+
         // Fiscal adapter factory + signature validators
         services.AddScoped<ITenantAdapterFactory<IFiscalIssuerAdapter>, FiscalIssuerAdapterFactory>();
         services.AddSingleton<IWebhookSignatureValidator, PlugNotasWebhookSignatureValidator>();
@@ -58,6 +67,13 @@ public static class LogisticsModule
         // Fiscal webhook handlers (one per provider)
         services.AddScoped<IInboundWebhookHandler, PlugNotasFiscalWebhookHandler>();
         services.AddScoped<IInboundWebhookHandler, FocusNfeFiscalWebhookHandler>();
+
+        // Shipping adapter factory + signature validators
+        services.AddScoped<ITenantAdapterFactory<IShippingAdapter>, ShippingAdapterFactory>();
+        services.AddSingleton<IWebhookSignatureValidator, MelhorEnvioWebhookSignatureValidator>();
+
+        // Shipping webhook handlers
+        services.AddScoped<IInboundWebhookHandler, MelhorEnvioShippingWebhookHandler>();
 
         // Fiscal document use cases
         services.AddScoped<IssueFiscalDocument>();

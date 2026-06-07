@@ -64,6 +64,12 @@ public static class IntegrationConstants
         /// Processed by LogisticsFiscalDispatcher.
         /// </summary>
         public const string MdfeEmissionRequested = "logistics.mdfe_emission_requested";
+
+        /// <summary>
+        /// Published once per dispatch when it is shipped and a shipping integration is configured.
+        /// Processed by LogisticsShippingDispatcher.
+        /// </summary>
+        public const string ShippingLabelRequested = "logistics.shipping_label_requested";
     }
 
     /// <summary>

@@ -96,6 +96,17 @@ export const FISCAL_LABEL: Record<string, string> = {
 
 export const RETRYABLE_FISCAL_STATUSES = new Set<string>(['erro_autorizacao', 'REJEITADO']);
 
+export const ME_STATUS_LABEL: Record<string, string> = {
+  'order.created':     'Criado',
+  'order.released':    'Liberado',
+  'order.generated':   'Etiqueta Gerada',
+  'order.posted':      'Postado',
+  'order.delivered':   'Entregue',
+  'order.undelivered': 'Não Entregue',
+  'order.cancelled':   'Cancelado',
+  'error':             'Erro',
+};
+
 export interface Dispatch {
   id: string;
   shipmentOrderId: string;
@@ -113,6 +124,10 @@ export interface Dispatch {
   mdfeAccessKey?: string;
   mdfeStatus?: string;
   mdfeErrorMessage?: string;
+  shippingExternalId?: string;
+  shippingStatus?: string;
+  shippingLabelUrl?: string;
+  shippingErrorMessage?: string;
   vehiclePlate?: string;
   vehicleRntrc?: string;
   driverCpf?: string;

@@ -4,12 +4,12 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
   Tooltip, IconButton, Typography,
 } from '@mui/material';
-import { AlertTriangle, CheckCircle, Package, Plus, Printer, RefreshCw, Truck } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ExternalLink, Package, Plus, Printer, RefreshCw, Truck } from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { ConfirmDialog } from '../../../shared/components/common/ConfirmDialog';
 import { transitionDispatch, retryFiscalEmission } from '../api/logistics';
-import { RETRYABLE_FISCAL_STATUSES } from '../types';
+import { RETRYABLE_FISCAL_STATUSES, ME_STATUS_LABEL } from '../types';
 import { useDispatches } from '../hooks/useDispatches';
 import { useShipmentOrders } from '../hooks/useShipmentOrders';
 import { useCarriers } from '../hooks/useCarriers';
@@ -155,6 +155,7 @@ export function DispatchesPage({ tenantCode }: Props) {
               <TableCell>Status</TableCell>
               <TableCell>NF-e</TableCell>
               <TableCell>MDF-e</TableCell>
+              <TableCell>Etiqueta</TableCell>
               <TableCell align="right">Frete (R$)</TableCell>
               <TableCell>Criado em</TableCell>
               <TableCell />
@@ -163,7 +164,7 @@ export function DispatchesPage({ tenantCode }: Props) {
           <TableBody>
             {dispatches.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={11} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   Nenhum despacho cadastrado.
                 </TableCell>
               </TableRow>
@@ -206,6 +207,27 @@ export function DispatchesPage({ tenantCode }: Props) {
                   </TableCell>
                   <TableCell>
                     <FiscalStatusCell status={d.mdfeStatus ?? null} accessKey={d.mdfeAccessKey} externalId={d.mdfeExternalId} errorMessage={d.mdfeErrorMessage} label="MDF-e" />
+                  </TableCell>
+                  <TableCell>
+                    {d.shippingStatus ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Chip
+                          label={ME_STATUS_LABEL[d.shippingStatus] ?? d.shippingStatus}
+                          size="small"
+                          color={d.shippingStatus === 'order.delivered' ? 'success' : d.shippingStatus === 'error' ? 'error' : 'default'}
+                          variant="outlined"
+                        />
+                        {d.shippingLabelUrl && (
+                          <Tooltip title="Abrir etiqueta">
+                            <IconButton size="small" component="a" href={d.shippingLabelUrl} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink size={13} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">—</Typography>
+                    )}
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" sx={{ fontWeight: 800 }}>

@@ -29,6 +29,12 @@ public sealed class Dispatch
     public string? MdfeStatus { get; private set; }
     public string? MdfeErrorMessage { get; private set; }
 
+    // Shipping label (Melhor Envio / Intelipost) — populated by LogisticsShippingDispatcher
+    public string? ShippingExternalId { get; private set; }
+    public string? ShippingStatus { get; private set; }
+    public string? ShippingLabelUrl { get; private set; }
+    public string? ShippingErrorMessage { get; private set; }
+
     // Vehicle/driver snapshot stored at creation for MDF-e (cross-service data)
     public string? VehiclePlate { get; private set; }
     public string? VehicleRntrc { get; private set; }
@@ -105,6 +111,14 @@ public sealed class Dispatch
         MdfeStatus = mdfeStatus;
         MdfeAccessKey = accessKey;
         MdfeErrorMessage = errorMessage;
+    }
+
+    public void UpdateShippingStatus(string externalId, string status, string? labelUrl, string? errorMessage = null)
+    {
+        ShippingExternalId = externalId;
+        ShippingStatus = status;
+        ShippingLabelUrl = labelUrl;
+        ShippingErrorMessage = errorMessage;
     }
 
     // Clears all fiscal fields so the outbox dispatcher retries emission from scratch.
