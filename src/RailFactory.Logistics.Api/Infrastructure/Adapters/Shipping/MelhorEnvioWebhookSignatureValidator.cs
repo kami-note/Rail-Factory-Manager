@@ -23,8 +23,10 @@ public sealed class MelhorEnvioWebhookSignatureValidator : IWebhookSignatureVali
             Encoding.UTF8.GetBytes(rawBody));
         var expected = Convert.ToHexString(expectedBytes).ToLowerInvariant();
 
+        // Pre-hash both sides so FixedTimeEquals always compares equal-length 32-byte digests,
+        // preventing timing oracle on length mismatch when provided signature has unexpected length.
         return CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(provided.ToString().ToLowerInvariant()),
-            Encoding.UTF8.GetBytes(expected));
+            SHA256.HashData(Encoding.UTF8.GetBytes(provided.ToString().ToLowerInvariant())),
+            SHA256.HashData(Encoding.UTF8.GetBytes(expected)));
     }
 }

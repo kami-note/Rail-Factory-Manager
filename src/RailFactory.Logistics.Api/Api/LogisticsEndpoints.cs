@@ -337,7 +337,7 @@ public static class LogisticsEndpoints
         Status = d.Status.ToString(),
         d.FiscalExternalId, d.FiscalStatus, d.FiscalAccessKey, d.FiscalErrorMessage,
         d.MdfeExternalId, d.MdfeStatus, d.MdfeAccessKey, d.MdfeErrorMessage,
-        d.ShippingExternalId, d.ShippingStatus, d.ShippingLabelUrl, d.ShippingErrorMessage,
+        d.ShippingExternalId, d.ShippingStatus, d.ShippingLabelUrl, d.ShippingTrackingCode, d.ShippingErrorMessage,
         d.VehiclePlate, d.VehicleRntrc, d.DriverCpf, d.DriverName,
         d.ConferencedAt, d.DispatchedAt, d.DeliveredAt, d.CreatedAt
     };

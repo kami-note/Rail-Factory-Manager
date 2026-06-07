@@ -69,14 +69,17 @@ public sealed class MelhorEnvioAdapter(HttpClient httpClient) : IShippingAdapter
                 new { orders = new[] { orderId }, mode = "public" },
                 JsonOptions, cancellationToken);
 
-            string? labelUrl = null;
-            if (printResponse.IsSuccessStatusCode)
+            if (!printResponse.IsSuccessStatusCode)
             {
-                using var printDoc = await JsonDocument.ParseAsync(
-                    await printResponse.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-                if (printDoc.RootElement.TryGetProperty("url", out var urlProp))
-                    labelUrl = urlProp.GetString();
+                var err = await printResponse.Content.ReadAsStringAsync(cancellationToken);
+                return Error(orderId, $"Print error {(int)printResponse.StatusCode}: {Truncate(err)}");
             }
+
+            string? labelUrl = null;
+            using var printDoc = await JsonDocument.ParseAsync(
+                await printResponse.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+            if (printDoc.RootElement.TryGetProperty("url", out var urlProp))
+                labelUrl = urlProp.GetString();
 
             return new ShippingLabelResult(orderId, "order.generated", labelUrl, null, null);
         }

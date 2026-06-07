@@ -87,11 +87,15 @@ public sealed class LogisticsShippingDispatcher(
 
         using var config = await integrationClient.GetConfigAsync(tenant.Code, "shipping", cancellationToken);
 
-        var adapter = config is not null
-            ? ShippingAdapterBuilder.Build(config, httpClientFactory)
-            : new MockShippingAdapter();
+        if (config is null)
+        {
+            logger.LogDebug("No shipping integration configured for tenant {TenantCode}. Skipping batch.", tenant.Code);
+            await tx.RollbackAsync(cancellationToken);
+            return;
+        }
 
-        var sender = config is not null ? BuildSender(config.Credentials) : null;
+        var adapter = ShippingAdapterBuilder.Build(config, httpClientFactory);
+        var sender = BuildSender(config.Credentials);
 
         foreach (var message in pending)
         {
@@ -166,7 +170,7 @@ public sealed class LogisticsShippingDispatcher(
 
         var packages = order.Items.Any()
             ? order.Items.Select(i => new ShippingPackage(
-                WeightKg: i.WeightKg > 0 ? (decimal)i.WeightKg * i.Quantity : 0.3m,
+                WeightKg: i.WeightKg > 0 ? i.WeightKg * i.Quantity : 0.3m * i.Quantity,
                 HeightCm: 10m, WidthCm: 15m, LengthCm: 20m)).ToList()
             : new List<ShippingPackage> { new(0.3m, 10m, 15m, 20m) };
 
@@ -182,7 +186,7 @@ public sealed class LogisticsShippingDispatcher(
 
         var result = await adapter.RequestLabelAsync(labelRequest, cancellationToken);
 
-        dispatch.UpdateShippingStatus(result.ExternalId, result.Status, result.LabelUrl, result.ErrorMessage);
+        dispatch.UpdateShippingStatus(result.ExternalId, result.Status, result.LabelUrl, result.TrackingCode, result.ErrorMessage);
 
         logger.LogInformation(
             "Shipping label requested for dispatch {DispatchId}: externalId={Id} status={Status}",

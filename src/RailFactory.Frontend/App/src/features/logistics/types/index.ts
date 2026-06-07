@@ -127,6 +127,7 @@ export interface Dispatch {
   shippingExternalId?: string;
   shippingStatus?: string;
   shippingLabelUrl?: string;
+  shippingTrackingCode?: string;
   shippingErrorMessage?: string;
   vehiclePlate?: string;
   vehicleRntrc?: string;
