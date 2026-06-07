@@ -150,6 +150,7 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.ShippingExternalId).HasMaxLength(200);
             entity.Property(x => x.ShippingStatus).HasMaxLength(50);
             entity.Property(x => x.ShippingLabelUrl).HasMaxLength(2000);
+            entity.Property(x => x.ShippingTrackingCode).HasMaxLength(100);
             entity.Property(x => x.ShippingErrorMessage).HasMaxLength(500);
             entity.Property(x => x.VehiclePlate).HasMaxLength(15);
             entity.Property(x => x.VehicleRntrc).HasMaxLength(20);

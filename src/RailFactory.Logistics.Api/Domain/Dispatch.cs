@@ -33,6 +33,7 @@ public sealed class Dispatch
     public string? ShippingExternalId { get; private set; }
     public string? ShippingStatus { get; private set; }
     public string? ShippingLabelUrl { get; private set; }
+    public string? ShippingTrackingCode { get; private set; }
     public string? ShippingErrorMessage { get; private set; }
 
     // Vehicle/driver snapshot stored at creation for MDF-e (cross-service data)
@@ -113,11 +114,12 @@ public sealed class Dispatch
         MdfeErrorMessage = errorMessage;
     }
 
-    public void UpdateShippingStatus(string externalId, string status, string? labelUrl, string? errorMessage = null)
+    public void UpdateShippingStatus(string externalId, string status, string? labelUrl, string? trackingCode = null, string? errorMessage = null)
     {
         ShippingExternalId = externalId;
         ShippingStatus = status;
         ShippingLabelUrl = labelUrl;
+        if (trackingCode is not null) ShippingTrackingCode = trackingCode;
         ShippingErrorMessage = errorMessage;
     }
 
