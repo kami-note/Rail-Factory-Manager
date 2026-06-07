@@ -33,6 +33,7 @@ export const SystemPermissions = {
   Logistics: {
     Read: 'logistics.read',
     Write: 'logistics.write',
+    Fiscal: 'logistics.fiscal',
   },
   Tenancy: {
     Admin: 'tenancy.admin',

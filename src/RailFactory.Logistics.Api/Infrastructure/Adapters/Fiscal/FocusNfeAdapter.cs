@@ -25,7 +25,7 @@ public sealed class FocusNfeAdapter(HttpClient httpClient) : IFiscalIssuerAdapte
             finalidade_emissao = 1,
             consumidor_final = 1,
             presenca_comprador = 1,
-            modalidade_frete = 9,
+            modalidade_frete = 0,
             local_destino = 1,
             cnpj_emitente = request.Emitter.CnpjOrCpf,
             inscricao_estadual_emitente = request.Emitter.IeStateRegistration,
@@ -103,6 +103,49 @@ public sealed class FocusNfeAdapter(HttpClient httpClient) : IFiscalIssuerAdapte
         request.Content = JsonContent.Create(new { justificativa }, options: JsonOptions);
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<MdfeEmissionResult> EmitirMdfeAsync(MdfeRequest request, CancellationToken cancellationToken = default)
+    {
+        var body = new
+        {
+            data_emissao = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+            uf_carregamento = request.UfInicio,
+            uf_descarregamento = request.UfFim,
+            cnpj_emitente = request.TenantId,
+            rntrc = request.Vehicle.Rntrc,
+            placa_veiculo = request.Vehicle.Plate,
+            cpf_motorista = request.Driver.CpfCnpj,
+            nome_motorista = request.Driver.Name,
+            peso_total = request.TotalWeightKg,
+            valor_total_carga = request.TotalValueBrl,
+            percurso = request.UfsPercorridas.ToArray(),
+            nfes = request.NfeLinks.Select(n => new { chave_nfe = n.AccessKey }).ToArray(),
+            url_notificacao = request.WebhookCallbackUrl
+        };
+
+        using var response = await httpClient.PostAsJsonAsync(
+            $"/v2/mdfe?ref={Uri.EscapeDataString(request.RefCode)}", body, JsonOptions, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            return new MdfeEmissionResult(
+                request.RefCode, "rejected", null, null,
+                $"FocusNFe MDF-e {(int)response.StatusCode}: {errorBody[..Math.Min(500, errorBody.Length)]}");
+        }
+
+        return new MdfeEmissionResult(request.RefCode, "processando_autorizacao", null, null, null);
+    }
+
+    public async Task<bool> EncerrarMdfeAsync(string externalId, string ufEncerramento, CancellationToken cancellationToken = default)
+    {
+        // FocusNFe: DELETE /v2/mdfe/{ref} = encerramento
+        using var req = new HttpRequestMessage(HttpMethod.Delete,
+            $"/v2/mdfe/{Uri.EscapeDataString(externalId)}");
+        req.Content = JsonContent.Create(new { uf_encerramento = ufEncerramento }, options: JsonOptions);
+        using var response = await httpClient.SendAsync(req, cancellationToken);
         return response.IsSuccessStatusCode;
     }
 }

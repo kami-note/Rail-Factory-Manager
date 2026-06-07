@@ -18,7 +18,7 @@ export const getVehicle = (tenantCode: string, id: string): Promise<Vehicle> =>
 export const createVehicle = (
   tenantCode: string,
   payload: {
-    plate: string; chassis: string; renavam: string; type: string;
+    plate: string; chassis: string; renavam: string; rntrc?: string; type: string;
     maxWeightKg: number; maxVolumeCbm: number; licenseExpiry: string;
   }
 ): Promise<Vehicle> =>

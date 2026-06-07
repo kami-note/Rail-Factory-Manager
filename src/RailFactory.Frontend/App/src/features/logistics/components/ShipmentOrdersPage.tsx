@@ -14,6 +14,7 @@ import { useShipmentOrders } from '../hooks/useShipmentOrders';
 import { useDispatches } from '../hooks/useDispatches';
 import { useCarriers } from '../hooks/useCarriers';
 import { CreateShipmentOrderModal } from './CreateShipmentOrderModal';
+import { CreateDispatchModal } from './CreateDispatchModal';
 import { AddShipmentItemModal } from './AddShipmentItemModal';
 import { FiscalStatusCell } from './FiscalStatusCell';
 import { ShipmentOrderDetailPanel } from './ShipmentOrderDetailPanel';
@@ -106,6 +107,7 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<ShipmentOrder | null>(null);
   const [addItemOrder, setAddItemOrder] = useState<ShipmentOrder | null>(null);
+  const [dispatchOrderId, setDispatchOrderId] = useState<string | undefined>(undefined);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -301,12 +303,14 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
                       </Tooltip>
                     )}
                     {o.status === 'Draft' && (
-                      <Tooltip title="Iniciar Separação">
-                        <Button size="small" disabled={isProcessing}
-                          startIcon={isProcessing ? <CircularProgress size={12} color="inherit" /> : undefined}
-                          onClick={() => handleTransition(o.id, 'start-picking', 'Iniciar Separação')}>
-                          {isProcessing ? '...' : 'Separar'}
-                        </Button>
+                      <Tooltip title={o.items.length === 0 ? 'Adicione itens antes de separar' : 'Iniciar Separação'}>
+                        <span>
+                          <Button size="small" disabled={isProcessing || o.items.length === 0}
+                            startIcon={isProcessing ? <CircularProgress size={12} color="inherit" /> : undefined}
+                            onClick={() => handleTransition(o.id, 'start-picking', 'Iniciar Separação')}>
+                            {isProcessing ? '...' : 'Separar'}
+                          </Button>
+                        </span>
                       </Tooltip>
                     )}
                     {o.status === 'Picking' && (
@@ -360,6 +364,23 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
           })()}
           onClose={() => setDetailOrder(null)}
           onTransition={handleTransition}
+          onCreateDispatch={id => { setDetailOrder(null); setDispatchOrderId(id); }}
+        />
+      )}
+
+      {dispatchOrderId !== undefined && (
+        <CreateDispatchModal
+          open
+          tenantCode={tenantCode}
+          initialOrderId={dispatchOrderId}
+          onCreated={d => {
+            setLocalOrders(prev => (prev ?? data ?? []).map(o =>
+              o.id === dispatchOrderId ? { ...o, status: 'Shipped' } : o
+            ));
+            setDispatchOrderId(undefined);
+            setSuccess(`Despacho ${d.trackingCode} criado com sucesso.`);
+          }}
+          onClose={() => setDispatchOrderId(undefined)}
         />
       )}
 

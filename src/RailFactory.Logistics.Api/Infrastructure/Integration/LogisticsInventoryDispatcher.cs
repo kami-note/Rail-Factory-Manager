@@ -74,20 +74,19 @@ public sealed class LogisticsInventoryDispatcher(
         var pendingMessages = await dbContext.OutboxMessages
             .FromSqlRaw("""
                 SELECT * FROM "logistics_outbox"
-                WHERE "DispatchedAt" IS NULL
+                WHERE "EventType" = {0}
+                  AND "DispatchedAt" IS NULL
                   AND "DeadLetteredAt" IS NULL
                 ORDER BY "OccurredAt" ASC
                 LIMIT 50
                 FOR UPDATE SKIP LOCKED
-                """)
+                """,
+                IntegrationConstants.LogisticsEvents.ShipmentDispatched)
             .ToListAsync(cancellationToken);
 
         foreach (var message in pendingMessages)
         {
-            if (message.EventType == IntegrationConstants.LogisticsEvents.ShipmentDispatched)
-                await HandleShipmentDispatchedAsync(message, tenant, cancellationToken);
-            else
-                logger.LogWarning("Unknown logistics outbox event type {EventType}.", message.EventType);
+            await HandleShipmentDispatchedAsync(message, tenant, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

@@ -67,6 +67,7 @@ const navGroups: NavGroup[] = [
       { href: '/app/logistics/shipment-orders', label: 'EXPEDIÇÃO', icon: <PackageCheck size={18} />, permission: SystemPermissions.Logistics.Read },
       { href: '/app/logistics/dispatches', label: 'DESPACHOS', icon: <SendHorizonal size={18} />, permission: SystemPermissions.Logistics.Read },
       { href: '/app/logistics/nfe-monitor', label: 'MONITOR NF-e', icon: <FileCheck2 size={18} />, permission: SystemPermissions.Logistics.Read },
+      { href: '/app/logistics/fiscal-settings', label: 'CONFIG. FISCAL', icon: <Settings size={18} />, permission: SystemPermissions.Logistics.Fiscal },
     ]
   },
   {

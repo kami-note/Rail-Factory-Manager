@@ -1,3 +1,16 @@
+export interface TenantFiscalProfile {
+  cfopPadraoIntraestadual: string;
+  cfopPadraoInterestadual: string;
+  ufOrigem: string;
+  icmsRate: number;
+  icmsCst: string;
+  pisCst: string;
+  cofinsCst: string;
+  ipiRate: number;
+  icmsOrigin: number;
+  updatedAt: string;
+}
+
 export type CarrierStatus = 'Active' | 'Inactive';
 
 export interface Carrier {
@@ -96,6 +109,14 @@ export interface Dispatch {
   fiscalAccessKey?: string;
   fiscalStatus?: FiscalStatus;
   fiscalErrorMessage?: string;
+  mdfeExternalId?: string;
+  mdfeAccessKey?: string;
+  mdfeStatus?: string;
+  mdfeErrorMessage?: string;
+  vehiclePlate?: string;
+  vehicleRntrc?: string;
+  driverCpf?: string;
+  driverName?: string;
   conferencedAt?: string;
   dispatchedAt?: string;
   deliveredAt?: string;

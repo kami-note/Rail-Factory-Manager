@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RailFactory.Logistics.Api.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using RailFactory.Logistics.Api.Infrastructure.Persistence;
 namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(LogisticsDbContext))]
-    partial class LogisticsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260606190745_AddTenantFiscalProfile")]
+    partial class AddTenantFiscalProfile
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -94,14 +97,6 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("DispatchedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DriverCpf")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("DriverName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.Property<Guid?>("DriverPersonId")
                         .HasColumnType("uuid");
 
@@ -124,22 +119,6 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("FreightValueBrl")
                         .HasColumnType("numeric(12,2)");
 
-                    b.Property<string>("MdfeAccessKey")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("MdfeErrorMessage")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("MdfeExternalId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("MdfeStatus")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<Guid>("ShipmentOrderId")
                         .HasColumnType("uuid");
 
@@ -155,14 +134,6 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("VehicleId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("VehiclePlate")
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)");
-
-                    b.Property<string>("VehicleRntrc")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 

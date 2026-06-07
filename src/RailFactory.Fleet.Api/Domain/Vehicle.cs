@@ -11,6 +11,8 @@ public sealed class Vehicle : AggregateRoot<Guid>
     public string Plate { get; private set; }
     public string Chassis { get; private set; }
     public string Renavam { get; private set; }
+    /// <summary>Registro Nacional de Transportadores Rodoviários de Carga — required for MDF-e.</summary>
+    public string? Rntrc { get; private set; }
     public VehicleType Type { get; private set; }
     public VehicleStatus Status { get; private set; }
 
@@ -36,12 +38,13 @@ public sealed class Vehicle : AggregateRoot<Guid>
         Renavam = string.Empty;
     }
 
-    private Vehicle(Guid id, string plate, string chassis, string renavam,
+    private Vehicle(Guid id, string plate, string chassis, string renavam, string? rntrc,
         VehicleType type, decimal maxWeightKg, decimal maxVolumeCbm, DateOnly licenseExpiry) : base(id)
     {
         Plate = plate;
         Chassis = chassis;
         Renavam = renavam;
+        Rntrc = rntrc;
         Type = type;
         MaxWeightKg = maxWeightKg;
         MaxVolumeCbm = maxVolumeCbm;
@@ -51,7 +54,7 @@ public sealed class Vehicle : AggregateRoot<Guid>
         UpdatedAt = CreatedAt;
     }
 
-    public static Vehicle Create(string plate, string chassis, string renavam,
+    public static Vehicle Create(string plate, string chassis, string renavam, string? rntrc,
         VehicleType type, decimal maxWeightKg, decimal maxVolumeCbm, DateOnly licenseExpiry)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(plate);
@@ -65,7 +68,14 @@ public sealed class Vehicle : AggregateRoot<Guid>
             plate.Trim().ToUpperInvariant(),
             chassis.Trim().ToUpperInvariant(),
             renavam.Trim(),
+            string.IsNullOrWhiteSpace(rntrc) ? null : rntrc.Trim(),
             type, maxWeightKg, maxVolumeCbm, licenseExpiry);
+    }
+
+    public void SetRntrc(string? rntrc)
+    {
+        Rntrc = string.IsNullOrWhiteSpace(rntrc) ? null : rntrc.Trim();
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <exception cref="InvalidOperationException">Already inactive.</exception>

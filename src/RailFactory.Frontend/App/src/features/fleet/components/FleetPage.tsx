@@ -142,6 +142,7 @@ export function FleetPage({ tenantCode }: Props) {
                 <TableCell sx={{ fontWeight: 800 }}>PLACA</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>TIPO</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>STATUS</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>RNTRC</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>CARGA MÁX (kg)</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>VOLUME MÁX (m³)</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>VENC. CRLV</TableCell>
@@ -151,7 +152,7 @@ export function FleetPage({ tenantCode }: Props) {
             <TableBody>
               {filteredVehicles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                     {vehicles.length === 0 ? 'Nenhum veículo cadastrado.' : 'Nenhum veículo encontrado.'}
                   </TableCell>
                 </TableRow>
@@ -165,6 +166,9 @@ export function FleetPage({ tenantCode }: Props) {
                   <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{v.plate}</TableCell>
                   <TableCell><StatusChip status={v.type} /></TableCell>
                   <TableCell><StatusChip status={v.status} /></TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace', color: v.rntrc ? 'text.primary' : 'text.disabled', fontSize: 13 }}>
+                    {v.rntrc ?? '—'}
+                  </TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{v.maxWeightKg.toLocaleString('pt-BR')}</TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{v.maxVolumeCbm.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}</TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{new Date(v.licenseExpiry).toLocaleDateString('pt-BR')}</TableCell>

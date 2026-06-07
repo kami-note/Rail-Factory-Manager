@@ -96,7 +96,10 @@ public sealed class ProductionInventoryDispatcher(
             else if (message.EventType == IntegrationConstants.ProductionEvents.ProductionOrderCancelled)
                 await HandleOrderStatusChangedAsync(message, tenant, IntegrationConstants.ProductionEvents.OrderCancelled, cancellationToken);
             else
+            {
                 logger.LogWarning("Unknown production outbox event type {EventType}.", message.EventType);
+                message.MarkDeadLetter($"Unknown event type: {message.EventType}");
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

@@ -17,17 +17,18 @@ import { toUiErrorMessage } from '../../../shared/lib/http';
 type Props = {
   open: boolean;
   tenantCode: string;
+  initialOrderId?: string;
   onCreated: (dispatch: Dispatch) => void;
   onClose: () => void;
 };
 
-export function CreateDispatchModal({ open, tenantCode, onCreated, onClose }: Props) {
+export function CreateDispatchModal({ open, tenantCode, initialOrderId, onCreated, onClose }: Props) {
   const { data: orders, loading: ordersLoading } = useShipmentOrders(tenantCode);
   const { data: carriers, loading: carriersLoading } = useCarriers(tenantCode);
   const { data: vehicles, loading: vehiclesLoading } = useVehicles(tenantCode);
   const { data: people, loading: peopleLoading } = usePeople(tenantCode);
 
-  const [shipmentOrderId, setShipmentOrderId] = useState('');
+  const [shipmentOrderId, setShipmentOrderId] = useState(initialOrderId ?? '');
   const [carrierId, setCarrierId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -47,10 +48,10 @@ export function CreateDispatchModal({ open, tenantCode, onCreated, onClose }: Pr
 
   useEffect(() => {
     if (!open) {
-      setShipmentOrderId(''); setCarrierId(''); setVehicleId('');
+      setShipmentOrderId(initialOrderId ?? ''); setCarrierId(''); setVehicleId('');
       setSaving(false); setError(null);
     }
-  }, [open]);
+  }, [open, initialOrderId]);
 
   const readyOrders = orders?.filter(o => o.status === 'ReadyToShip') ?? [];
   const activeCarriers = carriers?.filter(c => c.status === 'Active') ?? [];
@@ -66,11 +67,16 @@ export function CreateDispatchModal({ open, tenantCode, onCreated, onClose }: Pr
     if (saving || !shipmentOrderId || !carrierId || !vehicleId || !resolvedDriverId) return;
     setSaving(true); setError(null);
     try {
+      const selectedVehicle = vehicles?.find(v => v.id === vehicleId);
       const dispatch = await createDispatch(tenantCode, {
         shipmentOrderId,
         carrierId,
         vehicleId,
         driverPersonId: resolvedDriverId,
+        vehiclePlate: selectedVehicle?.plate,
+        vehicleRntrc: selectedVehicle?.rntrc,
+        driverCpf: resolvedDriver?.documentNumber,
+        driverName: resolvedDriver?.name,
       });
       onCreated(dispatch);
     } catch (err) {
@@ -95,23 +101,33 @@ export function CreateDispatchModal({ open, tenantCode, onCreated, onClose }: Pr
                 {error && <Alert severity="error">{error}</Alert>}
 
                 {/* Ordem de Expedição */}
-                {readyOrders.length === 0
-                  ? <Alert severity="info">Nenhuma ordem com status "Pronto p/ Despacho".</Alert>
-                  : (
-                    <FormControl fullWidth size="small" required>
-                      <InputLabel>Ordem de Expedição</InputLabel>
-                      <Select value={shipmentOrderId} label="Ordem de Expedição" onChange={e => setShipmentOrderId(e.target.value)}>
-                        {readyOrders.map(o => (
-                          <MenuItem key={o.id} value={o.id}>
-                            <Stack>
-                              <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{o.orderNumber}</Typography>
-                              {o.recipientName && <Typography variant="caption" color="text.secondary">{o.recipientName}</Typography>}
-                            </Stack>
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
+                {initialOrderId && selectedOrder ? (
+                  <Stack spacing={0.5} sx={{ px: 1.5, py: 1, bgcolor: 'action.hover', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Ordem de Expedição
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{selectedOrder.orderNumber}</Typography>
+                    {selectedOrder.recipientName && (
+                      <Typography variant="caption" color="text.secondary">{selectedOrder.recipientName}</Typography>
+                    )}
+                  </Stack>
+                ) : readyOrders.length === 0 ? (
+                  <Alert severity="info">Nenhuma ordem com status "Pronto p/ Despacho".</Alert>
+                ) : (
+                  <FormControl fullWidth size="small" required>
+                    <InputLabel>Ordem de Expedição</InputLabel>
+                    <Select value={shipmentOrderId} label="Ordem de Expedição" onChange={e => setShipmentOrderId(e.target.value)}>
+                      {readyOrders.map(o => (
+                        <MenuItem key={o.id} value={o.id}>
+                          <Stack>
+                            <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{o.orderNumber}</Typography>
+                            {o.recipientName && <Typography variant="caption" color="text.secondary">{o.recipientName}</Typography>}
+                          </Stack>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
 
                 {/* Itens da ordem selecionada */}
                 {selectedOrder && selectedOrder.items.length > 0 && (

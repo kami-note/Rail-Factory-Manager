@@ -25,11 +25,11 @@ describe('fetchJsonOrThrow', () => {
       body: JSON.stringify({ foo: 'bar' })
     }, 'Error');
 
-    expect(fetch).toHaveBeenCalledWith('/api/test', expect.objectContaining({
-      headers: expect.objectContaining({
-        'Content-Type': 'application/json'
-      })
-    }));
+    const testCall = vi.mocked(fetch).mock.calls.find(call => call[0] === '/api/test');
+    expect(testCall).toBeDefined();
+    const init = testCall![1] as RequestInit;
+    const headers = new Headers(init.headers);
+    expect(headers.get('Content-Type')).toBe('application/json');
   });
 
   it('does NOT add application/json content-type when body is FormData', async () => {

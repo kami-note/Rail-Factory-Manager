@@ -4,4 +4,8 @@ public sealed record CreateDispatchRequest(
     Guid ShipmentOrderId,
     Guid CarrierId,
     Guid VehicleId,
-    Guid DriverPersonId);
+    Guid DriverPersonId,
+    string? VehiclePlate = null,
+    string? VehicleRntrc = null,
+    string? DriverCpf = null,
+    string? DriverName = null);

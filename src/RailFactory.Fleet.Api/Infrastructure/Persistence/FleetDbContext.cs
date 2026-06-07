@@ -20,6 +20,7 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             entity.Property(x => x.Plate).HasMaxLength(12).IsRequired();
             entity.Property(x => x.Chassis).HasMaxLength(17).IsRequired();
             entity.Property(x => x.Renavam).HasMaxLength(15).IsRequired();
+            entity.Property(x => x.Rntrc).HasMaxLength(20);
             entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.MaxWeightKg).HasColumnType("numeric(10,2)").IsRequired();

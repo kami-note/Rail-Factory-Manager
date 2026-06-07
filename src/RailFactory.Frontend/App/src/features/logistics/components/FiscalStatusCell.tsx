@@ -9,17 +9,18 @@ const AUTHORIZED_STATUSES = new Set<string>(['autorizado', 'CONCLUIDO']);
 const EMPTY = <Typography variant="caption" sx={{ color: '#bbb' }}>—</Typography>;
 
 interface FiscalStatusCellProps {
-  status?: FiscalStatus;
+  status?: FiscalStatus | string | null;
   accessKey?: string;
   externalId?: string;
   errorMessage?: string;
+  label?: string;
 }
 
-export function FiscalStatusCell({ status, accessKey, externalId, errorMessage }: FiscalStatusCellProps) {
+export function FiscalStatusCell({ status, accessKey, externalId, errorMessage, label: labelOverride }: FiscalStatusCellProps) {
   if (!status) return EMPTY;
 
-  const color = FISCAL_COLOR[status] ?? 'default';
-  const label = FISCAL_LABEL[status] ?? status;
+  const color = (FISCAL_COLOR as Record<string, string>)[status!] ?? 'default';
+  const label = labelOverride ?? ((FISCAL_LABEL as Record<string, string>)[status!] ?? status!);
   const isAuthorized = AUTHORIZED_STATUSES.has(status);
   const tooltipTitle = errorMessage ? `Erro SEFAZ: ${errorMessage}` : (externalId ? `ID Externo: ${externalId}` : '');
 
@@ -31,7 +32,7 @@ export function FiscalStatusCell({ status, accessKey, externalId, errorMessage }
         <Chip
           icon={<FileCheck2 size={12} />}
           label={label}
-          color={color}
+          color={color as any}
           size="small"
           variant="outlined"
         />

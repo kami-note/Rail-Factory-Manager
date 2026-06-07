@@ -111,7 +111,7 @@ public static class FleetEndpoints
         try
         {
             var vehicle = await useCase.ExecuteAsync(
-                new CreateVehicleInput(req.Plate, req.Chassis, req.Renavam, req.Type,
+                new CreateVehicleInput(req.Plate, req.Chassis, req.Renavam, req.Rntrc, req.Type,
                     req.MaxWeightKg, req.MaxVolumeCbm, req.LicenseExpiry), ct);
             return Results.Created($"{ApiGroup}/vehicles/{vehicle.Id}", MapVehicleResponse(vehicle));
         }
@@ -175,7 +175,7 @@ public static class FleetEndpoints
 
     private static object MapVehicleResponse(Vehicle v) => new
     {
-        v.Id, v.Plate, v.Chassis, v.Renavam,
+        v.Id, v.Plate, v.Chassis, v.Renavam, v.Rntrc,
         v.MaxWeightKg, v.MaxVolumeCbm,
         v.LicenseExpiry,
         Type   = v.Type.ToDisplayType(),
