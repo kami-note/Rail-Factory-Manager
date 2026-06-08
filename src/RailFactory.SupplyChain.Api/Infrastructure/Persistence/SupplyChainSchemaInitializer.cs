@@ -56,6 +56,7 @@ public sealed class SupplyChainSchemaInitializer(
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<SupplyChainDbContext>();
             await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
             await dbContext.Database.MigrateAsync(cancellationToken);
+            await TenantServiceReadiness.MarkReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken);
 
             _migratedTenants.Add(tenant.Code);
             logger.LogInformation("SupplyChain database for tenant '{TenantCode}' migrated.", tenant.Code);

@@ -54,6 +54,7 @@ public sealed class ProductionSchemaInitializer(
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<ProductionDbContext>();
             await dbContext.Database.MigrateAsync(cancellationToken);
+            await TenantServiceReadiness.MarkReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken);
 
             _migratedTenants.Add(tenant.Code);
             logger.LogInformation("Production database for tenant '{TenantCode}' migrated.", tenant.Code);

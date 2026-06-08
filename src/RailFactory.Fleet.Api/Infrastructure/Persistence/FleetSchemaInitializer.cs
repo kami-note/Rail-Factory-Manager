@@ -54,6 +54,7 @@ public sealed class FleetSchemaInitializer(
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<FleetDbContext>();
             await dbContext.Database.MigrateAsync(cancellationToken);
+            await TenantServiceReadiness.MarkReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken);
 
             _migratedTenants.Add(tenant.Code);
             logger.LogInformation("Fleet database for tenant '{TenantCode}' migrated.", tenant.Code);

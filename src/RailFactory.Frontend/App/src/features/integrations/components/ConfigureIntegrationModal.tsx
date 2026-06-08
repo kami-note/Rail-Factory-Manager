@@ -21,11 +21,71 @@ type Props = {
   onClose: () => void;
 };
 
+/**
+ * Determines the layout grid size for a given integration configuration field.
+ * @param key - The unique credential/emitter/webhook field key identifier.
+ * @returns An object containing the responsive layout spans (xs, sm) for MUI's Grid component.
+ * @remarks
+ * Invariant: Shorter codes, document numbers, ZIPs, numbers, and states are grouped in columns.
+ * Longer keys (API keys, authorization tokens, URLs) default to full width (12 spans).
+ */
+function getFieldSize(key: string): { xs: number; sm?: number } {
+  // Credentials & general fields
+  if (key === 'client_id' || key === 'service_id' || key === 'billing_type') {
+    return { xs: 12, sm: 6 };
+  }
+  if (key === 'client_secret') {
+    return { xs: 12, sm: 6 };
+  }
+  
+  // Emitter / Sender fields
+  if (key === 'emitter_cnpj' || key === 'sender_document' || key === 'emitter_ie') {
+    return { xs: 12, sm: 6 };
+  }
+  if (key === 'emitter_email' || key === 'sender_phone') {
+    return { xs: 12, sm: 6 };
+  }
+  if (key === 'emitter_zip' || key === 'sender_zip_code') {
+    return { xs: 12, sm: 4 };
+  }
+  if (key === 'emitter_street' || key === 'sender_street') {
+    return { xs: 12, sm: 8 };
+  }
+  if (key === 'emitter_number' || key === 'sender_number') {
+    return { xs: 12, sm: 4 };
+  }
+  if (key === 'emitter_complement' || key === 'sender_complement') {
+    return { xs: 12, sm: 8 };
+  }
+  if (key === 'emitter_district' || key === 'sender_district') {
+    return { xs: 12, sm: 6 };
+  }
+  if (key === 'emitter_city' || key === 'sender_city') {
+    return { xs: 12, sm: 6 };
+  }
+  if (key === 'emitter_state' || key === 'sender_state') {
+    return { xs: 12, sm: 4 };
+  }
+  if (key === 'emitter_city_ibge') {
+    return { xs: 12, sm: 8 };
+  }
+
+  // Default to full width for long keys (tokens, base URL, api keys, etc.)
+  return { xs: 12 };
+}
+
+/**
+ * Renders a single credential, emitter, or webhook field input wrapped in a responsive Grid cell.
+ * @param field - The metadata definition of the credential field.
+ * @param value - The current value state of the field.
+ * @param onChange - Callback triggered when the field value changes.
+ */
 function CredentialFieldInput({
   field, value, onChange,
 }: { field: CredentialField; value: string; onChange: (v: string) => void }) {
+  const size = getFieldSize(field.key);
   return (
-    <Grid xs={12} sm={field.key.startsWith('emitter_state') || field.key.startsWith('emitter_number') ? 4 : 12}>
+    <Grid size={size}>
       <TextField
         label={field.label}
         value={value}

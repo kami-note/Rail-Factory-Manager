@@ -54,6 +54,7 @@ public sealed class LogisticsSchemaInitializer(
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<LogisticsDbContext>();
             await dbContext.Database.MigrateAsync(cancellationToken);
+            await TenantServiceReadiness.MarkReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken);
 
             _migratedTenants.Add(tenant.Code);
             logger.LogInformation("Logistics database for tenant '{TenantCode}' migrated.", tenant.Code);

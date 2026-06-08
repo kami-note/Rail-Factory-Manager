@@ -56,6 +56,7 @@ public sealed class InventorySchemaInitializer(
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
             await dbContext.Database.MigrateAsync(cancellationToken);
+            await TenantServiceReadiness.MarkReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken);
 
             _migratedTenants.Add(tenant.Code);
             logger.LogInformation("Inventory database for tenant '{TenantCode}' migrated.", tenant.Code);

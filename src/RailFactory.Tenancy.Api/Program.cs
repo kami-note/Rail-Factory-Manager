@@ -81,7 +81,7 @@ group.MapGet("/tenants/{code}/provision-status", async (
             cts.CancelAfter(TimeSpan.FromSeconds(3));
             await conn.OpenAsync(cts.Token);
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT COUNT(*) FROM \"__EFMigrationsHistory\"";
+            cmd.CommandText = "SELECT COUNT(*) FROM _rf_service_ready";
             var count = Convert.ToInt64(await cmd.ExecuteScalarAsync(cts.Token) ?? 0L);
             status = count > 0 ? "ready" : "pending";
         }

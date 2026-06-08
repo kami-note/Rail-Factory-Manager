@@ -215,12 +215,28 @@ public static class IamEndpoints
 
         var email = context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue("email");
 
-        var upsertResult = await upsertLocalUserFromExternalLogin.ExecuteAsync(
-            externalProvider: "google",
-            externalSubject: context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
-            email: email,
-            displayName: context.User.Identity?.Name,
-            cancellationToken);
+        UpsertLocalUserResult upsertResult;
+        try
+        {
+            upsertResult = await upsertLocalUserFromExternalLogin.ExecuteAsync(
+                externalProvider: "google",
+                externalSubject: context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
+                email: email,
+                displayName: context.User.Identity?.Name,
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // DB not ready yet (schema initializer still running or Postgres starting up).
+            // Redirect to frontend error page instead of surfacing a 500 to the user.
+            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Iam.Login");
+            logger.LogError(ex, "DB failure during Google login finalize for tenant '{TenantCode}'. CorrelationId: {CorrelationId}",
+                result.TenantCode, ExtractCorrelationId(context));
+            return Results.Redirect(redirects.BuildFailedFrontendRedirect(
+                result.ReturnUrl,
+                result.TenantCode,
+                AuthResultErrorCode.ServiceUnavailable));
+        }
 
         if (upsertResult.Success)
         {

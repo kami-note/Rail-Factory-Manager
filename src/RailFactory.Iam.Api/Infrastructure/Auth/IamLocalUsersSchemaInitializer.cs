@@ -59,6 +59,7 @@ public sealed class IamLocalUsersSchemaInitializer(
             await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
             await dbContext.Database.MigrateAsync(cancellationToken);
             await SeedTenantRolesAsync(dbContext, tenant.Code, cancellationToken);
+            await TenantServiceReadiness.MarkReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken);
 
             _migratedTenants.Add(tenant.Code);
             logger.LogInformation("IAM database for tenant '{TenantCode}' migrated.", tenant.Code);

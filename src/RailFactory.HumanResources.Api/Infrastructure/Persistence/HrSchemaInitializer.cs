@@ -54,6 +54,7 @@ public sealed class HrSchemaInitializer(
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<HrDbContext>();
             await dbContext.Database.MigrateAsync(cancellationToken);
+            await TenantServiceReadiness.MarkReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken);
 
             _migratedTenants.Add(tenant.Code);
             logger.LogInformation("HR database for tenant '{TenantCode}' migrated.", tenant.Code);
