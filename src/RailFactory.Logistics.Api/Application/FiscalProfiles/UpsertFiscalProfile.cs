@@ -12,7 +12,12 @@ public sealed record UpsertFiscalProfileInput(
     string PisCst,
     string CofinsCst,
     decimal IpiRate,
-    int IcmsOrigin);
+    int IcmsOrigin,
+    string EmitterName = "",
+    string EmitterCnpj = "",
+    string EmitterIe = "",
+    string EmitterCity = "",
+    string EmitterState = "");
 
 public sealed class UpsertFiscalProfile(IFiscalProfileRepository repository)
 {
@@ -24,7 +29,9 @@ public sealed class UpsertFiscalProfile(IFiscalProfileRepository repository)
             var created = TenantFiscalProfile.Create(
                 input.CfopPadraoIntraestadual, input.CfopPadraoInterestadual, input.UfOrigem,
                 input.IcmsRate, input.IcmsCst, input.PisCst, input.CofinsCst,
-                input.IpiRate, input.IcmsOrigin);
+                input.IpiRate, input.IcmsOrigin,
+                input.EmitterName, input.EmitterCnpj, input.EmitterIe,
+                input.EmitterCity, input.EmitterState);
             await repository.UpsertAsync(created, ct);
             return created;
         }
@@ -32,7 +39,9 @@ public sealed class UpsertFiscalProfile(IFiscalProfileRepository repository)
         existing.Update(
             input.CfopPadraoIntraestadual, input.CfopPadraoInterestadual, input.UfOrigem,
             input.IcmsRate, input.IcmsCst, input.PisCst, input.CofinsCst,
-            input.IpiRate, input.IcmsOrigin);
+            input.IpiRate, input.IcmsOrigin,
+            input.EmitterName, input.EmitterCnpj, input.EmitterIe,
+            input.EmitterCity, input.EmitterState);
         await repository.UpsertAsync(existing, ct);
         return existing;
     }

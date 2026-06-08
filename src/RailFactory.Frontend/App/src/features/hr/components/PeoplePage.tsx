@@ -157,7 +157,36 @@ export function PeoplePage({ tenantCode }: PeoplePageProps) {
                     onClick={() => setSelectedPersonId(p.id)}
                     sx={{ cursor: 'pointer' }}
                   >
-                    <TableCell sx={{ fontWeight: 600 }}>{p.name}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                        <Box
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            bgcolor: alpha(theme.palette.primary.main, 0.08),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            flexShrink: 0
+                          }}
+                        >
+                          {p.imageUrl ? (
+                            <Box
+                              component="img"
+                              src={p.imageUrl}
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <Users size={16} color={theme.palette.primary.main} />
+                          )}
+                        </Box>
+                        <span>{p.name}</span>
+                      </Stack>
+                    </TableCell>
                     <TableCell sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{p.documentNumber}</TableCell>
                     <TableCell><StatusChip status={p.type} /></TableCell>
                     <TableCell><StatusChip status={p.status} /></TableCell>
@@ -203,6 +232,9 @@ export function PeoplePage({ tenantCode }: PeoplePageProps) {
               key={selectedPerson.id}
               tenantCode={tenantCode}
               person={selectedPerson}
+              onUpdated={(updated) => {
+                setPeople(prev => prev.map(p => p.id === updated.id ? updated : p));
+              }}
             />
           </Paper>
         )}

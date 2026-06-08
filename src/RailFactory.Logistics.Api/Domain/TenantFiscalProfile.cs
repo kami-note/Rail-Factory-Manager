@@ -14,12 +14,20 @@ public sealed class TenantFiscalProfile
     public string CofinsCst { get; private set; } = "07";
     public decimal IpiRate { get; private set; } = 0m;
     public int IcmsOrigin { get; private set; } = 0;
+    // Dados do emitente para exibição no DA-MDF-e (não são credenciais sensíveis)
+    public string EmitterName { get; private set; } = string.Empty;
+    public string EmitterCnpj { get; private set; } = string.Empty;
+    public string EmitterIe { get; private set; } = string.Empty;
+    public string EmitterCity { get; private set; } = string.Empty;
+    public string EmitterState { get; private set; } = string.Empty;
     public DateTimeOffset UpdatedAt { get; private set; }
 
     public static TenantFiscalProfile Create(
         string cfopIntra, string cfopInter, string ufOrigem,
         decimal icmsRate, string icmsCst, string pisCst, string cofinsCst,
-        decimal ipiRate, int icmsOrigin) => new()
+        decimal ipiRate, int icmsOrigin,
+        string emitterName = "", string emitterCnpj = "", string emitterIe = "",
+        string emitterCity = "", string emitterState = "") => new()
     {
         Id = "default",
         CfopPadraoIntraestadual = cfopIntra,
@@ -31,13 +39,20 @@ public sealed class TenantFiscalProfile
         CofinsCst = cofinsCst,
         IpiRate = ipiRate,
         IcmsOrigin = icmsOrigin,
+        EmitterName = emitterName,
+        EmitterCnpj = emitterCnpj,
+        EmitterIe = emitterIe,
+        EmitterCity = emitterCity,
+        EmitterState = emitterState,
         UpdatedAt = DateTimeOffset.UtcNow,
     };
 
     public void Update(
         string cfopIntra, string cfopInter, string ufOrigem,
         decimal icmsRate, string icmsCst, string pisCst, string cofinsCst,
-        decimal ipiRate, int icmsOrigin)
+        decimal ipiRate, int icmsOrigin,
+        string emitterName = "", string emitterCnpj = "", string emitterIe = "",
+        string emitterCity = "", string emitterState = "")
     {
         CfopPadraoIntraestadual = cfopIntra;
         CfopPadraoInterestadual = cfopInter;
@@ -48,6 +63,11 @@ public sealed class TenantFiscalProfile
         CofinsCst = cofinsCst;
         IpiRate = ipiRate;
         IcmsOrigin = icmsOrigin;
+        EmitterName = emitterName;
+        EmitterCnpj = emitterCnpj;
+        EmitterIe = emitterIe;
+        EmitterCity = emitterCity;
+        EmitterState = emitterState;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

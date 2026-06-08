@@ -106,3 +106,26 @@ export const deleteShift = (tenantCode: string, personId: string, shiftId: strin
   fetchJsonOrThrow<void>(`${base}/people/${personId}/shifts/${shiftId}`, {
     method: 'DELETE', headers: buildTenantHeaders(tenantCode), credentials: 'include'
   }, 'Falha ao excluir turno');
+
+/**
+ * Uploads an image file for a person profile.
+ */
+export const uploadPersonImage = async (
+  tenantCode: string,
+  personId: string,
+  file: File
+): Promise<{ id: string; imageUrl: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return fetchJsonOrThrow<{ id: string; imageUrl: string }>(
+    `/api/hr/people/${personId}/image`,
+    {
+      method: 'PUT',
+      headers: buildTenantHeaders(tenantCode),
+      body: formData,
+      credentials: 'include'
+    },
+    'Falha ao enviar imagem do funcionário'
+  );
+};

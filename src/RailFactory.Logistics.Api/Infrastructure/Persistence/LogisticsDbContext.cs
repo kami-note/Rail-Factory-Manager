@@ -49,6 +49,8 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.RecipientCity).HasMaxLength(120);
             entity.Property(x => x.RecipientState).HasMaxLength(2);
             entity.Property(x => x.RecipientZipCode).HasMaxLength(10);
+            entity.Property(x => x.RecipientIe).HasMaxLength(20);
+            entity.Property(x => x.ModalidadeFrete).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.DeliveryLatitudeDeg).HasColumnType("numeric(10,6)");
             entity.Property(x => x.DeliveryLongitudeDeg).HasColumnType("numeric(10,6)");
@@ -88,6 +90,7 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.PisCst).HasMaxLength(3).IsRequired();
             entity.Property(x => x.CofinsCst).HasMaxLength(3).IsRequired();
             entity.Property(x => x.IpiRate).HasColumnType("numeric(5,2)");
+            entity.Property(x => x.IpiCst).HasMaxLength(3).IsRequired();
             entity.HasIndex(x => x.ShipmentOrderId);
         });
 
@@ -147,11 +150,19 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.MdfeAccessKey).HasMaxLength(100);
             entity.Property(x => x.MdfeStatus).HasMaxLength(50);
             entity.Property(x => x.MdfeErrorMessage).HasMaxLength(500);
+            entity.Property(x => x.MdfeLinkedNfeKey).HasMaxLength(100);
+            entity.Property(x => x.MdfeUfCarregamento).HasMaxLength(2);
+            entity.Property(x => x.MdfeUfDescarregamento).HasMaxLength(2);
             entity.Property(x => x.ShippingExternalId).HasMaxLength(200);
             entity.Property(x => x.ShippingStatus).HasMaxLength(50);
             entity.Property(x => x.ShippingLabelUrl).HasMaxLength(2000);
             entity.Property(x => x.ShippingTrackingCode).HasMaxLength(100);
             entity.Property(x => x.ShippingErrorMessage).HasMaxLength(500);
+            entity.Property(x => x.PaymentExternalId).HasMaxLength(200);
+            entity.Property(x => x.PaymentStatus).HasMaxLength(50);
+            entity.Property(x => x.PaymentBoletoUrl).HasMaxLength(2000);
+            entity.Property(x => x.PaymentPixUrl).HasMaxLength(2000);
+            entity.Property(x => x.PaymentErrorMessage).HasMaxLength(500);
             entity.Property(x => x.VehiclePlate).HasMaxLength(15);
             entity.Property(x => x.VehicleRntrc).HasMaxLength(20);
             entity.Property(x => x.DriverCpf).HasMaxLength(20);
@@ -161,6 +172,7 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.FiscalExternalId);
             entity.HasIndex(x => x.ShippingExternalId);
+            entity.HasIndex(x => x.PaymentExternalId);
             entity.HasIndex(x => x.CreatedAt);
         });
 
@@ -178,6 +190,11 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.CofinsCst).HasMaxLength(3).IsRequired();
             entity.Property(x => x.IpiRate).HasColumnType("numeric(5,2)").IsRequired();
             entity.Property(x => x.IcmsOrigin).IsRequired();
+            entity.Property(x => x.EmitterName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.EmitterCnpj).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.EmitterIe).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.EmitterCity).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.EmitterState).HasMaxLength(2).IsRequired();
             entity.Property(x => x.UpdatedAt).IsRequired();
         });
     }

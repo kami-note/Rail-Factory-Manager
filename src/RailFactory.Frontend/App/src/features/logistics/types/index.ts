@@ -8,6 +8,11 @@ export interface TenantFiscalProfile {
   cofinsCst: string;
   ipiRate: number;
   icmsOrigin: number;
+  emitterName: string;
+  emitterCnpj: string;
+  emitterIe: string;
+  emitterCity: string;
+  emitterState: string;
   updatedAt: string;
 }
 
@@ -45,6 +50,7 @@ export interface ShipmentItem {
   pisCst?: string;
   cofinsCst?: string;
   ipiRate?: number;
+  ipiCst?: string;
 }
 
 export interface ShipmentOrder {
@@ -62,6 +68,8 @@ export interface ShipmentOrder {
   recipientCity?: string;
   recipientState?: string;
   recipientZipCode?: string;
+  recipientIe?: string;
+  modalidadeFrete?: number;
   natureOfOperation?: string;
   createdAt: string;
   updatedAt: string;
@@ -124,6 +132,9 @@ export interface Dispatch {
   mdfeAccessKey?: string;
   mdfeStatus?: string;
   mdfeErrorMessage?: string;
+  mdfeLinkedNfeKey?: string;
+  mdfeUfCarregamento?: string;
+  mdfeUfDescarregamento?: string;
   shippingExternalId?: string;
   shippingStatus?: string;
   shippingLabelUrl?: string;

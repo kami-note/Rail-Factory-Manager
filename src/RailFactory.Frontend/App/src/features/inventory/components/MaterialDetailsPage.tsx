@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -23,8 +23,9 @@ import {
   AlertTitle,
   Grid
 } from '@mui/material'
-import { ArrowLeft as BackIcon, AlertTriangle, User, Calendar, GitMerge as MergeIcon } from 'lucide-react'
+import { ArrowLeft as BackIcon, AlertTriangle, User, Calendar, GitMerge as MergeIcon, Image as ImageIcon } from 'lucide-react'
 import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http'
+import { uploadMaterialImage } from '../api/materials'
 import { CurrencyFormatter } from '../../../shared/lib/utils/formatters'
 import { PageError } from '../../../shared/components/common/PageError'
 import { StatusChip } from '../../../shared/components/common/StatusChip'
@@ -131,6 +132,30 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
   const [activeTab, setActiveTab] = useState('mappings')
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !materialCode) return
+
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const result = await uploadMaterialImage(tenantCode, materialCode, file)
+      setMaterial(prev => prev ? { ...prev, imageUrl: result.imageUrl } : null)
+    } catch (err) {
+      setUploadError(toUiErrorMessage(err, 'Falha ao enviar imagem.'))
+    } finally {
+      setUploading(false)
+    }
+  }
+
   useEffect(() => {
     if (!materialCode) return
 
@@ -235,14 +260,86 @@ export function MaterialDetailsPage({ tenantCode }: MaterialDetailsPageProps) {
               <StatusChip status={material.status} />
             </Stack>
           </Box>
-          {material.imageUrl && (
-            <Box 
-               component="img" 
-               src={material.imageUrl} 
-               sx={{ width: 100, height: 100, borderRadius: 2, objectFit: 'cover', border: 1, borderColor: 'divider' }}
-               alt={material.officialName}
+          <Stack direction="column" sx={{ alignItems: { xs: 'center', md: 'flex-end' } }} spacing={1}>
+            <input
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              style={{ display: 'none' }}
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              disabled={uploading}
             />
-          )}
+            <Box
+              onClick={uploading ? undefined : handleImageClick}
+              sx={{
+                width: 120,
+                height: 120,
+                borderRadius: 2,
+                border: '2px dashed',
+                borderColor: uploading ? 'primary.main' : 'divider',
+                bgcolor: alpha(theme.palette.primary.main, 0.02),
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: uploading ? 'default' : 'pointer',
+                overflow: 'hidden',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: alpha(theme.palette.primary.main, 0.05),
+                }
+              }}
+            >
+              {uploading ? (
+                <CircularProgress size={24} />
+              ) : material.imageUrl ? (
+                <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <Box
+                    component="img"
+                    src={material.imageUrl}
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    alt={material.officialName}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      bgcolor: 'rgba(0, 0, 0, 0.5)',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      '&:hover': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    Alterar Imagem
+                  </Box>
+                </Box>
+              ) : (
+                <>
+                  <ImageIcon size={28} color={theme.palette.text.secondary} />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, fontWeight: 700 }}>
+                    Enviar Imagem
+                  </Typography>
+                </>
+              )}
+            </Box>
+            {uploadError && (
+              <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
+                {uploadError}
+              </Typography>
+            )}
+          </Stack>
         </Stack>
       </Paper>
 

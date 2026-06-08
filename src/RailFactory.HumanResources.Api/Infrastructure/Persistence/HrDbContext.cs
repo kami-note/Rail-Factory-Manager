@@ -21,6 +21,7 @@ public sealed class HrDbContext(DbContextOptions<HrDbContext> options) : DbConte
             entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(x => x.Email).HasMaxLength(256);
+            entity.Property(x => x.ImageUrl).HasMaxLength(2000);
             entity.Property(x => x.CreatedAt).IsRequired();
             entity.Property(x => x.UpdatedAt).IsRequired();
             entity.HasIndex(x => x.DocumentNumber).IsUnique();

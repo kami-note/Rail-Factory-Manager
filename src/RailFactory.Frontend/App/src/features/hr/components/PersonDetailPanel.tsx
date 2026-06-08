@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Alert,
   Box,
@@ -18,8 +18,10 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useTheme,
+  alpha,
 } from '@mui/material';
-import { Clock, Star, Calendar, Trash2 } from 'lucide-react';
+import { Clock, Star, Calendar, Trash2, Image as ImageIcon } from 'lucide-react';
 import { StatusChip } from '../../../shared/components/common/StatusChip';
 import { Authorized } from '../../auth';
 import {
@@ -31,21 +33,147 @@ import {
   listShifts,
   createShift,
   deleteShift,
+  uploadPersonImage,
 } from '../api/hr';
 import type { Person, HourLog, Skill, WorkShift } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 
-export function PersonDetailPanel({ tenantCode, person }: { tenantCode: string; person: Person }) {
+export function PersonDetailPanel({
+  tenantCode,
+  person,
+  onUpdated,
+}: {
+  tenantCode: string;
+  person: Person;
+  onUpdated?: (updated: Person) => void;
+}) {
   const [tab, setTab] = useState(0);
+  const theme = useTheme();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const result = await uploadPersonImage(tenantCode, person.id, file);
+      if (onUpdated) {
+        onUpdated({ ...person, imageUrl: result.imageUrl });
+      }
+    } catch (err) {
+      setUploadError(toUiErrorMessage(err, 'Falha ao enviar imagem.'));
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>PESSOA</Typography>
-      <Typography variant="h6" sx={{ fontWeight: 800, mt: 0.5 }}>{person.name}</Typography>
-      <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 2, flexWrap: 'wrap', gap: 1 }}>
-        <StatusChip status={person.type} />
-        <StatusChip status={person.status} />
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mb: 2 }}>
+        <input
+          type="file"
+          accept="image/png, image/jpeg, image/webp"
+          style={{ display: 'none' }}
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          disabled={uploading}
+        />
+        
+        <Box
+          onClick={uploading ? undefined : handleImageClick}
+          sx={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            border: '2px dashed',
+            borderColor: uploading ? 'primary.main' : 'divider',
+            bgcolor: alpha(theme.palette.primary.main, 0.02),
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: uploading ? 'default' : 'pointer',
+            overflow: 'hidden',
+            position: 'relative',
+            transition: 'all 0.2s',
+            flexShrink: 0,
+            '&:hover': {
+              borderColor: 'primary.main',
+              bgcolor: alpha(theme.palette.primary.main, 0.05),
+            }
+          }}
+        >
+          {uploading ? (
+            <CircularProgress size={20} />
+          ) : person.imageUrl ? (
+            <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+              <Box
+                component="img"
+                src={person.imageUrl}
+                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                alt={person.name}
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  bgcolor: 'rgba(0, 0, 0, 0.5)',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.2s',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  p: 0.5,
+                  '&:hover': {
+                    opacity: 1
+                  }
+                }}
+              >
+                Alterar
+              </Box>
+            </Box>
+          ) : (
+            <>
+              <ImageIcon size={20} color={theme.palette.text.secondary} />
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontWeight: 700, mt: 0.5 }}>
+                Foto
+              </Typography>
+            </>
+          )}
+        </Box>
+
+        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>PESSOA</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 800, mt: -0.5, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {person.name}
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+            <StatusChip status={person.type} />
+            <StatusChip status={person.status} />
+          </Stack>
+        </Box>
       </Stack>
+
+      {uploadError && (
+        <Alert severity="error" onClose={() => setUploadError(null)} sx={{ mb: 2, py: 0 }}>
+          {uploadError}
+        </Alert>
+      )}
 
       <Tabs
         value={tab}

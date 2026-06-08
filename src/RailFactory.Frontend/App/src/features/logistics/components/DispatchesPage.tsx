@@ -15,6 +15,7 @@ import { useShipmentOrders } from '../hooks/useShipmentOrders';
 import { useCarriers } from '../hooks/useCarriers';
 import { useVehicles } from '../../fleet/hooks/useVehicles';
 import { usePeople } from '../../hr/hooks/usePeople';
+import { useFiscalProfile } from '../hooks/useFiscalProfile';
 import { CreateDispatchModal } from './CreateDispatchModal';
 import { ConferenceModal } from './ConferenceModal';
 import { DispatchPrintView } from './DispatchPrintView';
@@ -52,6 +53,7 @@ export function DispatchesPage({ tenantCode }: Props) {
   const { data: carriers } = useCarriers(tenantCode);
   const { data: vehicles } = useVehicles(tenantCode);
   const { data: people } = usePeople(tenantCode);
+  const { data: fiscalProfile } = useFiscalProfile(tenantCode);
 
   const [localDispatches, setLocalDispatches] = useState<Dispatch[] | null>(null);
   const dispatches = localDispatches ?? dispatchData ?? [];
@@ -374,6 +376,7 @@ export function DispatchesPage({ tenantCode }: Props) {
           order={orderMap.get(damdfeDispatch.shipmentOrderId)!}
           vehicle={damdfeDispatch.vehicleId ? vehicleMap.get(damdfeDispatch.vehicleId) : undefined}
           driver={damdfeDispatch.driverPersonId ? personMap.get(damdfeDispatch.driverPersonId) : undefined}
+          fiscalProfile={fiscalProfile ?? undefined}
           onClose={() => setDamdfeDispatch(null)}
         />
       )}

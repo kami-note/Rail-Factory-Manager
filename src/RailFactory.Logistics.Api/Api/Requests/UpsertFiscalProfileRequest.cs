@@ -9,4 +9,9 @@ public sealed record UpsertFiscalProfileRequest(
     string PisCst,
     string CofinsCst,
     decimal IpiRate,
-    int IcmsOrigin);
+    int IcmsOrigin,
+    string EmitterName = "",
+    string EmitterCnpj = "",
+    string EmitterIe = "",
+    string EmitterCity = "",
+    string EmitterState = "");

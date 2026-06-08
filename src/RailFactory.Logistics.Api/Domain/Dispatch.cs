@@ -28,6 +28,11 @@ public sealed class Dispatch
     public string? MdfeAccessKey { get; private set; }
     public string? MdfeStatus { get; private set; }
     public string? MdfeErrorMessage { get; private set; }
+    // NF-e access key stamped into the MDF-e at emission time — immutable after emission
+    public string? MdfeLinkedNfeKey { get; private set; }
+    // UF de carregamento e descarregamento — snapshot do momento da emissão do MDF-e
+    public string? MdfeUfCarregamento { get; private set; }
+    public string? MdfeUfDescarregamento { get; private set; }
 
     // Shipping label (Melhor Envio / Intelipost) — populated by LogisticsShippingDispatcher
     public string? ShippingExternalId { get; private set; }
@@ -35,6 +40,13 @@ public sealed class Dispatch
     public string? ShippingLabelUrl { get; private set; }
     public string? ShippingTrackingCode { get; private set; }
     public string? ShippingErrorMessage { get; private set; }
+
+    // Payment charge (Asaas / gateway) — populated by LogisticsPaymentDispatcher
+    public string? PaymentExternalId { get; private set; }
+    public string? PaymentStatus { get; private set; }
+    public string? PaymentBoletoUrl { get; private set; }
+    public string? PaymentPixUrl { get; private set; }
+    public string? PaymentErrorMessage { get; private set; }
 
     // Vehicle/driver snapshot stored at creation for MDF-e (cross-service data)
     public string? VehiclePlate { get; private set; }
@@ -106,12 +118,15 @@ public sealed class Dispatch
         FiscalErrorMessage = errorMessage;
     }
 
-    public void UpdateMdfeStatus(string externalId, string mdfeStatus, string? accessKey, string? errorMessage = null)
+    public void UpdateMdfeStatus(string externalId, string mdfeStatus, string? accessKey, string? errorMessage = null, string? linkedNfeKey = null, string? ufCarregamento = null, string? ufDescarregamento = null)
     {
         MdfeExternalId = externalId;
         MdfeStatus = mdfeStatus;
         MdfeAccessKey = accessKey;
         MdfeErrorMessage = errorMessage;
+        if (linkedNfeKey is not null) MdfeLinkedNfeKey = linkedNfeKey;
+        if (ufCarregamento is not null) MdfeUfCarregamento = ufCarregamento;
+        if (ufDescarregamento is not null) MdfeUfDescarregamento = ufDescarregamento;
     }
 
     public void UpdateShippingStatus(string externalId, string status, string? labelUrl, string? trackingCode = null, string? errorMessage = null)
@@ -121,6 +136,15 @@ public sealed class Dispatch
         if (labelUrl is not null) ShippingLabelUrl = labelUrl;
         if (trackingCode is not null) ShippingTrackingCode = trackingCode;
         ShippingErrorMessage = errorMessage;
+    }
+
+    public void UpdatePaymentStatus(string externalId, string status, string? boletoUrl, string? pixUrl, string? errorMessage = null)
+    {
+        PaymentExternalId = externalId;
+        PaymentStatus = status;
+        if (boletoUrl is not null) PaymentBoletoUrl = boletoUrl;
+        if (pixUrl is not null) PaymentPixUrl = pixUrl;
+        PaymentErrorMessage = errorMessage;
     }
 
     // Clears all fiscal fields so the outbox dispatcher retries emission from scratch.

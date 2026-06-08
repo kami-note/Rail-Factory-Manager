@@ -12,16 +12,13 @@ import { FleetPage } from './features/fleet';
 import { CarriersPage, DispatchesPage, FiscalMonitorPage, FiscalSettingsPage, ShipmentOrdersPage } from './features/logistics';
 import { IntegrationsPage } from './features/integrations';
 import { TenantManagementPage } from './features/tenants';
+import { SetupPage } from './features/setup/SetupPage';
 import { TenantSelector } from './shared/components/TenantSelector';
-import { Box, Button, Card, CircularProgress, Container, Typography, Link } from '@mui/material';
+import { Box, Button, Card, CircularProgress, Container, Link, Typography } from '@mui/material';
 import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from './shared/lib/http';
 
 const TENANT_STORAGE_KEY = 'rail_factory_tenant_code';
 
-/**
- * Root Application component handling routing, session validation, and tenant selection.
- * Implementation follows the "Elite Prevention Protocol" for localized and secure UI.
- */
 export function App() {
   const [tenantCode, setTenantCode] = useState<string>(() => {
     const queryTenantCode = new URLSearchParams(window.location.search).get('tenantCode');
@@ -29,7 +26,6 @@ export function App() {
       localStorage.setItem(TENANT_STORAGE_KEY, queryTenantCode);
       return queryTenantCode;
     }
-
     return localStorage.getItem(TENANT_STORAGE_KEY) || '';
   });
 
@@ -62,10 +58,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
 
   useEffect(() => {
     const queryTenantCode = new URLSearchParams(location.search).get('tenantCode');
-    if (!queryTenantCode || queryTenantCode === tenantCode) {
-      return;
-    }
-
+    if (!queryTenantCode || queryTenantCode === tenantCode) return;
     onTenantSelected(queryTenantCode);
   }, [location.search, onTenantSelected, tenantCode]);
 
@@ -81,10 +74,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
         setStatusError(null);
         const response = await fetchJsonOrThrow<Status>(
           '/api/status',
-          {
-            credentials: 'include',
-            headers: buildTenantHeaders(tenantCode)
-          },
+          { credentials: 'include', headers: buildTenantHeaders(tenantCode) },
           'Falha ao carregar status do sistema'
         );
         setStatus(response);
@@ -98,20 +88,11 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
   }, [tenantCode, isProtectedRoute, auth.status]);
 
   useEffect(() => {
-    if (!isProtectedRoute || !tenantCode) {
-      return;
-    }
-
+    if (!isProtectedRoute || !tenantCode) return;
     void auth.refreshSession();
-
-    const handleFocus = () => {
-      void auth.refreshSession();
-    };
-
+    const handleFocus = () => { void auth.refreshSession(); };
     window.addEventListener('focus', handleFocus);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
+    return () => { window.removeEventListener('focus', handleFocus); };
   }, [auth.refreshSession, isProtectedRoute, tenantCode]);
 
   const handleLogout = async () => {
@@ -126,16 +107,16 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
     }
   };
 
-  if (isProtectedRoute && !tenantCode) {
-    return <Navigate to="/" replace />;
-  }
+  if (isProtectedRoute && !tenantCode) return <Navigate to="/" replace />;
 
   if (isProtectedRoute && auth.status === 'loading') {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <CircularProgress size={40} sx={{ mb: 2 }} />
         <Typography variant="h5" sx={{ fontWeight: 800 }}>Validando sessão</Typography>
-        <Typography variant="body1" color="text.secondary">Verificando acesso protegido para a organização <strong>{tenantCode}</strong>.</Typography>
+        <Typography variant="body1" color="text.secondary">
+          Verificando acesso para <strong>{tenantCode}</strong>.
+        </Typography>
       </Box>
     );
   }
@@ -144,14 +125,14 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
     return (
       <Container maxWidth="sm" sx={{ py: 8 }}>
         <Card sx={{ p: 4, textAlign: 'center', borderRadius: 2, border: 1, borderColor: 'divider' }}>
-          <Typography variant="h4" sx={{ fontWeight: 900, mb: 2 }} gutterBottom>Sessão expirada</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 900, mb: 2 }}>Sessão expirada</Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            Esta área é protegida e exige uma sessão ativa para a organização <strong>{tenantCode}</strong>.
+            Esta área exige uma sessão ativa para a organização <strong>{tenantCode}</strong>.
           </Typography>
-          <Button 
-            variant="contained" 
-            href={loginHref} 
-            fullWidth 
+          <Button
+            variant="contained"
+            href={loginHref}
+            fullWidth
             size="large"
             sx={{ mb: 2, py: 1.5, fontWeight: 800, borderRadius: 2 }}
             disabled={!tenantCode}
@@ -159,12 +140,7 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
           >
             Entrar com Google
           </Button>
-          <Link 
-            href="/" 
-            color="primary" 
-            underline="hover" 
-            sx={{ fontWeight: 700, cursor: 'pointer' }}
-          >
+          <Link href="/" color="primary" underline="hover" sx={{ fontWeight: 700, cursor: 'pointer' }}>
             Voltar para o início
           </Link>
         </Card>
@@ -174,6 +150,8 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
 
   return (
     <Routes>
+      <Route path="/setup" element={<SetupPage />} />
+
       <Route path="/" element={
         <Container maxWidth="sm" sx={{ py: 8 }}>
           <Card sx={{ p: 5, textAlign: 'center', borderRadius: 3, border: 1, borderColor: 'divider', boxShadow: 0 }}>
@@ -181,31 +159,36 @@ function AppContent({ tenantCode, onTenantSelected }: AppContentProps) {
               RAIL FACTORY
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-              Selecione sua organização para acessar o painel de operações.
+              Informe o código da sua organização para acessar o painel.
             </Typography>
 
-            <TenantSelector 
+            <TenantSelector
               onTenantSelected={onTenantSelected}
-              selectedTenantCode={tenantCode} 
+              selectedTenantCode={tenantCode}
             />
 
-            <Button 
-              variant="contained" 
-              href={loginHref} 
-              fullWidth 
+            <Button
+              variant="contained"
+              href={loginHref}
+              fullWidth
               size="large"
               disabled={!tenantCode}
-              sx={{ mt: 4, py: 2, fontWeight: 900, borderRadius: 2 }}
+              sx={{ py: 2, fontWeight: 900, borderRadius: 2 }}
               startIcon={<img src="/google-g-logo.png" alt="" style={{ width: 18, height: 18 }} />}
             >
               Entrar com Google
             </Button>
-            {auth.oauthError && <Typography color="error" sx={{ mt: 2, fontWeight: 600 }}>{auth.oauthError}</Typography>}
-            {auth.status === 'error' && auth.error && <Typography color="error" sx={{ mt: 2, fontWeight: 600 }}>{auth.error}</Typography>}
+
+            {auth.oauthError && (
+              <Typography color="error" sx={{ mt: 2, fontWeight: 600 }}>{auth.oauthError}</Typography>
+            )}
+            {auth.status === 'error' && auth.error && (
+              <Typography color="error" sx={{ mt: 2, fontWeight: 600 }}>{auth.error}</Typography>
+            )}
           </Card>
         </Container>
       } />
-      
+
       <Route path="/app/*" element={
         <ProtectedDashboardLayout
           tenantCode={tenantCode}

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.HumanResources.Api.Api.Requests;
 using RailFactory.HumanResources.Api.Application.Hours;
@@ -39,6 +40,9 @@ public static class HrEndpoints
             .RequirePermission(SystemPermissions.Hr.Write);
 
         secure.MapPut("/people/{id:guid}/activate", HandleActivatePerson)
+            .RequirePermission(SystemPermissions.Hr.Write);
+
+        secure.MapPut("/people/{id:guid}/image", HandleUpdatePersonImage)
             .RequirePermission(SystemPermissions.Hr.Write);
 
         // Hour Logs
@@ -139,6 +143,20 @@ public static class HrEndpoints
         catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
     }
 
+    private static async Task<IResult> HandleUpdatePersonImage(
+        Guid id,
+        [FromBody] UpdatePersonImageRequest req,
+        UpdatePersonImage useCase,
+        CancellationToken ct)
+    {
+        try
+        {
+            await useCase.ExecuteAsync(id, req.ImageUrl, ct);
+            return Results.NoContent();
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+    }
+
     // ── Hour Logs ─────────────────────────────────────────────────────────────
 
     private static async Task<IResult> HandleLogHours(
@@ -225,7 +243,7 @@ public static class HrEndpoints
 
     private static object MapPersonResponse(Person p) => new
     {
-        p.Id, p.Name, p.DocumentNumber, p.Email,
+        p.Id, p.Name, p.DocumentNumber, p.Email, p.ImageUrl,
         Type   = p.Type.ToDisplayType(),
         Status = p.Status.ToDisplayStatus(),
         p.CreatedAt, p.UpdatedAt

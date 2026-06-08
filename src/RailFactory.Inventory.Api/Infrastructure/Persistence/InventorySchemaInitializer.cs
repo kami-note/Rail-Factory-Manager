@@ -4,39 +4,43 @@ using System.Reflection;
 
 namespace RailFactory.Inventory.Api.Infrastructure.Persistence;
 
-/// <summary>
-/// Initializes the Inventory database schema for all active tenants.
-/// </summary>
-/// <remarks>
-/// This initializer iterates over all tenants in the catalog and applies EF Core migrations.
-/// It uses a <see cref="SemaphoreSlim"/> to limit concurrent database migrations,
-/// ensuring stability and preventing connection pool exhaustion during startup.
-/// Resilience is handled by the underlying <see cref="ITenantCatalogClient"/>'s resilience policies.
-/// </remarks>
-public sealed class InventorySchemaInitializer(IServiceProvider serviceProvider, ILogger<InventorySchemaInitializer> logger) : IHostedService
+public sealed class InventorySchemaInitializer(
+    IServiceProvider serviceProvider,
+    ILogger<InventorySchemaInitializer> logger) : BackgroundService
 {
     private static readonly SemaphoreSlim MigrationSemaphore = new(5);
+    private readonly HashSet<string> _migratedTenants = [];
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("Starting Inventory multi-tenant schema initialization...");
+        logger.LogInformation("Inventory schema initializer started.");
+        await MigrateNewTenantsAsync(stoppingToken);
 
-        await using var scope = serviceProvider.CreateAsyncScope();
-        var catalogClient = scope.ServiceProvider.GetRequiredService<ITenantCatalogClient>();
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+            await MigrateNewTenantsAsync(stoppingToken);
+    }
 
-        var allTenants = await catalogClient.ListAllAsync(cancellationToken);
-        var activeTenants = allTenants.Where(t => t.Found && t.IsActive).ToList();
-
-        if (!activeTenants.Any())
+    private async Task MigrateNewTenantsAsync(CancellationToken cancellationToken)
+    {
+        List<TenantResolutionResult> pending;
+        try
         {
-            logger.LogWarning("No active tenants found in catalog for Inventory migration.");
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var client = scope.ServiceProvider.GetRequiredService<ITenantCatalogClient>();
+            var all = await client.ListAllAsync(cancellationToken);
+            pending = all.Where(t => t.IsActive && !_migratedTenants.Contains(t.Code)).ToList();
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "Could not fetch tenant list from catalog. Will retry in 15s.");
             return;
         }
 
-        var migrationTasks = activeTenants.Select(tenant => MigrateTenantAsync(tenant, cancellationToken));
-        await Task.WhenAll(migrationTasks);
+        if (pending.Count == 0) return;
 
-        logger.LogInformation("Inventory multi-tenant schema initialization completed.");
+        logger.LogInformation("Migrating Inventory databases for {Count} new tenant(s)...", pending.Count);
+        await Task.WhenAll(pending.Select(t => MigrateTenantAsync(t, cancellationToken)));
     }
 
     private async Task MigrateTenantAsync(TenantResolutionResult tenant, CancellationToken cancellationToken)
@@ -44,26 +48,21 @@ public sealed class InventorySchemaInitializer(IServiceProvider serviceProvider,
         await MigrationSemaphore.WaitAsync(cancellationToken);
         try
         {
-            logger.LogInformation("Migrating Inventory database for tenant: {TenantCode}", tenant.Code);
-
             using var tenantScope = serviceProvider.CreateScope();
             var scopedContextAccessor = tenantScope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
             scopedContextAccessor.Current = new TenantContext(
-                tenant.Code,
-                tenant.Locale,
-                tenant.TimeZone,
-                tenant.ConnectionStrings);
+                tenant.Code, tenant.Locale, tenant.TimeZone, tenant.ConnectionStrings);
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-
             await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
             await dbContext.Database.MigrateAsync(cancellationToken);
 
-            logger.LogInformation("Inventory database for tenant {TenantCode} initialized successfully.", tenant.Code);
+            _migratedTenants.Add(tenant.Code);
+            logger.LogInformation("Inventory database for tenant '{TenantCode}' migrated.", tenant.Code);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            logger.LogError(ex, "Failed to migrate Inventory database for tenant: {TenantCode}", tenant.Code);
+            logger.LogError(ex, "Failed to migrate Inventory database for tenant '{TenantCode}'. Will retry.", tenant.Code);
         }
         finally
         {
@@ -71,45 +70,29 @@ public sealed class InventorySchemaInitializer(IServiceProvider serviceProvider,
         }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
     private static async Task AlignLegacySchemaWithMigrationHistoryAsync(
         InventoryDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken);
-        if (appliedMigrations.Any())
-        {
-            return;
-        }
+        if (appliedMigrations.Any()) return;
 
         var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync(cancellationToken);
-        if (!pendingMigrations.Any())
-        {
-            return;
-        }
+        if (!pendingMigrations.Any()) return;
 
         var connection = dbContext.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
-        {
             await connection.OpenAsync(cancellationToken);
-        }
 
         await using var tableExistsCommand = connection.CreateCommand();
         tableExistsCommand.CommandText = "SELECT to_regclass('public.inventory_balances') IS NOT NULL;";
-        var tableExistsResult = await tableExistsCommand.ExecuteScalarAsync(cancellationToken);
-        var tableExists = tableExistsResult is true;
-        if (!tableExists)
-        {
-            return;
-        }
+        if (await tableExistsCommand.ExecuteScalarAsync(cancellationToken) is not true) return;
 
         var firstPendingMigration = pendingMigrations.First();
         var efProductVersion = typeof(DbContext)
             .Assembly
-            .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion
-            ?.Split('+')[0] ?? "9.0.0";
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion?.Split('+')[0] ?? "9.0.0";
 
         await dbContext.Database.ExecuteSqlRawAsync("""
             CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (

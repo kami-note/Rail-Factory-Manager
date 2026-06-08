@@ -3,35 +3,43 @@ using RailFactory.BuildingBlocks.Tenancy;
 
 namespace RailFactory.Production.Api.Infrastructure.Persistence;
 
-/// <summary>
-/// Initializes the Production database schema for all active tenants on startup.
-/// </summary>
 public sealed class ProductionSchemaInitializer(
     IServiceProvider serviceProvider,
-    ILogger<ProductionSchemaInitializer> logger) : IHostedService
+    ILogger<ProductionSchemaInitializer> logger) : BackgroundService
 {
     private static readonly SemaphoreSlim MigrationSemaphore = new(5);
+    private readonly HashSet<string> _migratedTenants = [];
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("Starting Production multi-tenant schema initialization...");
+        logger.LogInformation("Production schema initializer started.");
+        await MigrateNewTenantsAsync(stoppingToken);
 
-        await using var scope = serviceProvider.CreateAsyncScope();
-        var catalogClient = scope.ServiceProvider.GetRequiredService<ITenantCatalogClient>();
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+            await MigrateNewTenantsAsync(stoppingToken);
+    }
 
-        var allTenants = await catalogClient.ListAllAsync(cancellationToken);
-        var activeTenants = allTenants.Where(t => t.Found && t.IsActive).ToList();
-
-        if (!activeTenants.Any())
+    private async Task MigrateNewTenantsAsync(CancellationToken cancellationToken)
+    {
+        List<TenantResolutionResult> pending;
+        try
         {
-            logger.LogWarning("No active tenants found in catalog for Production migration.");
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var client = scope.ServiceProvider.GetRequiredService<ITenantCatalogClient>();
+            var all = await client.ListAllAsync(cancellationToken);
+            pending = all.Where(t => t.IsActive && !_migratedTenants.Contains(t.Code)).ToList();
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "Could not fetch tenant list from catalog. Will retry in 15s.");
             return;
         }
 
-        var migrationTasks = activeTenants.Select(tenant => MigrateTenantAsync(tenant, cancellationToken));
-        await Task.WhenAll(migrationTasks);
+        if (pending.Count == 0) return;
 
-        logger.LogInformation("Production multi-tenant schema initialization completed.");
+        logger.LogInformation("Migrating Production databases for {Count} new tenant(s)...", pending.Count);
+        await Task.WhenAll(pending.Select(t => MigrateTenantAsync(t, cancellationToken)));
     }
 
     private async Task MigrateTenantAsync(TenantResolutionResult tenant, CancellationToken cancellationToken)
@@ -39,30 +47,24 @@ public sealed class ProductionSchemaInitializer(
         await MigrationSemaphore.WaitAsync(cancellationToken);
         try
         {
-            logger.LogInformation("Migrating Production database for tenant: {TenantCode}", tenant.Code);
-
             using var tenantScope = serviceProvider.CreateScope();
             var scopedContextAccessor = tenantScope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
             scopedContextAccessor.Current = new TenantContext(
-                tenant.Code,
-                tenant.Locale,
-                tenant.TimeZone,
-                tenant.ConnectionStrings);
+                tenant.Code, tenant.Locale, tenant.TimeZone, tenant.ConnectionStrings);
 
             var dbContext = tenantScope.ServiceProvider.GetRequiredService<ProductionDbContext>();
             await dbContext.Database.MigrateAsync(cancellationToken);
 
-            logger.LogInformation("Production database for tenant {TenantCode} initialized successfully.", tenant.Code);
+            _migratedTenants.Add(tenant.Code);
+            logger.LogInformation("Production database for tenant '{TenantCode}' migrated.", tenant.Code);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            logger.LogError(ex, "Failed to migrate Production database for tenant: {TenantCode}", tenant.Code);
+            logger.LogError(ex, "Failed to migrate Production database for tenant '{TenantCode}'. Will retry.", tenant.Code);
         }
         finally
         {
             MigrationSemaphore.Release();
         }
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

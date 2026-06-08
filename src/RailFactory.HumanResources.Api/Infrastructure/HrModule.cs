@@ -32,6 +32,7 @@ public static class HrModule
         services.AddScoped<ActivatePerson>();
         services.AddScoped<DeactivatePerson>();
         services.AddScoped<ListPersons>();
+        services.AddScoped<UpdatePersonImage>();
 
         services.AddScoped<LogHours>();
         services.AddScoped<ListHourLogs>();

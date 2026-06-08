@@ -96,6 +96,16 @@ public sealed class ShipDispatch(
             LogisticsOutboxMessage.Create(IntegrationConstants.LogisticsEvents.ShippingLabelRequested, shippingPayload),
             ct);
 
+        // Enqueue payment charge request — processed asynchronously by LogisticsPaymentDispatcher
+        var paymentPayload = JsonSerializer.Serialize(new
+        {
+            dispatchId = dispatch.Id,
+            shipmentOrderId = order.Id
+        });
+        await outbox.AddAsync(
+            LogisticsOutboxMessage.Create(IntegrationConstants.LogisticsEvents.PaymentChargeRequested, paymentPayload),
+            ct);
+
         await dispatches.SaveAsync(dispatch, ct);
     }
 }

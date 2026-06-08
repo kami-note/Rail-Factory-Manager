@@ -30,6 +30,11 @@ public static class FrontendEndpoints
         var inventoryGroup = group.MapGroup("/inventory");
         inventoryGroup.MapPut("/materials/{materialCode}/image", MaterialImageUploadEndpoint.HandlePut);
         inventoryGroup.MapGet("/materials/images/{tenantCode}/{fileName}", MaterialImageServingEndpoint.HandleGet);
+
+        // HR Group
+        var hrGroup = group.MapGroup("/hr");
+        hrGroup.MapPut("/people/{id:guid}/image", PersonImageUploadEndpoint.HandlePut);
+        hrGroup.MapGet("/people/images/{tenantCode}/{fileName}", PersonImageServingEndpoint.HandleGet);
         
         app.MapReverseProxy(proxyPipeline =>
         {
@@ -52,7 +57,9 @@ public static class FrontendEndpoints
                 }
 
                 // 2. CSRF Validation for mutation methods (POST, PUT, DELETE) — skipped for dev bypass
-                if (devEmail is null && (HttpMethods.IsPost(context.Request.Method) ||
+                // Bootstrap has no tenant yet and is protected by its own "zero tenants" gate.
+                var isBootstrap = context.Request.Path.StartsWithSegments("/api/tenancy/bootstrap");
+                if (!isBootstrap && devEmail is null && (HttpMethods.IsPost(context.Request.Method) ||
                     HttpMethods.IsPut(context.Request.Method) ||
                     HttpMethods.IsDelete(context.Request.Method)))
                 {

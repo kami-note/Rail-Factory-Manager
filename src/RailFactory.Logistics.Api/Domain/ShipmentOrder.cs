@@ -23,6 +23,7 @@ public sealed class ShipmentItem
     public string PisCst { get; private set; } = "07";
     public string CofinsCst { get; private set; } = "07";
     public decimal IpiRate { get; private set; }
+    public string IpiCst { get; private set; } = "99";
 
     private ShipmentItem() { }
 
@@ -30,7 +31,8 @@ public sealed class ShipmentItem
         decimal quantity, string unitOfMeasure, decimal weightKg, decimal volumeCbm,
         string ncmCode = "", string cfopCode = "", decimal unitValue = 0,
         decimal taxBaseIcms = 0, decimal icmsRate = 12,
-        int icmsOrigin = 0, string icmsCst = "40", string pisCst = "07", string cofinsCst = "07", decimal ipiRate = 0)
+        int icmsOrigin = 0, string icmsCst = "40", string pisCst = "07", string cofinsCst = "07",
+        decimal ipiRate = 0, string ipiCst = "99")
     {
         return new ShipmentItem
         {
@@ -50,7 +52,8 @@ public sealed class ShipmentItem
             IcmsCst = icmsCst.Trim(),
             PisCst = pisCst.Trim(),
             CofinsCst = cofinsCst.Trim(),
-            IpiRate = ipiRate
+            IpiRate = ipiRate,
+            IpiCst = ipiCst.Trim()
         };
     }
 }
@@ -80,7 +83,11 @@ public sealed class ShipmentOrder
     public string? RecipientCity { get; private set; }
     public string? RecipientState { get; private set; }
     public string? RecipientZipCode { get; private set; }
+    // IE do destinatário — necessário para indicador_inscricao_estadual_destinatario = 1
+    public string? RecipientIe { get; private set; }
     public string NatureOfOperation { get; private set; } = "Venda de mercadoria";
+    // Modalidade de frete: 0=CIF (por conta do emitente), 1=FOB (destinatário), 2=Terceiros, 9=Sem frete
+    public int ModalidadeFrete { get; private set; } = 0;
 
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -95,7 +102,8 @@ public sealed class ShipmentOrder
         string? recipientStreet = null, string? recipientNumber = null,
         string? recipientDistrict = null, string? recipientCity = null,
         string? recipientState = null, string? recipientZipCode = null,
-        string? natureOfOperation = null)
+        string? natureOfOperation = null,
+        string? recipientIe = null, int modalidadeFrete = 0)
     {
         var now = DateTimeOffset.UtcNow;
         var orderNumber = $"EXP-{now:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..4].ToUpperInvariant()}";
@@ -118,7 +126,9 @@ public sealed class ShipmentOrder
             RecipientCity = recipientCity?.Trim(),
             RecipientState = recipientState?.Trim(),
             RecipientZipCode = recipientZipCode?.Trim(),
+            RecipientIe = recipientIe?.Trim(),
             NatureOfOperation = natureOfOperation?.Trim() ?? "Venda de mercadoria",
+            ModalidadeFrete = modalidadeFrete,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -128,13 +138,14 @@ public sealed class ShipmentOrder
         decimal weightKg, decimal volumeCbm,
         string ncmCode = "", string cfopCode = "", decimal unitValue = 0,
         decimal taxBaseIcms = 0, decimal icmsRate = 12,
-        int icmsOrigin = 0, string icmsCst = "40", string pisCst = "07", string cofinsCst = "07", decimal ipiRate = 0)
+        int icmsOrigin = 0, string icmsCst = "40", string pisCst = "07", string cofinsCst = "07",
+        decimal ipiRate = 0, string ipiCst = "99")
     {
         if (Status != ShipmentOrderStatus.Draft)
             throw new InvalidOperationException("Items can only be added to Draft orders.");
         var item = ShipmentItem.Create(Id, materialCode, quantity, unitOfMeasure, weightKg, volumeCbm,
             ncmCode, cfopCode, unitValue, taxBaseIcms, icmsRate,
-            icmsOrigin, icmsCst, pisCst, cofinsCst, ipiRate);
+            icmsOrigin, icmsCst, pisCst, cofinsCst, ipiRate, ipiCst);
         _items.Add(item);
         UpdatedAt = DateTimeOffset.UtcNow;
         return item;

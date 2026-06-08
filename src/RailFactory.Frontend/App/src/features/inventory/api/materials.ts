@@ -72,3 +72,26 @@ export const mergeMaterials = async (
     'Falha ao unificar materiais'
   );
 };
+
+/**
+ * Uploads an image file for a material catalog entry.
+ */
+export const uploadMaterialImage = async (
+  tenantCode: string,
+  materialCode: string,
+  file: File
+): Promise<{ materialCode: string; imageUrl: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return fetchJsonOrThrow<{ materialCode: string; imageUrl: string }>(
+    `/api/inventory/materials/${encodeURIComponent(materialCode)}/image`,
+    {
+      method: 'PUT',
+      headers: buildTenantHeaders(tenantCode),
+      body: formData,
+      credentials: 'include'
+    },
+    'Falha ao enviar imagem do material'
+  );
+};
