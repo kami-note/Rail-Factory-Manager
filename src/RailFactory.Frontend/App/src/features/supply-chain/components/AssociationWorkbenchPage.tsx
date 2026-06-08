@@ -679,7 +679,13 @@ function CreateMaterialForm({ tenantCode, receiptId, item, onSuccess }: {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isNcmValid = !formData.ncm || formData.ncm.length === 8;
+  const isGtinValid = !formData.gtin || [8, 12, 13, 14].includes(formData.gtin.length);
+  const isSkuValid = formData.materialCode.trim().length > 0;
+  const isFormValid = isNcmValid && isGtinValid && isSkuValid && formData.officialName.trim() && formData.unitOfMeasure.trim();
+
   const handleSubmit = async () => {
+    if (!isFormValid) return;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -704,7 +710,13 @@ function CreateMaterialForm({ tenantCode, receiptId, item, onSuccess }: {
 
   return (
     <Stack spacing={2}>
-      <TextField label="SKU Interno" fullWidth size="small" value={formData.materialCode} onChange={e => setFormData({...formData, materialCode: e.target.value})} />
+      <TextField
+        label="SKU Interno"
+        fullWidth
+        size="small"
+        value={formData.materialCode}
+        onChange={e => setFormData({...formData, materialCode: e.target.value.toUpperCase().replace(/\s/g, '')})}
+      />
       <TextField label="Nome Oficial" fullWidth size="small" value={formData.officialName} onChange={e => setFormData({...formData, officialName: e.target.value})} />
       <Stack direction="row" spacing={2}>
         <TextField label="Unidade Base" sx={{ flex: 1 }} size="small" value={formData.unitOfMeasure} onChange={e => setFormData({...formData, unitOfMeasure: e.target.value})} />
@@ -724,15 +736,33 @@ function CreateMaterialForm({ tenantCode, receiptId, item, onSuccess }: {
         <MenuItem value="Consumable">Consumível</MenuItem>
       </TextField>
       <Stack direction="row" spacing={2}>
-        <TextField label="NCM" sx={{ flex: 1 }} size="small" value={formData.ncm} onChange={e => setFormData({...formData, ncm: e.target.value})} />
-        <TextField label="GTIN" sx={{ flex: 1 }} size="small" value={formData.gtin} onChange={e => setFormData({...formData, gtin: e.target.value})} />
+        <TextField
+          label="NCM"
+          sx={{ flex: 1 }}
+          size="small"
+          value={formData.ncm}
+          onChange={e => setFormData({...formData, ncm: e.target.value.replace(/\D/g, '').slice(0, 8)})}
+          error={formData.ncm.length > 0 && !isNcmValid}
+          helperText={formData.ncm.length > 0 && !isNcmValid ? "Deve ter 8 dígitos" : ""}
+          slotProps={{ htmlInput: { maxLength: 8 } }}
+        />
+        <TextField
+          label="GTIN"
+          sx={{ flex: 1 }}
+          size="small"
+          value={formData.gtin}
+          onChange={e => setFormData({...formData, gtin: e.target.value.replace(/\D/g, '').slice(0, 14)})}
+          error={formData.gtin.length > 0 && !isGtinValid}
+          helperText={formData.gtin.length > 0 && !isGtinValid ? "Tamanho inválido (8, 12, 13 ou 14 dígitos)" : ""}
+          slotProps={{ htmlInput: { maxLength: 14 } }}
+        />
       </Stack>
       <Button 
         variant="contained" 
         color="primary" 
         fullWidth 
         startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <AddIcon size={16} />}
-        disabled={isSubmitting}
+        disabled={isSubmitting || !isFormValid}
         onClick={handleSubmit}
         sx={{ fontWeight: 800 }}
       >

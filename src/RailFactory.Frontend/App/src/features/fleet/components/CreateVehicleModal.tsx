@@ -19,6 +19,7 @@ import { InlineError } from '../../../shared/components/common/InlineError';
 import { createVehicle } from '../api/fleet';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 import type { Vehicle } from '../types';
+import { Masks, Validators } from '../../../shared/lib/utils/masks';
 
 const VEHICLE_TYPE_OPTIONS = [
   { value: 'Car',        label: 'Carro' },
@@ -54,13 +55,19 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
     }
   }, [open]);
 
+  const isPlateValid = !plate || Validators.plate(plate);
+  const isChassisValid = !chassis || chassis.trim().length === 17;
+  const isRenavamValid = !renavam || (renavam.trim().length >= 9 && renavam.trim().length <= 11);
+  const isRntrcValid = !rntrc || rntrc.trim().length === 8;
+
   const isValid =
     plate.trim().length > 0 &&
     chassis.trim().length > 0 &&
     renavam.trim().length > 0 &&
     maxWeightKg !== '' &&
     maxVolumeCbm !== '' &&
-    licenseExpiry !== '';
+    licenseExpiry !== '' &&
+    isPlateValid && isChassisValid && isRenavamValid && isRntrcValid;
 
   const handleSubmit = async () => {
     if (!isValid) return;
@@ -68,7 +75,7 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
     setError(null);
     try {
       const vehicle = await createVehicle(tenantCode, {
-        plate: plate.trim().toUpperCase(),
+        plate: plate.replace('-', '').trim().toUpperCase(),
         chassis: chassis.trim().toUpperCase(),
         renavam: renavam.trim(),
         rntrc: rntrc.trim() || undefined,
@@ -106,9 +113,11 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
               size="small"
               sx={{ width: 130 }}
               value={plate}
-              onChange={e => setPlate(e.target.value.toUpperCase())}
+              onChange={e => setPlate(Masks.plate(e.target.value))}
               placeholder="ABC-1234"
-              slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontWeight: 700 } } }}
+              error={plate.length > 0 && !isPlateValid}
+              helperText={plate.length > 0 && !isPlateValid ? "Placa inválida" : ""}
+              slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontWeight: 700 }, maxLength: 8 } }}
               autoFocus
             />
             <FormControl size="small" sx={{ minWidth: 150 }}>
@@ -124,9 +133,11 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
               size="small"
               sx={{ flexGrow: 1 }}
               value={renavam}
-              onChange={e => setRenavam(e.target.value)}
+              onChange={e => setRenavam(e.target.value.replace(/\D/g, ''))}
               placeholder="00123456789"
-              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }}
+              error={renavam.length > 0 && !isRenavamValid}
+              helperText={renavam.length > 0 && !isRenavamValid ? "Mín. 9 e máx. 11 dígitos" : ""}
+              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' }, maxLength: 11 } }}
             />
           </Stack>
 
@@ -136,19 +147,22 @@ export function CreateVehicleModal({ open, tenantCode, onCreated, onClose }: Pro
               size="small"
               sx={{ flexGrow: 1 }}
               value={chassis}
-              onChange={e => setChassis(e.target.value.toUpperCase())}
+              onChange={e => setChassis(e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, ''))}
               placeholder="9BWZZZ377VT004251"
-              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }}
+              error={chassis.length > 0 && !isChassisValid}
+              helperText={chassis.length > 0 && !isChassisValid ? "Chassi deve ter 17 caracteres" : ""}
+              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' }, maxLength: 17 } }}
             />
             <TextField
               label="RNTRC"
               size="small"
               sx={{ width: 140 }}
               value={rntrc}
-              onChange={e => setRntrc(e.target.value)}
+              onChange={e => setRntrc(e.target.value.replace(/\D/g, ''))}
               placeholder="12345678"
-              helperText="Opcional — para MDF-e"
-              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }}
+              error={rntrc.length > 0 && !isRntrcValid}
+              helperText={rntrc.length > 0 && !isRntrcValid ? "Deve ter 8 dígitos" : "Opcional — para MDF-e"}
+              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' }, maxLength: 8 } }}
             />
           </Stack>
 

@@ -11,6 +11,7 @@ import {
   type CredentialField, type IntegrationCategory,
 } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { Masks, Validators } from '../../../shared/lib/utils/masks';
 
 type Props = {
   open: boolean;
@@ -20,6 +21,71 @@ type Props = {
   onSaved: () => void;
   onClose: () => void;
 };
+
+/**
+ * Validates a dynamic integration field value based on its key.
+ */
+function validateField(key: string, value: string): boolean {
+  if (!value) return true;
+  if (key === 'emitter_cnpj') {
+    return Validators.cnpj(value);
+  }
+  if (key === 'sender_document') {
+    return Validators.cpfCnpj(value);
+  }
+  if (key === 'emitter_zip' || key === 'sender_zip_code') {
+    return Validators.cep(value);
+  }
+  if (key === 'sender_phone') {
+    return Validators.phone(value);
+  }
+  if (key.toLowerCase().includes('email')) {
+    return Validators.email(value);
+  }
+  return true;
+}
+
+/**
+ * Returns validation message helper text or fallback hint for a field.
+ */
+function getValidationHelperText(key: string, value: string, defaultHint?: string): string {
+  if (!value) return defaultHint || '';
+  if (key === 'emitter_cnpj' && !Validators.cnpj(value)) {
+    return 'CNPJ inválido (deve ter 14 dígitos)';
+  }
+  if (key === 'sender_document' && !Validators.cpfCnpj(value)) {
+    return 'CPF ou CNPJ inválido';
+  }
+  if ((key === 'emitter_zip' || key === 'sender_zip_code') && !Validators.cep(value)) {
+    return 'CEP inválido (deve ter 8 dígitos)';
+  }
+  if (key === 'sender_phone' && !Validators.phone(value)) {
+    return 'Telefone inválido (deve ter 10 ou 11 dígitos)';
+  }
+  if (key.toLowerCase().includes('email') && !Validators.email(value)) {
+    return 'E-mail inválido';
+  }
+  return defaultHint || '';
+}
+
+/**
+ * Applies a mask to a dynamic integration field value based on its key.
+ */
+function applyMask(key: string, value: string): string {
+  if (key === 'emitter_cnpj') {
+    return Masks.cnpj(value);
+  }
+  if (key === 'sender_document') {
+    return Masks.cpfCnpj(value);
+  }
+  if (key === 'emitter_zip' || key === 'sender_zip_code') {
+    return Masks.cep(value);
+  }
+  if (key === 'sender_phone') {
+    return Masks.phone(value);
+  }
+  return value;
+}
 
 /**
  * Determines the layout grid size for a given integration configuration field.
@@ -84,19 +150,37 @@ function CredentialFieldInput({
   field, value, onChange,
 }: { field: CredentialField; value: string; onChange: (v: string) => void }) {
   const size = getFieldSize(field.key);
+  const isValid = validateField(field.key, value);
+  const helperText = getValidationHelperText(field.key, value, field.hint);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = applyMask(field.key, e.target.value);
+    onChange(formatted);
+  };
+
+  const getMaxLength = (key: string): number | undefined => {
+    if (key === 'emitter_cnpj') return 18;
+    if (key === 'sender_document') return value.replace(/\D/g, '').length <= 11 ? 14 : 18;
+    if (key === 'emitter_zip' || key === 'sender_zip_code') return 9;
+    if (key === 'sender_phone') return 15;
+    if (key === 'emitter_state' || key === 'sender_state') return 2;
+    return undefined;
+  };
+
   return (
     <Grid size={size}>
       <TextField
         label={field.label}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={handleTextChange}
         fullWidth
         size="small"
         required={field.required}
         placeholder={field.placeholder}
         type={field.secret ? 'password' : 'text'}
-        helperText={field.hint}
-        slotProps={{ htmlInput: { maxLength: field.key === 'emitter_state' ? 2 : undefined } }}
+        error={!isValid}
+        helperText={helperText}
+        slotProps={{ htmlInput: { maxLength: getMaxLength(field.key) } }}
       />
     </Grid>
   );
@@ -135,15 +219,39 @@ export function ConfigureIntegrationModal({ open, tenantCode, category, existing
   const setField = (key: string, value: string) =>
     setCredentials(prev => ({ ...prev, [key]: value }));
 
+  const isFormValid = (() => {
+    if (!schema) return false;
+    if (schema.providerType === 'mock') return true;
+    const allFields = [...schema.credentialFields, ...schema.emitterFields, ...schema.webhookFields];
+    return allFields.every(f => {
+      const val = credentials[f.key] ?? '';
+      if (f.required && !val.trim()) return false;
+      return validateField(f.key, val);
+    });
+  })();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (saving || !providerType) return;
+    if (!isFormValid || saving || !providerType) return;
     setSaving(true); setError(null);
     try {
-      const filtered = Object.fromEntries(
-        Object.entries(credentials).filter(([, v]) => v.trim() !== '')
+      const cleanedCredentials = Object.fromEntries(
+        Object.entries(credentials)
+          .map(([k, v]) => {
+            if (
+              k === 'emitter_cnpj' ||
+              k === 'sender_document' ||
+              k === 'emitter_zip' ||
+              k === 'sender_zip_code' ||
+              k === 'sender_phone'
+            ) {
+              return [k, Masks.cleanDigits(v)];
+            }
+            return [k, v];
+          })
+          .filter(([, v]) => v.trim() !== '')
       );
-      await configureIntegration(tenantCode, { category, providerType, credentials: filtered });
+      await configureIntegration(tenantCode, { category, providerType, credentials: cleanedCredentials });
       onSaved();
     } catch (err) {
       setError(toUiErrorMessage(err, 'Erro ao salvar integração.'));
@@ -233,7 +341,7 @@ export function ConfigureIntegrationModal({ open, tenantCode, category, existing
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={onClose} disabled={saving}>Cancelar</Button>
-          <Button type="submit" variant="contained" disabled={saving || !providerType}>
+          <Button type="submit" variant="contained" disabled={saving || !providerType || !isFormValid}>
             {saving ? 'Salvando...' : 'Salvar'}
           </Button>
         </DialogActions>

@@ -20,6 +20,7 @@ import { FuelingContent } from './FuelingContent';
 import { ReportsContent } from './ReportsContent';
 import type { Vehicle } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { Masks } from '../../../shared/lib/utils/masks';
 
 type Props = { tenantCode: string };
 type ConfirmAction = { type: 'deactivate' | 'activate'; id: string; plate: string };
@@ -163,7 +164,7 @@ export function FleetPage({ tenantCode }: Props) {
                   onClick={() => setDetailVehicle(v)}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{v.plate}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{Masks.plate(v.plate)}</TableCell>
                   <TableCell><StatusChip status={v.type} /></TableCell>
                   <TableCell><StatusChip status={v.status} /></TableCell>
                   <TableCell sx={{ fontFamily: 'monospace', color: v.rntrc ? 'text.primary' : 'text.disabled', fontSize: 13 }}>

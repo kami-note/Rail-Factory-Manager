@@ -65,6 +65,9 @@ public sealed class LogisticsWebhookDispatcher(
 
         var dbContext = scope.ServiceProvider.GetRequiredService<LogisticsDbContext>();
 
+        if (!await TenantServiceReadiness.IsReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken))
+            return;
+
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         var pendingMessages = await dbContext.OutboxMessages

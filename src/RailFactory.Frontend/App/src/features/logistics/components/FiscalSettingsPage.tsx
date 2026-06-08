@@ -10,6 +10,7 @@ import { useFiscalProfile } from '../hooks/useFiscalProfile';
 import { upsertFiscalProfile } from '../api/logistics';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 import type { TenantFiscalProfile } from '../types';
+import { Masks, Validators } from '../../../shared/lib/utils/masks';
 
 type Props = { tenantCode: string };
 
@@ -44,7 +45,7 @@ function profileToForm(p: TenantFiscalProfile): FormState {
     ipiRate: p.ipiRate,
     icmsOrigin: p.icmsOrigin,
     emitterName: p.emitterName,
-    emitterCnpj: p.emitterCnpj,
+    emitterCnpj: p.emitterCnpj ? Masks.cnpj(p.emitterCnpj) : '',
     emitterIe: p.emitterIe,
     emitterCity: p.emitterCity,
     emitterState: p.emitterState,
@@ -63,16 +64,25 @@ export function FiscalSettingsPage({ tenantCode }: Props) {
   }, [profile]);
 
   const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
+    let val = e.target.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
+    if (field === 'emitterCnpj' && typeof val === 'string') {
+      val = Masks.cnpj(val);
+    }
     setForm(prev => ({ ...prev, [field]: val }));
   };
 
+  const isCnpjValid = !form.emitterCnpj || Validators.cnpj(form.emitterCnpj);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isCnpjValid) return;
     setSaving(true);
     setMutationError(null);
     try {
-      await upsertFiscalProfile(tenantCode, form);
+      await upsertFiscalProfile(tenantCode, {
+        ...form,
+        emitterCnpj: Masks.cleanDigits(form.emitterCnpj)
+      });
       setSuccess('Perfil fiscal salvo com sucesso.');
     } catch (err) {
       setMutationError(toUiErrorMessage(err, 'Erro ao salvar perfil fiscal.'));
@@ -117,7 +127,9 @@ export function FiscalSettingsPage({ tenantCode }: Props) {
                     onChange={set('emitterCnpj')}
                     fullWidth size="small"
                     placeholder="00.000.000/0000-00"
-                    slotProps={{ htmlInput: { maxLength: 20 } }}
+                    error={form.emitterCnpj.length > 0 && !isCnpjValid}
+                    helperText={form.emitterCnpj.length > 0 && !isCnpjValid ? "CNPJ inválido" : ""}
+                    slotProps={{ htmlInput: { maxLength: 18 } }}
                   />
                 </Grid>
                 <Grid size={{ xs: 4 }}>
@@ -276,7 +288,7 @@ export function FiscalSettingsPage({ tenantCode }: Props) {
               <Button
                 type="submit"
                 variant="contained"
-                disabled={saving}
+                disabled={saving || !isCnpjValid}
                 startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <Save size={16} />}
               >
                 {saving ? 'Salvando...' : 'Salvar Configurações'}

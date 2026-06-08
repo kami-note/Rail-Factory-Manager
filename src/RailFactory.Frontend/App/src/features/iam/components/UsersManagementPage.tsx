@@ -27,6 +27,7 @@ import { Users, UserPlus, Shield, X, Trash2, Mail, Save } from 'lucide-react';
 import { InlineError } from '../../../shared/components/common/InlineError';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { buildTenantHeaders, fetchJsonOrThrow, toUiErrorMessage } from '../../../shared/lib/http';
+import { Validators } from '../../../shared/lib/utils/masks';
 
 interface Role {
   id: string;
@@ -75,8 +76,10 @@ export function UsersManagementPage({ tenantCode }: UsersManagementPageProps) {
     void loadData();
   }, [tenantCode]);
 
+  const isEmailValid = !inviteEmail || Validators.email(inviteEmail);
+
   const handleAssignRole = async () => {
-    if (!inviteEmail || !selectedRoleId) return;
+    if (!inviteEmail || !selectedRoleId || !isEmailValid) return;
     setIsSubmitting(true);
     try {
       await fetchJsonOrThrow(`/api/iam/users/${inviteEmail}/roles`, {
@@ -209,7 +212,8 @@ export function UsersManagementPage({ tenantCode }: UsersManagementPageProps) {
               value={inviteEmail}
               onChange={e => setInviteEmail(e.target.value)}
               placeholder="exemplo@email.com"
-              helperText="O usuário deve possuir uma conta Google."
+              error={inviteEmail.length > 0 && !isEmailValid}
+              helperText={inviteEmail.length > 0 && !isEmailValid ? "E-mail inválido" : "O usuário deve possuir uma conta Google."}
             />
             
             <Autocomplete
@@ -227,7 +231,7 @@ export function UsersManagementPage({ tenantCode }: UsersManagementPageProps) {
           <Button 
             variant="contained" 
             onClick={handleAssignRole} 
-            disabled={!inviteEmail || !selectedRoleId || isSubmitting}
+            disabled={!inviteEmail || !selectedRoleId || isSubmitting || !isEmailValid}
             startIcon={isSubmitting ? <CircularProgress size={18} color="inherit" /> : <Save size={18} />}
             sx={{ fontWeight: 800 }}
           >

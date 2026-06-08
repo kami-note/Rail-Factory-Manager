@@ -22,6 +22,7 @@ import { SnackbarAlert } from '../../../shared/components/common/SnackbarAlert';
 import type { Dispatch, ShipmentItem, ShipmentOrder, ShipmentOrderStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 import { CurrencyFormatter, RelativeDateFormatter } from '../../../shared/lib/utils/formatters';
+import { Masks } from '../../../shared/lib/utils/masks';
 
 type Props = { tenantCode: string };
 type ConfirmAction = { type: string; id: string; label: string };
@@ -292,7 +293,7 @@ export function ShipmentOrdersPage({ tenantCode }: Props) {
                       {totalValue !== null ? CurrencyFormatter.format(totalValue) : '—'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ fontSize: 12 }}>{o.recipientName ?? o.recipientCnpj ?? '-'}</TableCell>
+                  <TableCell sx={{ fontSize: 12 }}>{o.recipientName ?? (o.recipientCnpj ? Masks.cpfCnpj(o.recipientCnpj) : '-')}</TableCell>
                   <TableCell>{RelativeDateFormatter.format(o.createdAt, false)}</TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                     {o.status === 'Draft' && (

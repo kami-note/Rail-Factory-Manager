@@ -67,6 +67,9 @@ public sealed class LogisticsFiscalDispatcher(
         var db = scope.ServiceProvider.GetRequiredService<LogisticsDbContext>();
         var integrationClient = scope.ServiceProvider.GetRequiredService<ITenantIntegrationClient>();
 
+        if (!await TenantServiceReadiness.IsReadyAsync(db.Database.GetDbConnection(), cancellationToken))
+            return;
+
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var pending = await db.OutboxMessages

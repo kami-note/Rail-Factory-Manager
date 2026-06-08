@@ -11,6 +11,7 @@ import { AssignDriverModal } from './AssignDriverModal';
 import { MaintenanceContent } from './MaintenanceContent';
 import { FuelingContent } from './FuelingContent';
 import type { DriverAssignment, Vehicle } from '../types';
+import { Masks } from '../../../shared/lib/utils/masks';
 
 type Props = {
   vehicle: Vehicle;
@@ -143,7 +144,7 @@ export function VehicleDetailPanel({ vehicle, tenantCode, onClose }: Props) {
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2.5, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
             <Typography variant="h6" sx={{ fontWeight: 800, fontFamily: 'monospace' }}>
-              {vehicle.plate}
+              {Masks.plate(vehicle.plate)}
             </Typography>
             <Chip label={vehicle.type.label} size="small" />
             <Chip

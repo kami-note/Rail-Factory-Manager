@@ -29,6 +29,7 @@ import { CreatePersonModal } from './CreatePersonModal';
 import { PersonDetailPanel } from './PersonDetailPanel';
 import type { Person } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { Masks } from '../../../shared/lib/utils/masks';
 
 type PeoplePageProps = { tenantCode: string };
 type ConfirmAction = { type: 'deactivate' | 'activate'; id: string; name: string };
@@ -187,7 +188,7 @@ export function PeoplePage({ tenantCode }: PeoplePageProps) {
                         <span>{p.name}</span>
                       </Stack>
                     </TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{p.documentNumber}</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{Masks.cpfCnpj(p.documentNumber)}</TableCell>
                     <TableCell><StatusChip status={p.type} /></TableCell>
                     <TableCell><StatusChip status={p.status} /></TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>{p.email ?? '—'}</TableCell>
