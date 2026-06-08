@@ -139,7 +139,7 @@ export function IntegrationsPage({ tenantCode }: Props) {
           const providerLabel = providerType ? (PROVIDER_SCHEMAS[providerType]?.label ?? providerType) : null;
 
           return (
-            <Grid item xs={12} md={6} lg={4} key={category}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={category}>
               <Paper 
                 elevation={0} 
                 sx={{ 
