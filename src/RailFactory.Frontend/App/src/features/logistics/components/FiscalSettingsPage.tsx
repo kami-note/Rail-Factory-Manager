@@ -25,6 +25,11 @@ const DEFAULTS: FormState = {
   cofinsCst: '07',
   ipiRate: 0,
   icmsOrigin: 0,
+  emitterName: '',
+  emitterCnpj: '',
+  emitterIe: '',
+  emitterCity: '',
+  emitterState: '',
 };
 
 function profileToForm(p: TenantFiscalProfile): FormState {
@@ -38,6 +43,11 @@ function profileToForm(p: TenantFiscalProfile): FormState {
     cofinsCst: p.cofinsCst,
     ipiRate: p.ipiRate,
     icmsOrigin: p.icmsOrigin,
+    emitterName: p.emitterName,
+    emitterCnpj: p.emitterCnpj,
+    emitterIe: p.emitterIe,
+    emitterCity: p.emitterCity,
+    emitterState: p.emitterState,
   };
 }
 
@@ -80,13 +90,67 @@ export function FiscalSettingsPage({ tenantCode }: Props) {
       {fetchError && <Alert severity="error" sx={{ mb: 2 }}>{fetchError}</Alert>}
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Defina os padrões fiscais do tenant. Esses valores são usados como padrão ao criar itens de expedição,
-        reduzindo a entrada manual de dados nas notas fiscais.
+        Defina os padrões fiscais do tenant. Esses valores são usados como padrão ao criar itens de expedição
+        e para exibição no DA-MDF-e.
       </Typography>
 
       <Paper elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3 }}>
         <form onSubmit={handleSubmit}>
           <Stack spacing={3}>
+
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Dados do Emitente (DA-MDF-e)</Typography>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 8 }}>
+                  <TextField
+                    label="Razão Social"
+                    value={form.emitterName}
+                    onChange={set('emitterName')}
+                    fullWidth size="small"
+                    slotProps={{ htmlInput: { maxLength: 200 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 4 }}>
+                  <TextField
+                    label="CNPJ"
+                    value={form.emitterCnpj}
+                    onChange={set('emitterCnpj')}
+                    fullWidth size="small"
+                    placeholder="00.000.000/0000-00"
+                    slotProps={{ htmlInput: { maxLength: 20 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 4 }}>
+                  <TextField
+                    label="IE (Inscrição Estadual)"
+                    value={form.emitterIe}
+                    onChange={set('emitterIe')}
+                    fullWidth size="small"
+                    slotProps={{ htmlInput: { maxLength: 30 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <TextField
+                    label="Município"
+                    value={form.emitterCity}
+                    onChange={set('emitterCity')}
+                    fullWidth size="small"
+                    slotProps={{ htmlInput: { maxLength: 120 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 2 }}>
+                  <TextField
+                    label="UF"
+                    value={form.emitterState}
+                    onChange={set('emitterState')}
+                    fullWidth size="small"
+                    slotProps={{ htmlInput: { maxLength: 2, style: { textTransform: 'uppercase' } } }}
+                  />
+                </Grid>
+              </Grid>
+            </Stack>
+
+            <Divider />
 
             <Stack spacing={1}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>CFOP Padrão</Typography>

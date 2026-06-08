@@ -18,7 +18,9 @@ public sealed record CreateShipmentOrderInput(
     string? RecipientCity = null,
     string? RecipientState = null,
     string? RecipientZipCode = null,
-    string? NatureOfOperation = null);
+    string? NatureOfOperation = null,
+    string? RecipientIe = null,
+    int ModalidadeFrete = 0);
 
 public sealed class CreateShipmentOrder(IShipmentOrderRepository orders)
 {
@@ -30,7 +32,8 @@ public sealed class CreateShipmentOrder(IShipmentOrderRepository orders)
             input.RecipientCnpj, input.RecipientName, input.RecipientEmail,
             input.RecipientStreet, input.RecipientNumber, input.RecipientDistrict,
             input.RecipientCity, input.RecipientState, input.RecipientZipCode,
-            input.NatureOfOperation);
+            input.NatureOfOperation,
+            input.RecipientIe, input.ModalidadeFrete);
         await orders.SaveAsync(order, ct);
         return order;
     }

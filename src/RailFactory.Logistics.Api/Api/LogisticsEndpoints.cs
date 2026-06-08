@@ -162,7 +162,8 @@ public static class LogisticsEndpoints
             req.RecipientCnpj, req.RecipientName, req.RecipientEmail,
             req.RecipientStreet, req.RecipientNumber, req.RecipientDistrict,
             req.RecipientCity, req.RecipientState, req.RecipientZipCode,
-            req.NatureOfOperation), ct);
+            req.NatureOfOperation,
+            req.RecipientIe, req.ModalidadeFrete), ct);
         return Results.Created($"{ApiGroup}/shipment-orders/{order.Id}", MapShipmentOrderResponse(order));
     }
 
@@ -175,11 +176,12 @@ public static class LogisticsEndpoints
                 new AddShipmentItemInput(id, req.MaterialCode, req.Quantity, req.UnitOfMeasure,
                     req.WeightKg, req.VolumeCbm, req.NcmCode, req.CfopCode,
                     req.UnitValue, req.TaxBaseIcms, req.IcmsRate,
-                    req.IcmsOrigin, req.IcmsCst, req.PisCst, req.CofinsCst, req.IpiRate), ct);
+                    req.IcmsOrigin, req.IcmsCst, req.PisCst, req.CofinsCst, req.IpiRate, req.IpiCst), ct);
             return Results.Created($"{ApiGroup}/shipment-orders/{id}/items/{item.Id}",
                 new { item.Id, item.MaterialCode, item.Quantity, item.UnitOfMeasure,
                     item.WeightKg, item.VolumeCbm, item.NcmCode, item.CfopCode, item.UnitValue,
-                    item.TaxBaseIcms, item.IcmsRate, item.IcmsOrigin, item.IcmsCst, item.PisCst, item.CofinsCst, item.IpiRate });
+                    item.TaxBaseIcms, item.IcmsRate, item.IcmsOrigin, item.IcmsCst, item.PisCst, item.CofinsCst,
+                    item.IpiRate, item.IpiCst });
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
         catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
@@ -320,13 +322,14 @@ public static class LogisticsEndpoints
         o.RecipientCnpj, o.RecipientName, o.RecipientEmail,
         o.RecipientStreet, o.RecipientNumber, o.RecipientDistrict,
         o.RecipientCity, o.RecipientState, o.RecipientZipCode,
+        o.RecipientIe, o.ModalidadeFrete,
         o.NatureOfOperation,
         o.CreatedAt, o.UpdatedAt,
         Items = o.Items.Select(i => new
         {
             i.Id, i.MaterialCode, i.Quantity, i.UnitOfMeasure, i.WeightKg, i.VolumeCbm,
             i.NcmCode, i.CfopCode, i.UnitValue, i.TaxBaseIcms, i.IcmsRate,
-            i.IcmsOrigin, i.IcmsCst, i.PisCst, i.CofinsCst, i.IpiRate
+            i.IcmsOrigin, i.IcmsCst, i.PisCst, i.CofinsCst, i.IpiRate, i.IpiCst
         })
     };
 
@@ -336,8 +339,10 @@ public static class LogisticsEndpoints
         d.TrackingCode, d.FreightValueBrl,
         Status = d.Status.ToString(),
         d.FiscalExternalId, d.FiscalStatus, d.FiscalAccessKey, d.FiscalErrorMessage,
-        d.MdfeExternalId, d.MdfeStatus, d.MdfeAccessKey, d.MdfeErrorMessage,
+        d.MdfeExternalId, d.MdfeStatus, d.MdfeAccessKey, d.MdfeErrorMessage, d.MdfeLinkedNfeKey,
+        d.MdfeUfCarregamento, d.MdfeUfDescarregamento,
         d.ShippingExternalId, d.ShippingStatus, d.ShippingLabelUrl, d.ShippingTrackingCode, d.ShippingErrorMessage,
+        d.PaymentExternalId, d.PaymentStatus, d.PaymentBoletoUrl, d.PaymentPixUrl, d.PaymentErrorMessage,
         d.VehiclePlate, d.VehicleRntrc, d.DriverCpf, d.DriverName,
         d.ConferencedAt, d.DispatchedAt, d.DeliveredAt, d.CreatedAt
     };
@@ -473,7 +478,9 @@ public static class LogisticsEndpoints
         var profile = await useCase.ExecuteAsync(new UpsertFiscalProfileInput(
             req.CfopPadraoIntraestadual, req.CfopPadraoInterestadual, req.UfOrigem,
             req.IcmsRate, req.IcmsCst, req.PisCst, req.CofinsCst,
-            req.IpiRate, req.IcmsOrigin), ct);
+            req.IpiRate, req.IcmsOrigin,
+            req.EmitterName, req.EmitterCnpj, req.EmitterIe,
+            req.EmitterCity, req.EmitterState), ct);
         return Results.Ok(MapFiscalProfileResponse(profile));
     }
 
@@ -488,6 +495,11 @@ public static class LogisticsEndpoints
         p.CofinsCst,
         p.IpiRate,
         p.IcmsOrigin,
+        p.EmitterName,
+        p.EmitterCnpj,
+        p.EmitterIe,
+        p.EmitterCity,
+        p.EmitterState,
         p.UpdatedAt,
     };
 }

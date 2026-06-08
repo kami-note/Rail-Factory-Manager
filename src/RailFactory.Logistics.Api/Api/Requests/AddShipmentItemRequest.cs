@@ -16,4 +16,5 @@ public sealed record AddShipmentItemRequest(
     string IcmsCst = "40",
     string PisCst = "07",
     string CofinsCst = "07",
-    decimal IpiRate = 0);
+    decimal IpiRate = 0,
+    string IpiCst = "99");

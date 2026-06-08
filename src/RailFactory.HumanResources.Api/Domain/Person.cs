@@ -13,6 +13,7 @@ public sealed class Person : AggregateRoot<Guid>
     public PersonType Type { get; private set; }
     public PersonStatus Status { get; private set; }
     public string? Email { get; private set; }
+    public string? ImageUrl { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -22,12 +23,13 @@ public sealed class Person : AggregateRoot<Guid>
         DocumentNumber = string.Empty;
     }
 
-    private Person(Guid id, string name, string documentNumber, PersonType type, string? email) : base(id)
+    private Person(Guid id, string name, string documentNumber, PersonType type, string? email, string? imageUrl = null) : base(id)
     {
         Name = name;
         DocumentNumber = documentNumber;
         Type = type;
         Email = email;
+        ImageUrl = imageUrl;
         Status = PersonStatus.Active;
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = CreatedAt;
@@ -36,12 +38,21 @@ public sealed class Person : AggregateRoot<Guid>
     /// <summary>
     /// Factory method to register a new person.
     /// </summary>
-    public static Person Create(string name, string documentNumber, PersonType type, string? email = null)
+    public static Person Create(string name, string documentNumber, PersonType type, string? email = null, string? imageUrl = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(documentNumber);
 
-        return new Person(Guid.NewGuid(), name.Trim(), documentNumber.Trim(), type, email?.Trim().ToLowerInvariant());
+        return new Person(Guid.NewGuid(), name.Trim(), documentNumber.Trim(), type, email?.Trim().ToLowerInvariant(), imageUrl);
+    }
+
+    /// <summary>
+    /// Updates the profile image URL for the person.
+    /// </summary>
+    public void UpdateImageUrl(string? imageUrl)
+    {
+        ImageUrl = imageUrl?.Trim();
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <exception cref="InvalidOperationException">Already inactive.</exception>

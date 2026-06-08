@@ -16,4 +16,6 @@ public sealed record CreateShipmentOrderRequest(
     string? RecipientCity = null,
     string? RecipientState = null,
     string? RecipientZipCode = null,
-    string? NatureOfOperation = null);
+    string? NatureOfOperation = null,
+    string? RecipientIe = null,
+    int ModalidadeFrete = 0);

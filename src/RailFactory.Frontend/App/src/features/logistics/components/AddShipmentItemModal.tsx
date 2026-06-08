@@ -37,13 +37,14 @@ interface FormState {
   pisCst: string;
   cofinsCst: string;
   ipiRate: string;
+  ipiCst: string;
 }
 
 const EMPTY: FormState = {
   materialCode: '', quantity: '', unitOfMeasure: 'UN',
   weightKg: '', volumeCbm: '',
   ncmCode: '', cfopCode: '5102', unitValue: '', taxBaseIcms: '', icmsRate: '12',
-  icmsOrigin: '0', icmsCst: '40', pisCst: '07', cofinsCst: '07', ipiRate: '0',
+  icmsOrigin: '0', icmsCst: '40', pisCst: '07', cofinsCst: '07', ipiRate: '0', ipiCst: '99',
 };
 
 export function AddShipmentItemModal({ open, tenantCode, orderId, orderNumber, onAdded, onClose }: Props) {
@@ -103,6 +104,7 @@ export function AddShipmentItemModal({ open, tenantCode, orderId, orderNumber, o
         pisCst: form.pisCst.trim(),
         cofinsCst: form.cofinsCst.trim(),
         ipiRate: parseFloat(form.ipiRate || '0'),
+        ipiCst: form.ipiCst.trim(),
       });
       onAdded(item);
     } catch (err) {
@@ -198,6 +200,7 @@ export function AddShipmentItemModal({ open, tenantCode, orderId, orderNumber, o
                   <Grid size={{ xs: 3 }}><TextField label="CST PIS" value={form.pisCst} onChange={set('pisCst')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 3 } }} /></Grid>
                   <Grid size={{ xs: 3 }}><TextField label="CST COFINS" value={form.cofinsCst} onChange={set('cofinsCst')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 3 } }} /></Grid>
                   <Grid size={{ xs: 3 }}><TextField label="Alíq. IPI (%)" value={form.ipiRate} onChange={set('ipiRate')} fullWidth size="small" type="number" /></Grid>
+                  <Grid size={{ xs: 3 }}><TextField label="CST IPI" value={form.ipiCst} onChange={set('ipiCst')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 3 } }} helperText="99=N.trib 50=Trib" /></Grid>
                   <Grid size={{ xs: 4 }}><TextField label="Alíq. ICMS (%)" value={form.icmsRate} onChange={set('icmsRate')} fullWidth size="small" type="number" /></Grid>
                   <Grid size={{ xs: 4 }}><TextField label="Base ICMS (R$)" value={form.taxBaseIcms} onChange={set('taxBaseIcms')} fullWidth size="small" type="number" /></Grid>
                 </Grid>

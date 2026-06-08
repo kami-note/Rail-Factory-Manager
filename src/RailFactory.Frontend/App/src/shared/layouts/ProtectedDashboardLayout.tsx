@@ -18,7 +18,7 @@ import {
   Avatar,
   IconButton
 } from '@mui/material';
-import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, Wrench, Fuel, PackageCheck, ScrollText, Plug, SendHorizonal, Building2, FileCheck2 } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Boxes, LogOut, Settings, Bell, Menu, Link2, ShieldCheck, Users, Factory, BookOpen, ClipboardList, Truck, UserCheck, PackageCheck, ScrollText, Plug, SendHorizonal, Building2, FileCheck2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { usePermissions } from '../../features/auth';
 import { SystemPermissions } from '../types/permissions';

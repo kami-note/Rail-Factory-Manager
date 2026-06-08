@@ -12,7 +12,8 @@ public sealed record NfeItem(
     string Code, string Description, string NcmCode, string CfopCode,
     string UnitOfMeasure, decimal Quantity, decimal UnitValue,
     decimal TaxBaseIcms, decimal IcmsRate, decimal IpiRate = 0m,
-    int IcmsOrigin = 0, string IcmsCst = "40", string PisCst = "07", string CofinsCst = "07");
+    int IcmsOrigin = 0, string IcmsCst = "40", string PisCst = "07", string CofinsCst = "07",
+    string IpiCst = "99");
 
 public sealed record NfeRequest(
     string TenantId,
@@ -21,7 +22,8 @@ public sealed record NfeRequest(
     NfeParty Emitter,
     NfeParty Recipient,
     IReadOnlyList<NfeItem> Items,
-    string? WebhookCallbackUrl = null);
+    string? WebhookCallbackUrl = null,
+    int ModalidadeFrete = 0);
 
 public sealed record NfeEmissionResult(
     string ExternalId,

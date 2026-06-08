@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.ServiceDiscovery.Yarp" />
     <PackageReference Include="Yarp.ReverseProxy" />
+    <PackageReference Include="AWSSDK.S3" />
     <ProjectReference Include="..\RailFactory.BuildingBlocks\RailFactory.BuildingBlocks.csproj" />
     <ProjectReference Include="..\RailFactory.ServiceDefaults\RailFactory.ServiceDefaults.csproj" />
   </ItemGroup>

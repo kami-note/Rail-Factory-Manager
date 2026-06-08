@@ -26,6 +26,7 @@ public static class TenancyModule
         services.AddScoped<GetTenantByCode>();
         services.AddScoped<ListTenants>();
         services.AddScoped<RegisterTenant>();
+        services.AddScoped<DeleteTenant>();
         services.AddScoped<ConfigureIntegration>();
         services.AddScoped<GetIntegrationCredentials>();
         services.AddScoped<ListTenantIntegrations>();

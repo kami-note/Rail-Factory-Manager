@@ -136,7 +136,39 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("MdfeLinkedNfeKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("MdfeStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MdfeUfCarregamento")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("MdfeUfDescarregamento")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("PaymentBoletoUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PaymentErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PaymentExternalId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PaymentPixUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PaymentStatus")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
@@ -189,6 +221,8 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("FiscalExternalId");
+
+                    b.HasIndex("PaymentExternalId");
 
                     b.HasIndex("ShipmentOrderId");
 
@@ -325,6 +359,11 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("IcmsRate")
                         .HasColumnType("numeric(5,2)");
 
+                    b.Property<string>("IpiCst")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
                     b.Property<decimal>("IpiRate")
                         .HasColumnType("numeric(5,2)");
 
@@ -392,6 +431,9 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("DeliveryLongitudeDeg")
                         .HasColumnType("numeric(10,6)");
 
+                    b.Property<int>("ModalidadeFrete")
+                        .HasColumnType("integer");
+
                     b.Property<string>("NatureOfOperation")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -424,6 +466,10 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                     b.Property<string>("RecipientEmail")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RecipientIe")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("RecipientName")
                         .HasMaxLength(200)
@@ -483,6 +529,31 @@ namespace RailFactory.Logistics.Api.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
+
+                    b.Property<string>("EmitterCity")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("EmitterCnpj")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("EmitterIe")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("EmitterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("EmitterState")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
 
                     b.Property<string>("IcmsCst")
                         .IsRequired()

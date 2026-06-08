@@ -104,6 +104,19 @@ export const PROVIDER_SCHEMAS: Record<string, ProviderSchema> = {
         hint: 'Melhor Envio assina webhooks com HMAC-SHA256 usando o client_secret.' },
     ],
   },
+  asaas: {
+    providerType: 'asaas',
+    label: 'Asaas',
+    credentialFields: [
+      { key: 'access_token', label: 'Access Token', required: true, secret: true, placeholder: '$aact_...', hint: 'Token de API do Asaas (painel Minha Conta → Integrações → API)' },
+      { key: 'billing_type', label: 'Tipo de Cobrança', placeholder: 'BOLETO', hint: 'BOLETO, PIX, CREDIT_CARD ou DEBIT_CARD. Padrão: BOLETO' },
+      { key: 'base_url', label: 'URL Base (opcional)', placeholder: 'https://api-sandbox.asaas.com/v3', hint: 'Deixe em branco para produção. Para testes: https://api-sandbox.asaas.com/v3' },
+    ],
+    emitterFields: [],
+    webhookFields: [
+      { key: 'webhook_token', label: 'Token do Webhook', required: true, secret: true, hint: 'Token configurado no painel Asaas em Configurações → Integrações → Webhooks' },
+    ],
+  },
   mock: {
     providerType: 'mock',
     label: 'Mock (Simulação)',

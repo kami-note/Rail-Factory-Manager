@@ -10,6 +10,7 @@ using RailFactory.Logistics.Api.Application.Shipments;
 using RailFactory.Logistics.Api.Application.Fiscal;
 using RailFactory.Logistics.Api.Application.FiscalProfiles;
 using RailFactory.Logistics.Api.Infrastructure.Adapters.Fiscal;
+using RailFactory.Logistics.Api.Infrastructure.Adapters.Payment;
 using RailFactory.Logistics.Api.Infrastructure.Adapters.Shipping;
 using RailFactory.Logistics.Api.Infrastructure.Integration;
 using RailFactory.Logistics.Api.Infrastructure.Persistence;
@@ -33,6 +34,7 @@ public static class LogisticsModule
         services.AddHostedService<InboundWebhookProcessor>();
         services.AddHostedService<LogisticsFiscalDispatcher>();
         services.AddHostedService<LogisticsShippingDispatcher>();
+        services.AddHostedService<LogisticsPaymentDispatcher>();
         services.AddHttpClient("logistics-webhook")
             .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddSingleton<RabbitMqPublisher>(sp => new RabbitMqPublisher(
@@ -59,6 +61,14 @@ public static class LogisticsModule
             c.Timeout = TimeSpan.FromSeconds(30);
         }).AddStandardResilienceHandler();
 
+        // Named HTTP client for Asaas (production default; base_url credential overrides for sandbox)
+        services.AddHttpClient("asaas", c =>
+        {
+            c.BaseAddress = new Uri("https://api.asaas.com/v3/");
+            c.Timeout = TimeSpan.FromSeconds(30);
+        }).AddStandardResilienceHandler();
+
+
         // Fiscal adapter factory + signature validators
         services.AddScoped<ITenantAdapterFactory<IFiscalIssuerAdapter>, FiscalIssuerAdapterFactory>();
         services.AddSingleton<IWebhookSignatureValidator, PlugNotasWebhookSignatureValidator>();
@@ -73,6 +83,12 @@ public static class LogisticsModule
 
         // Shipping webhook handlers
         services.AddScoped<IInboundWebhookHandler, MelhorEnvioShippingWebhookHandler>();
+
+        // Payment signature validators
+        services.AddSingleton<IWebhookSignatureValidator, AsaasWebhookSignatureValidator>();
+
+        // Payment webhook handlers
+        services.AddScoped<IInboundWebhookHandler, AsaasPaymentWebhookHandler>();
 
         // Fiscal document use cases
         services.AddScoped<IssueFiscalDocument>();

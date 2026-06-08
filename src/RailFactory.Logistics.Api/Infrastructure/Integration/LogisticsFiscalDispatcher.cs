@@ -211,7 +211,8 @@ public sealed class LogisticsFiscalDispatcher(
                 District: order.RecipientDistrict!,
                 City: order.RecipientCity ?? order.DeliveryCity ?? string.Empty,
                 State: order.RecipientState!,
-                ZipCode: order.RecipientZipCode!));
+                ZipCode: order.RecipientZipCode!),
+            IeStateRegistration: order.RecipientIe);
 
         // Load fiscal profile to determine state transitions and default taxes
         var fiscalProfile = await db.FiscalProfiles.FirstOrDefaultAsync(cancellationToken);
@@ -230,6 +231,10 @@ public sealed class LogisticsFiscalDispatcher(
                 throw new InvalidOperationException($"NCM is required for item {i.MaterialCode} in shipment order {order.OrderNumber}.");
             }
 
+            var icmsCst = string.IsNullOrEmpty(i.IcmsCst) ? (fiscalProfile?.IcmsCst ?? "40") : i.IcmsCst;
+            // CST 40/41/50/60 = isento/não tributado/suspenso/ST retido → base e alíquota devem ser zero
+            var isIcmsNaoTributado = icmsCst is "40" or "41" or "50" or "60";
+
             return new NfeItem(
                 Code: i.MaterialCode,
                 Description: i.MaterialCode,
@@ -238,13 +243,14 @@ public sealed class LogisticsFiscalDispatcher(
                 UnitOfMeasure: i.UnitOfMeasure,
                 Quantity: i.Quantity,
                 UnitValue: i.UnitValue,
-                TaxBaseIcms: i.TaxBaseIcms,
-                IcmsRate: i.IcmsRate,
+                TaxBaseIcms: isIcmsNaoTributado ? 0m : i.TaxBaseIcms,
+                IcmsRate: isIcmsNaoTributado ? 0m : i.IcmsRate,
                 IpiRate: i.IpiRate,
                 IcmsOrigin: i.IcmsOrigin,
-                IcmsCst: string.IsNullOrEmpty(i.IcmsCst) ? (fiscalProfile?.IcmsCst ?? "40") : i.IcmsCst,
+                IcmsCst: icmsCst,
                 PisCst: string.IsNullOrEmpty(i.PisCst) ? (fiscalProfile?.PisCst ?? "07") : i.PisCst,
-                CofinsCst: string.IsNullOrEmpty(i.CofinsCst) ? (fiscalProfile?.CofinsCst ?? "07") : i.CofinsCst);
+                CofinsCst: string.IsNullOrEmpty(i.CofinsCst) ? (fiscalProfile?.CofinsCst ?? "07") : i.CofinsCst,
+                IpiCst: string.IsNullOrEmpty(i.IpiCst) ? (i.IpiRate > 0 ? "50" : "99") : i.IpiCst);
         }).ToList();
 
         var nfeRequest = new NfeRequest(
@@ -254,7 +260,8 @@ public sealed class LogisticsFiscalDispatcher(
             Emitter: emitter,
             Recipient: recipient,
             Items: items,
-            WebhookCallbackUrl: focusNfeCallbackUrl);
+            WebhookCallbackUrl: focusNfeCallbackUrl,
+            ModalidadeFrete: order.ModalidadeFrete);
 
         var result = await adapter.EmitirNfeAsync(nfeRequest, cancellationToken);
         dispatch.UpdateFiscalStatus(result.ExternalId, result.Status, result.AccessKey);
@@ -325,8 +332,8 @@ public sealed class LogisticsFiscalDispatcher(
         var ufOrigem = fiscalProfile?.UfOrigem ?? emitter.Address.State;
         var ufDestino = order.RecipientState ?? ufOrigem;
 
-        var ufsPercorridas = new List<string> { ufOrigem };
-        if (ufDestino != ufOrigem) ufsPercorridas.Add(ufDestino);
+        // percUF deve conter apenas UFs intermediárias — nunca a UF de carregamento nem descarregamento
+        var ufsPercorridas = new List<string>();
 
         var totalKg = order.Items.Sum(i => i.WeightKg * i.Quantity);
         var totalValue = order.Items.Sum(i => i.UnitValue * i.Quantity);
@@ -351,7 +358,7 @@ public sealed class LogisticsFiscalDispatcher(
             NfeLinks: nfeLinks);
 
         var result = await adapter.EmitirMdfeAsync(mdfeRequest, cancellationToken);
-        dispatch.UpdateMdfeStatus(result.ExternalId, result.Status, result.AccessKey, result.ErrorMessage);
+        dispatch.UpdateMdfeStatus(result.ExternalId, result.Status, result.AccessKey, result.ErrorMessage, resolvedNfeAccessKey, ufOrigem, ufDestino);
 
         logger.LogInformation(
             "MDF-e emitted for dispatch {DispatchId}: externalId={ExternalId} status={Status}",

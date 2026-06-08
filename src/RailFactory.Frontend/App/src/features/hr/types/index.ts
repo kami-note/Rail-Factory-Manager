@@ -11,6 +11,7 @@ export type Person = {
   name: string;
   documentNumber: string;
   email?: string;
+  imageUrl?: string | null;
   type: PersonType;
   status: DisplayStatus;
   createdAt: string;

@@ -17,21 +17,27 @@ public sealed class FocusNfeAdapter(HttpClient httpClient) : IFiscalIssuerAdapte
     public async Task<NfeEmissionResult> EmitirNfeAsync(NfeRequest request, CancellationToken cancellationToken = default)
     {
         // FocusNFe expects FLAT snake_case fields at root level (not nested)
+        var isConsumidorFinal = request.Recipient.CnpjOrCpf.Length <= 11 ? 1 : 0;
+        var localDestino = string.Equals(request.Emitter.Address.State, request.Recipient.Address.State,
+            StringComparison.OrdinalIgnoreCase) ? 1 : 2;
+        var indicadorIe = string.IsNullOrEmpty(request.Recipient.IeStateRegistration) ? 9 : 1;
+
         var body = new
         {
             natureza_operacao = request.NatureOfOperation,
             data_emissao = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:sszzz"),
             tipo_documento = 1,
             finalidade_emissao = 1,
-            consumidor_final = 1,
-            presenca_comprador = 1,
-            modalidade_frete = 0,
-            local_destino = 1,
+            consumidor_final = isConsumidorFinal,
+            presenca_comprador = 9,
+            modalidade_frete = request.ModalidadeFrete,
+            local_destino = localDestino,
             cnpj_emitente = request.Emitter.CnpjOrCpf,
             inscricao_estadual_emitente = request.Emitter.IeStateRegistration,
             nome_destinatario = request.Recipient.Name,
             cnpj_destinatario = request.Recipient.CnpjOrCpf.Length > 11 ? request.Recipient.CnpjOrCpf : (string?)null,
             cpf_destinatario = request.Recipient.CnpjOrCpf.Length <= 11 ? request.Recipient.CnpjOrCpf : (string?)null,
+            inscricao_estadual_destinatario = request.Recipient.IeStateRegistration,
             email_destinatario = request.Recipient.Email,
             logradouro_destinatario = request.Recipient.Address.Street,
             numero_destinatario = request.Recipient.Address.Number,
@@ -40,7 +46,7 @@ public sealed class FocusNfeAdapter(HttpClient httpClient) : IFiscalIssuerAdapte
             municipio_destinatario = request.Recipient.Address.City,
             uf_destinatario = request.Recipient.Address.State,
             cep_destinatario = request.Recipient.Address.ZipCode,
-            indicador_inscricao_estadual_destinatario = 9,
+            indicador_inscricao_estadual_destinatario = indicadorIe,
             url_notificacao = request.WebhookCallbackUrl,
             items = request.Items.Select((item, i) => new
             {
@@ -54,10 +60,13 @@ public sealed class FocusNfeAdapter(HttpClient httpClient) : IFiscalIssuerAdapte
                 valor_unitario_comercial = item.UnitValue,
                 icms_origem = item.IcmsOrigin,
                 icms_situacao_tributaria = item.IcmsCst,
+                icms_base_calculo = item.TaxBaseIcms,
+                icms_aliquota = item.IcmsRate,
                 pis_situacao_tributaria = item.PisCst,
                 cofins_situacao_tributaria = item.CofinsCst,
-                ipi_situacao_tributaria = item.IpiRate > 0 ? "50" : null,
-                ipi_aliquota = item.IpiRate > 0 ? (decimal?)item.IpiRate : null
+                ipi_situacao_tributaria = item.IpiRate > 0 ? item.IpiCst : null,
+                ipi_aliquota = item.IpiRate > 0 ? (decimal?)item.IpiRate : null,
+                ipi_base_calculo = item.IpiRate > 0 ? (decimal?)(item.UnitValue * item.Quantity) : null
             }).ToArray()
         };
 

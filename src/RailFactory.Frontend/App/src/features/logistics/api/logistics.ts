@@ -54,6 +54,8 @@ export async function createShipmentOrder(tenantCode: string, body: {
   recipientCity?: string;
   recipientState?: string;
   recipientZipCode?: string;
+  recipientIe?: string;
+  modalidadeFrete?: number;
   natureOfOperation?: string;
 }): Promise<ShipmentOrder> {
   return fetchJsonOrThrow<ShipmentOrder>(
@@ -79,6 +81,7 @@ export async function addShipmentItem(tenantCode: string, orderId: string, body:
   pisCst?: string;
   cofinsCst?: string;
   ipiRate?: number;
+  ipiCst?: string;
 }): Promise<ShipmentItem> {
   return fetchJsonOrThrow<ShipmentItem>(
     `${BASE}/shipment-orders/${orderId}/items`,

@@ -22,6 +22,8 @@ interface HeaderForm {
   recipientCnpj: string; recipientName: string; recipientEmail: string;
   recipientStreet: string; recipientNumber: string; recipientDistrict: string;
   recipientCity: string; recipientState: string; recipientZipCode: string;
+  recipientIe: string;
+  modalidadeFrete: string;
   natureOfOperation: string;
 }
 
@@ -41,6 +43,7 @@ interface ItemForm {
   pisCst: string;
   cofinsCst: string;
   ipiRate: string;
+  ipiCst: string;
 }
 
 const EMPTY_HEADER: HeaderForm = {
@@ -48,6 +51,7 @@ const EMPTY_HEADER: HeaderForm = {
   recipientCnpj: '', recipientName: '', recipientEmail: '',
   recipientStreet: '', recipientNumber: '', recipientDistrict: '',
   recipientCity: '', recipientState: '', recipientZipCode: '',
+  recipientIe: '', modalidadeFrete: '0',
   natureOfOperation: 'Venda de mercadoria',
 };
 
@@ -55,7 +59,7 @@ const EMPTY_ITEM: ItemForm = {
   materialCode: '', quantity: '', unitOfMeasure: 'UN',
   weightKg: '', volumeCbm: '',
   ncmCode: '', cfopCode: '5102', unitValue: '', taxBaseIcms: '', icmsRate: '12',
-  icmsOrigin: '0', icmsCst: '40', pisCst: '07', cofinsCst: '07', ipiRate: '0',
+  icmsOrigin: '0', icmsCst: '40', pisCst: '07', cofinsCst: '07', ipiRate: '0', ipiCst: '99',
 };
 
 export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose }: Props) {
@@ -111,6 +115,8 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
         recipientCity: header.recipientCity.trim() || undefined,
         recipientState: header.recipientState.trim() || undefined,
         recipientZipCode: header.recipientZipCode.trim() || undefined,
+        recipientIe: header.recipientIe.trim() || undefined,
+        modalidadeFrete: parseInt(header.modalidadeFrete || '0', 10),
         natureOfOperation: header.natureOfOperation.trim() || undefined,
       });
       setCreatedOrder(order);
@@ -145,6 +151,7 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
         pisCst: itemForm.pisCst.trim(),
         cofinsCst: itemForm.cofinsCst.trim(),
         ipiRate: parseFloat(itemForm.ipiRate || '0'),
+        ipiCst: itemForm.ipiCst.trim(),
       });
       setItems(prev => [...prev, item]);
       setItemForm(EMPTY_ITEM);
@@ -213,7 +220,9 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
                       <Grid xs={6}><TextField label="CEP" value={header.recipientZipCode} onChange={setH('recipientZipCode')} fullWidth size="small" /></Grid>
                       <Grid xs={8}><TextField label="Município" value={header.recipientCity} onChange={setH('recipientCity')} fullWidth size="small" /></Grid>
                       <Grid xs={4}><TextField label="UF" value={header.recipientState} onChange={setH('recipientState')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 2 } }} placeholder="SP" /></Grid>
-                      <Grid xs={12}><TextField label="Natureza da Operação" value={header.natureOfOperation} onChange={setH('natureOfOperation')} fullWidth size="small" /></Grid>
+                      <Grid xs={4}><TextField label="IE Destinatário" value={header.recipientIe} onChange={setH('recipientIe')} fullWidth size="small" placeholder="Opcional" /></Grid>
+                      <Grid xs={4}><TextField label="Modalidade Frete" value={header.modalidadeFrete} onChange={setH('modalidadeFrete')} fullWidth size="small" helperText="0=CIF 1=FOB 2=Terc 9=Sem" /></Grid>
+                      <Grid xs={4}><TextField label="Natureza da Operação" value={header.natureOfOperation} onChange={setH('natureOfOperation')} fullWidth size="small" /></Grid>
                     </Grid>
                   </Stack>
                 </AccordionDetails>
@@ -365,6 +374,7 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
                         <Grid xs={3}><TextField label="CST PIS" value={itemForm.pisCst} onChange={setI('pisCst')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 3 } }} /></Grid>
                         <Grid xs={3}><TextField label="CST COFINS" value={itemForm.cofinsCst} onChange={setI('cofinsCst')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 3 } }} /></Grid>
                         <Grid xs={3}><TextField label="Alíq. IPI (%)" value={itemForm.ipiRate} onChange={setI('ipiRate')} fullWidth size="small" type="number" /></Grid>
+                        <Grid xs={3}><TextField label="CST IPI" value={itemForm.ipiCst} onChange={setI('ipiCst')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 3 } }} helperText="99=N.trib 50=Trib" /></Grid>
                         <Grid xs={4}><TextField label="Alíq. ICMS (%)" value={itemForm.icmsRate} onChange={setI('icmsRate')} fullWidth size="small" type="number" /></Grid>
                         <Grid xs={4}><TextField label="Base ICMS (R$)" value={itemForm.taxBaseIcms} onChange={setI('taxBaseIcms')} fullWidth size="small" type="number" /></Grid>
                       </Grid>

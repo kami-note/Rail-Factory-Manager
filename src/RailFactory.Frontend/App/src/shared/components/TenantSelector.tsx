@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress, FormControl, InputLabel, MenuItem, Select, Typography } from '@mui/material';
 import { InlineError } from './common/InlineError';
 import { fetchJsonOrThrow, toUiErrorMessage } from '../lib/http';
@@ -13,11 +14,8 @@ interface TenantSelectorProps {
   selectedTenantCode?: string;
 }
 
-/**
- * Component to allow the user to select the organization (tenant).
- * Fetches the list of active tenants from the catalog.
- */
 export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected, selectedTenantCode }) => {
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +28,10 @@ export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected
           {},
           'Não foi possível carregar as organizações'
         );
+        if (data.length === 0) {
+          navigate('/setup', { replace: true });
+          return;
+        }
         setTenants(data);
       } catch (requestError) {
         setError(toUiErrorMessage(requestError, 'Não foi possível carregar as organizações.'));
@@ -39,7 +41,7 @@ export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected
     };
 
     void loadTenants();
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -56,12 +58,12 @@ export const TenantSelector: React.FC<TenantSelectorProps> = ({ onTenantSelected
   return (
     <Box sx={{ mt: 2 }}>
       <FormControl fullWidth sx={{ mb: 3 }}>
-        <InputLabel id="tenant-select-label">Organization</InputLabel>
+        <InputLabel id="tenant-select-label">Organização</InputLabel>
         <Select
           labelId="tenant-select-label"
           id="tenant-select"
           value={selectedTenantCode || ''}
-          label="Organization"
+          label="Organização"
           onChange={(e) => onTenantSelected(e.target.value)}
         >
           {tenants.map((t) => (

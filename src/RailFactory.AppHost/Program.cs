@@ -12,7 +12,7 @@ ValidateSecrets(builder.Configuration);
 var parameters = AddParameters(builder);
 var infra = AddInfrastructure(builder, parameters);
 var services = AddDomainServices(builder, infra, parameters);
-var frontend = AddEdgeServices(builder, services, parameters);
+var frontend = AddEdgeServices(builder, services, infra, parameters);
 
 if (builder.ExecutionContext.IsRunMode)
 {
@@ -46,24 +46,21 @@ static AppHostInfrastructure AddInfrastructure(
     var redis = builder.AddRedis("redis")
         .WithDataVolume("rail-factory-fork-redis-data");
 
+    var minio = builder.AddContainer("minio", "minio/minio")
+        .WithImageTag("latest")
+        .WithHttpEndpoint(port: 9000, targetPort: 9000, name: "api")
+        .WithHttpEndpoint(port: 9001, targetPort: 9001, name: "console")
+        .WithArgs("server", "/data", "--console-address", ":9001")
+        .WithEnvironment("MINIO_ROOT_USER", "minioadmin")
+        .WithEnvironment("MINIO_ROOT_PASSWORD", "minioadmin")
+        .WithAnnotation(new ContainerMountAnnotation("rail-factory-fork-minio-data", "/data", ContainerMountType.Volume, false));
+
     return new AppHostInfrastructure(
+        Postgres: postgres,
         TenantCatalogDb: postgres.AddDatabase("tenantcatalog"),
-        TenantDevIamDb: postgres.AddDatabase("tenant-dev-iamdb"),
-        TenantDevSupplyChainDb: postgres.AddDatabase("tenant-dev-supplychaindb"),
-        TenantDevInventoryDb: postgres.AddDatabase("tenant-dev-inventorydb"),
-        TenantDevProductionDb: postgres.AddDatabase("tenant-dev-productiondb"),
-        TenantDevHrDb: postgres.AddDatabase("tenant-dev-hrdb"),
-        TenantDevFleetDb: postgres.AddDatabase("tenant-dev-fleetdb"),
-        TenantDevLogisticsDb: postgres.AddDatabase("tenant-dev-logisticsdb"),
-        TenantAcmeIamDb: postgres.AddDatabase("tenant-acme-iamdb"),
-        TenantAcmeSupplyChainDb: postgres.AddDatabase("tenant-acme-supplychaindb"),
-        TenantAcmeInventoryDb: postgres.AddDatabase("tenant-acme-inventorydb"),
-        TenantAcmeProductionDb: postgres.AddDatabase("tenant-acme-productiondb"),
-        TenantAcmeHrDb: postgres.AddDatabase("tenant-acme-hrdb"),
-        TenantAcmeFleetDb: postgres.AddDatabase("tenant-acme-fleetdb"),
-        TenantAcmeLogisticsDb: postgres.AddDatabase("tenant-acme-logisticsdb"),
         Redis: redis,
-        RabbitMq: builder.AddRabbitMQ("rabbitmq"));
+        RabbitMq: builder.AddRabbitMQ("rabbitmq"),
+        Minio: minio);
 }
 
 static AppHostDomainServices AddDomainServices(
@@ -75,30 +72,14 @@ static AppHostDomainServices AddDomainServices(
         .WithEnvironment("TENANCY__KEK", parameters.TenancyKek)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
+        .WithReference(infra.Postgres)        // server connection string — used to create tenant databases at runtime
         .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevIamDb)
-        .WithReference(infra.TenantDevSupplyChainDb)
-        .WithReference(infra.TenantDevInventoryDb)
-        .WithReference(infra.TenantDevProductionDb)
-        .WithReference(infra.TenantDevHrDb)
-        .WithReference(infra.TenantDevFleetDb)
-        .WithReference(infra.TenantAcmeIamDb)
-        .WithReference(infra.TenantAcmeSupplyChainDb)
-        .WithReference(infra.TenantAcmeInventoryDb)
-        .WithReference(infra.TenantAcmeProductionDb)
-        .WithReference(infra.TenantAcmeHrDb)
-        .WithReference(infra.TenantAcmeFleetDb)
-        .WithReference(infra.TenantDevLogisticsDb)
-        .WithReference(infra.TenantAcmeLogisticsDb)
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("TenantRouting__CatalogCacheTtlSeconds", TenantCatalogCacheTtlSeconds)
         .WaitFor(infra.TenantCatalogDb);
 
     var iam = builder.AddProject<Projects.RailFactory_Iam_Api>("identity-access-management")
         .WithReference(tenantManagement)
-        .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevIamDb)
-        .WithReference(infra.TenantAcmeIamDb)
         .WithReference(infra.Redis)
         .WithEnvironment("TenantRouting__ServiceKey", "iamdb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
@@ -107,96 +88,64 @@ static AppHostDomainServices AddDomainServices(
         .WithEnvironment("Authentication__Google__PublicOrigin", parameters.Edge.FrontendPublicOrigin)
         .WithEnvironment("Authentication__Google__CallbackPath", "/api/iam/auth/google/callback")
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
-        .WaitFor(infra.TenantCatalogDb)
-        .WaitFor(infra.TenantDevIamDb)
         .WaitFor(infra.Redis)
         .WaitFor(tenantManagement);
 
     var inventory = builder.AddProject<Projects.RailFactory_Inventory_Api>("inventory")
         .WithReference(tenantManagement)
-        .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevInventoryDb)
-        .WithReference(infra.TenantAcmeInventoryDb)
         .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "inventorydb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
-        .WaitFor(infra.TenantCatalogDb)
-        .WaitFor(infra.TenantDevInventoryDb)
         .WaitFor(infra.RabbitMq)
         .WaitFor(tenantManagement);
 
     var supplyChain = builder.AddProject<Projects.RailFactory_SupplyChain_Api>("supply-chain")
         .WithReference(tenantManagement)
-        .WithReference(inventory)           // needed for InventoryMaterialService (sync HTTP calls)
-        .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevSupplyChainDb)
-        .WithReference(infra.TenantAcmeSupplyChainDb)
+        .WithReference(inventory)
         .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "supplychaindb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
-        .WaitFor(infra.TenantCatalogDb)
-        .WaitFor(infra.TenantDevSupplyChainDb)
         .WaitFor(infra.RabbitMq)
         .WaitFor(tenantManagement)
         .WaitFor(inventory);
 
     var production = builder.AddProject<Projects.RailFactory_Production_Api>("production")
         .WithReference(tenantManagement)
-        .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevProductionDb)
-        .WithReference(infra.TenantAcmeProductionDb)
         .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "productiondb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
-        .WaitFor(infra.TenantCatalogDb)
-        .WaitFor(infra.TenantDevProductionDb)
         .WaitFor(infra.RabbitMq)
         .WaitFor(tenantManagement);
 
     var humanResources = builder.AddProject<Projects.RailFactory_HumanResources_Api>("human-resources")
         .WithReference(tenantManagement)
-        .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevHrDb)
-        .WithReference(infra.TenantAcmeHrDb)
         .WithEnvironment("TenantRouting__ServiceKey", "hrdb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
-        .WaitFor(infra.TenantCatalogDb)
-        .WaitFor(infra.TenantDevHrDb)
         .WaitFor(tenantManagement);
 
     var fleet = builder.AddProject<Projects.RailFactory_Fleet_Api>("fleet")
         .WithReference(tenantManagement)
-        .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevFleetDb)
-        .WithReference(infra.TenantAcmeFleetDb)
         .WithEnvironment("TenantRouting__ServiceKey", "fleetdb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
-        .WaitFor(infra.TenantCatalogDb)
-        .WaitFor(infra.TenantDevFleetDb)
         .WaitFor(tenantManagement);
 
     var logistics = builder.AddProject<Projects.RailFactory_Logistics_Api>("logistics")
         .WithReference(tenantManagement)
-        .WithReference(infra.TenantCatalogDb)
-        .WithReference(infra.TenantDevLogisticsDb)
-        .WithReference(infra.TenantAcmeLogisticsDb)
         .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "logisticsdb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
-        .WaitFor(infra.TenantCatalogDb)
-        .WaitFor(infra.TenantDevLogisticsDb)
         .WaitFor(infra.RabbitMq)
         .WaitFor(tenantManagement);
 
@@ -206,6 +155,7 @@ static AppHostDomainServices AddDomainServices(
 static IResourceBuilder<ProjectResource> AddEdgeServices(
     IDistributedApplicationBuilder builder,
     AppHostDomainServices services,
+    AppHostInfrastructure infra,
     AppHostParameters parameters)
 {
     var gateway = builder.AddProject<Projects.RailFactory_Gateway>("gateway")
@@ -230,8 +180,12 @@ static IResourceBuilder<ProjectResource> AddEdgeServices(
         .WithReference(gateway)
         .WithEnvironment("Frontend__PublicOrigin", parameters.Edge.FrontendPublicOrigin)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
+        .WithEnvironment("Minio__Endpoint", "http://localhost:9000")
+        .WithEnvironment("Minio__AccessKey", "minioadmin")
+        .WithEnvironment("Minio__SecretKey", "minioadmin")
         .WithExternalHttpEndpoints()
-        .WaitFor(gateway);
+        .WaitFor(gateway)
+        .WaitFor(infra.Minio);
 }
 
 static void AddLocalFrontendUi(
@@ -300,23 +254,11 @@ file sealed record AppHostEdgeParameters(
     IResourceBuilder<ParameterResource> FrontendPublicOrigin);
 
 file sealed record AppHostInfrastructure(
+    IResourceBuilder<PostgresServerResource> Postgres,
     IResourceBuilder<PostgresDatabaseResource> TenantCatalogDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantDevIamDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantDevSupplyChainDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantDevInventoryDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantDevProductionDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantDevHrDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantDevFleetDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantDevLogisticsDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantAcmeIamDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantAcmeSupplyChainDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantAcmeInventoryDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantAcmeProductionDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantAcmeHrDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantAcmeFleetDb,
-    IResourceBuilder<PostgresDatabaseResource> TenantAcmeLogisticsDb,
     IResourceBuilder<RedisResource> Redis,
-    IResourceBuilder<RabbitMQServerResource> RabbitMq);
+    IResourceBuilder<RabbitMQServerResource> RabbitMq,
+    IResourceBuilder<ContainerResource> Minio);
 
 file sealed record AppHostDomainServices(
     IResourceBuilder<ProjectResource> TenantManagement,

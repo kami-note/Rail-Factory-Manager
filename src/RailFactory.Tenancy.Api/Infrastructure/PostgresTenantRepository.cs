@@ -40,6 +40,15 @@ public sealed class PostgresTenantRepository(TenancyDbContext dbContext) : ITena
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RemoveAsync(Tenant tenant, CancellationToken cancellationToken = default)
+    {
+        var record = await dbContext.Tenants
+            .SingleOrDefaultAsync(x => x.Code == tenant.Code, cancellationToken);
+        if (record is null) return;
+        dbContext.Tenants.Remove(record);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private static Tenant ToTenant(TenantRecord r) =>
         Tenant.Restore(r.Code, r.DisplayName, r.Locale, r.TimeZone,
             Enum.Parse<TenantStatus>(r.Status, ignoreCase: true), r.ConnectionStrings);

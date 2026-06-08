@@ -25,8 +25,8 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
                 idIntegracao = request.RefCode,
                 naturezaOperacao = request.NatureOfOperation,
                 finalidadeEmissao = 1,
-                consumidorFinal = true,
-                frete = new { modalidadeFrete = 0 },
+                consumidorFinal = request.Recipient.CnpjOrCpf.Length <= 11,
+                frete = new { modalidadeFrete = request.ModalidadeFrete },
                 emitente = new
                 {
                     cpfCnpj = request.Emitter.CnpjOrCpf,
@@ -52,6 +52,7 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
                     cpfCnpj = request.Recipient.CnpjOrCpf,
                     nome = request.Recipient.Name,
                     email = request.Recipient.Email,
+                    inscricaoEstadual = request.Recipient.IeStateRegistration,
                     endereco = new
                     {
                         logradouro = request.Recipient.Address.Street,
@@ -84,7 +85,9 @@ public sealed class PlugNotasAdapter(HttpClient httpClient) : IFiscalIssuerAdapt
                     },
                     pis = new { cst = item.PisCst },
                     cofins = new { cst = item.CofinsCst },
-                    ipi = item.IpiRate > 0 ? new { cst = "50", aliquota = item.IpiRate } : null
+                    ipi = item.IpiRate > 0
+                        ? (object)new { cst = item.IpiCst, aliquota = item.IpiRate, baseCalculo = item.UnitValue * item.Quantity }
+                        : null
                 }).ToArray()
             }
         };

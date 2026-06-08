@@ -70,6 +70,12 @@ public static class IntegrationConstants
         /// Processed by LogisticsShippingDispatcher.
         /// </summary>
         public const string ShippingLabelRequested = "logistics.shipping_label_requested";
+
+        /// <summary>
+        /// Published once per dispatch when it is shipped and a payment integration is configured.
+        /// Processed by LogisticsPaymentDispatcher.
+        /// </summary>
+        public const string PaymentChargeRequested = "logistics.payment_charge_requested";
     }
 
     /// <summary>

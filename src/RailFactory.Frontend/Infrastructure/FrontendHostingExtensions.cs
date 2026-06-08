@@ -48,7 +48,7 @@ public static class FrontendHostingExtensions
             .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
             .AddServiceDiscoveryDestinationResolver();
 
-        builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
+        builder.Services.AddScoped<IImageStorage, MinioImageStorage>();
 
         return builder;
     }

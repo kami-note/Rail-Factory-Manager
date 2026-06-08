@@ -1,19 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using RailFactory.Tenancy.Api.Domain;
 using RailFactory.Tenancy.Api.Infrastructure.Persistence;
 using System.Reflection;
 
 namespace RailFactory.Tenancy.Api.Infrastructure;
 
-/// <summary>
-/// Initializes the global Tenant Catalog database schema and performs initial seeding.
-/// </summary>
-/// <remarks>
-/// This initializer manages the shared catalog of tenants. It ensures the migration history 
-/// is aligned with legacy schemas if necessary and applies the latest migrations.
-/// It also seeds the system with initial tenants (e.g., 'dev' and 'acme') to ensure 
-/// the platform is ready for operation immediately after deployment.
-/// </remarks>
 public sealed class TenantCatalogSchemaInitializer(
     IServiceProvider serviceProvider,
     ILogger<TenantCatalogSchemaInitializer> logger) : IHostedService
@@ -26,40 +16,24 @@ public sealed class TenantCatalogSchemaInitializer(
         logger.LogInformation("Initializing tenant catalog schema...");
         await AlignLegacySchemaWithMigrationHistoryAsync(dbContext, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
-
-        await SeedDevTenantAsync(dbContext, cancellationToken);
-        await SeedAcmeTenantAsync(dbContext, cancellationToken);
-
         logger.LogInformation("Tenant catalog schema initialized successfully.");
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    /// <summary>
-    /// Inspects the actual database schema and marks already-applied migrations as done
-    /// so EF Core does not try to re-run them. Handles legacy databases that were created
-    /// before the EF migration system was introduced.
-    /// </summary>
     private static async Task AlignLegacySchemaWithMigrationHistoryAsync(
         TenancyDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
-
-        if (!pendingMigrations.Any())
-            return;
+        if (!pendingMigrations.Any()) return;
 
         var connection = dbContext.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
             await connection.OpenAsync(cancellationToken);
 
-        // Check what already exists in the database
         var tenantsTableExists = await ColumnExistsAsync(connection, "tenants", null, cancellationToken);
-        if (!tenantsTableExists)
-            return; // truly fresh database — let MigrateAsync create everything
+        if (!tenantsTableExists) return;
 
         var connectionStringsColumnExists = await ColumnExistsAsync(connection, "tenants", "connection_strings", cancellationToken);
         var tenantIntegrationsTableExists = await ColumnExistsAsync(connection, "tenant_integrations", null, cancellationToken);
@@ -77,7 +51,6 @@ public sealed class TenantCatalogSchemaInitializer(
             );
             """);
 
-        // Mark each legacy migration as applied only when we confirm its schema change already exists
         foreach (var migration in pendingMigrations)
         {
             var alreadyApplied = migration switch
@@ -99,10 +72,8 @@ public sealed class TenantCatalogSchemaInitializer(
         }
     }
 
-    private static readonly HashSet<string> AllowedTables =
-        ["tenants", "tenant_integrations"];
-    private static readonly HashSet<string> AllowedColumns =
-        ["connection_strings"];
+    private static readonly HashSet<string> AllowedTables = ["tenants", "tenant_integrations"];
+    private static readonly HashSet<string> AllowedColumns = ["connection_strings"];
 
     private static async Task<bool> ColumnExistsAsync(
         System.Data.Common.DbConnection connection,
@@ -121,76 +92,5 @@ public sealed class TenantCatalogSchemaInitializer(
             : $"SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='{table}' AND column_name='{column}')";
         var result = await cmd.ExecuteScalarAsync(cancellationToken);
         return result is true;
-    }
-
-    private async Task SeedDevTenantAsync(TenancyDbContext dbContext, CancellationToken cancellationToken)
-    {
-        logger.LogInformation("Seeding 'dev' tenant...");
-        var tenant = Tenant.RegisterDevTenant();
-        tenant.SetConnectionString("iamdb", "ConnectionStrings:tenant-dev-iamdb");
-        tenant.SetConnectionString("supplychaindb", "ConnectionStrings:tenant-dev-supplychaindb");
-        tenant.SetConnectionString("inventorydb", "ConnectionStrings:tenant-dev-inventorydb");
-        tenant.SetConnectionString("productiondb", "ConnectionStrings:tenant-dev-productiondb");
-        tenant.SetConnectionString("hrdb", "ConnectionStrings:tenant-dev-hrdb");
-        tenant.SetConnectionString("fleetdb", "ConnectionStrings:tenant-dev-fleetdb");
-        tenant.SetConnectionString("logisticsdb", "ConnectionStrings:tenant-dev-logisticsdb");
-
-        await UpsertTenantAsync(dbContext, tenant, cancellationToken);
-    }
-
-    private async Task SeedAcmeTenantAsync(TenancyDbContext dbContext, CancellationToken cancellationToken)
-    {
-        logger.LogInformation("Seeding 'acme' tenant...");
-        var tenant = Tenant.Restore(
-            "acme",
-            "Acme Corporation",
-            "en-US",
-            "UTC",
-            TenantStatus.Active);
-
-        tenant.SetConnectionString("iamdb", "ConnectionStrings:tenant-acme-iamdb");
-        tenant.SetConnectionString("supplychaindb", "ConnectionStrings:tenant-acme-supplychaindb");
-        tenant.SetConnectionString("inventorydb", "ConnectionStrings:tenant-acme-inventorydb");
-        tenant.SetConnectionString("productiondb", "ConnectionStrings:tenant-acme-productiondb");
-        tenant.SetConnectionString("hrdb", "ConnectionStrings:tenant-acme-hrdb");
-        tenant.SetConnectionString("fleetdb", "ConnectionStrings:tenant-acme-fleetdb");
-        tenant.SetConnectionString("logisticsdb", "ConnectionStrings:tenant-acme-logisticsdb");
-
-        await UpsertTenantAsync(dbContext, tenant, cancellationToken);
-    }
-
-    private async Task UpsertTenantAsync(TenancyDbContext dbContext, Tenant tenant, CancellationToken cancellationToken)
-    {
-        var existing = await dbContext.Tenants
-            .SingleOrDefaultAsync(x => x.Code == tenant.Code, cancellationToken);
-
-        var now = DateTimeOffset.UtcNow;
-        if (existing is null)
-        {
-            logger.LogInformation("Adding new tenant: {TenantCode}", tenant.Code);
-            dbContext.Tenants.Add(new TenantRecord
-            {
-                Code = tenant.Code,
-                DisplayName = tenant.DisplayName,
-                Locale = tenant.Locale,
-                TimeZone = tenant.TimeZone,
-                Status = tenant.Status.ToString(),
-                ConnectionStrings = tenant.ConnectionStrings.ToDictionary(x => x.Key, x => x.Value),
-                CreatedAt = now,
-                UpdatedAt = now
-            });
-        }
-        else
-        {
-            logger.LogInformation("Updating existing tenant: {TenantCode}", tenant.Code);
-            existing.DisplayName = tenant.DisplayName;
-            existing.Locale = tenant.Locale;
-            existing.TimeZone = tenant.TimeZone;
-            existing.Status = tenant.Status.ToString();
-            existing.ConnectionStrings = tenant.ConnectionStrings.ToDictionary(x => x.Key, x => x.Value);
-            existing.UpdatedAt = now;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

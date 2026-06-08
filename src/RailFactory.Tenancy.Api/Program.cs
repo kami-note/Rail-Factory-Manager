@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using Npgsql;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.BuildingBlocks.Results;
 using RailFactory.Tenancy.Api.Application;
@@ -8,6 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 using RailFactory.Tenancy.Api.Api;
 using RailFactory.Tenancy.Api.Api.Requests;
 using RailFactory.Tenancy.Api.Api.Validation;
+using RailFactory.Tenancy.Api.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,22 +33,23 @@ var group = app.MapGroup("/api/tenancy");
 
 group.MapGet("/info", async (IHostEnvironment environment, GetTenantByCode getTenant, CancellationToken cancellationToken) =>
 {
-    var tenant = await getTenant.ExecuteAsync("dev", cancellationToken);
+    var tenants = await new ListTenants(
+        app.Services.CreateScope().ServiceProvider.GetRequiredService<ITenantRepository>())
+        .ExecuteAsync(cancellationToken);
 
     return Results.Ok(new
     {
         service = "tenancy",
         environment = environment.EnvironmentName,
         purpose = "Tenant catalog and tenant resolution",
-        defaultTenant = tenant.IsSuccess ? tenant.Value : null
+        tenantCount = tenants.IsSuccess ? tenants.Value.Count : 0
     });
 });
 
 group.MapGet("/tenants/{code}", async ([AsParameters] GetTenantByCodeRequest request, GetTenantByCode getTenant, CancellationToken cancellationToken) =>
 {
     var validation = RequestValidator.Validate(request);
-    if (validation is not null)
-        return validation;
+    if (validation is not null) return validation;
 
     var result = await getTenant.ExecuteAsync(request.Code, cancellationToken);
     return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
@@ -55,6 +59,93 @@ group.MapGet("/tenants", async (ListTenants listTenants, CancellationToken cance
 {
     var result = await listTenants.ExecuteAsync(cancellationToken);
     return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
+});
+
+// ── Provision status (public — used by setup page before login) ───────────────
+group.MapGet("/tenants/{code}/provision-status", async (
+    string code,
+    ITenantRepository tenantRepo,
+    CancellationToken ct) =>
+{
+    var tenant = await tenantRepo.FindByCodeAsync(code, ct);
+    if (tenant is null)
+        return Results.NotFound(new { error = "Tenant not found" });
+
+    var tasks = tenant.ConnectionStrings.Select(async kvp =>
+    {
+        var status = "pending";
+        try
+        {
+            await using var conn = new NpgsqlConnection(kvp.Value);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(3));
+            await conn.OpenAsync(cts.Token);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM \"__EFMigrationsHistory\"";
+            var count = Convert.ToInt64(await cmd.ExecuteScalarAsync(cts.Token) ?? 0L);
+            status = count > 0 ? "ready" : "pending";
+        }
+        catch { /* still pending */ }
+        return (kvp.Key, status);
+    });
+
+    var results = await Task.WhenAll(tasks);
+    var databases = results.ToDictionary(r => r.Key, r => r.status);
+    var allReady = databases.Values.All(s => s == "ready");
+
+    return Results.Ok(new { tenantCode = code, ready = allReady, databases });
+});
+
+// ── Bootstrap (no auth — only works when zero tenants exist) ──────────────────
+group.MapPost("/bootstrap", async (
+    [FromBody] RegisterTenantRequest req,
+    RegisterTenant register,
+    TenancyDbContext dbContext,
+    CancellationToken ct) =>
+{
+    var count = await dbContext.Tenants.CountAsync(ct);
+    if (count > 0)
+        return Results.Problem(
+            title: "Bootstrap disabled",
+            detail: "Bootstrap só pode ser usado quando nenhum tenant existe.",
+            statusCode: StatusCodes.Status403Forbidden);
+
+    var result = await register.ExecuteAsync(
+        new RegisterTenantInput(req.Code, req.DisplayName, req.Locale ?? "pt-BR", req.TimeZone ?? "America/Sao_Paulo"), ct);
+
+    return result.IsSuccess
+        ? Results.Created($"/api/tenancy/tenants/{result.Value.Code}", result.Value)
+        : ToHttpResult(result.Error);
+});
+
+// ── Admin endpoints (JWT + tenancy.admin permission) ─────────────────────────
+
+var adminTenantsGroup = group.MapGroup("/admin/tenants")
+    .RequireAuthorization()
+    .RequirePermission(SystemPermissions.Tenancy.Admin);
+
+adminTenantsGroup.MapGet("/", async (ListTenants list, CancellationToken ct) =>
+{
+    var result = await list.ExecuteAsync(ct);
+    return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
+});
+
+adminTenantsGroup.MapPost("/", async (
+    [FromBody] RegisterTenantRequest req,
+    RegisterTenant register,
+    CancellationToken ct) =>
+{
+    var result = await register.ExecuteAsync(
+        new RegisterTenantInput(req.Code, req.DisplayName, req.Locale ?? "pt-BR", req.TimeZone ?? "America/Sao_Paulo"), ct);
+    return result.IsSuccess
+        ? Results.Created($"/api/tenancy/tenants/{result.Value.Code}", result.Value)
+        : ToHttpResult(result.Error);
+});
+
+adminTenantsGroup.MapDelete("/{code}", async (string code, DeleteTenant delete, CancellationToken ct) =>
+{
+    var result = await delete.ExecuteAsync(code, ct);
+    return result.IsSuccess ? Results.NoContent() : ToHttpResult(result.Error);
 });
 
 // ── Internal endpoints (service-to-service, InternalApiKey) ──────────────────
@@ -90,8 +181,7 @@ integrationsGroup.MapGet("/{tenantCode}/{category}/credentials", async (
     CancellationToken cancellationToken) =>
 {
     var result = await get.ExecuteAsync(tenantCode, category, cancellationToken);
-    if (!result.IsSuccess)
-        return ToHttpResult(result.Error);
+    if (!result.IsSuccess) return ToHttpResult(result.Error);
 
     using var details = result.Value;
     var json = JsonSerializer.SerializeToUtf8Bytes(new
@@ -102,34 +192,8 @@ integrationsGroup.MapGet("/{tenantCode}/{category}/credentials", async (
     return Results.Bytes(json, contentType: "application/json");
 });
 
-// ── Admin endpoints (JWT + tenancy.admin permission) ─────────────────────────
-// Tenant management
-
-var adminTenantsGroup = group.MapGroup("/admin/tenants")
-    .RequireAuthorization()
-    .RequirePermission(SystemPermissions.Tenancy.Admin);
-
-adminTenantsGroup.MapGet("/", async (ListTenants list, CancellationToken ct) =>
-{
-    var result = await list.ExecuteAsync(ct);
-    return result.IsSuccess ? Results.Ok(result.Value) : ToHttpResult(result.Error);
-});
-
-adminTenantsGroup.MapPost("/", async (
-    [FromBody] RegisterTenantRequest req,
-    RegisterTenant register,
-    CancellationToken ct) =>
-{
-    var result = await register.ExecuteAsync(
-        new RegisterTenantInput(req.Code, req.DisplayName, req.Locale ?? "pt-BR", req.TimeZone ?? "America/Sao_Paulo"), ct);
-    return result.IsSuccess
-        ? Results.Created($"/api/tenancy/tenants/{result.Value.Code}", result.Value)
-        : ToHttpResult(result.Error);
-});
 
 // ── Admin integration management ──────────────────────────────────────────────
-// Tenant code is always derived from the JWT "tenant" claim — never from the URL.
-// This prevents cross-tenant privilege escalation.
 
 var adminGroup = group.MapGroup("/admin/integrations")
     .RequireAuthorization()
