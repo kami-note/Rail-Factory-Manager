@@ -19,6 +19,7 @@ import { InlineError } from '../../../shared/components/common/InlineError';
 import { createPerson } from '../api/hr';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 import type { Person } from '../types';
+import { Masks, Validators } from '../../../shared/lib/utils/masks';
 
 const PERSON_TYPE_OPTIONS = [
   { value: 'Employee',   label: 'Colaborador' },
@@ -48,7 +49,9 @@ export function CreatePersonModal({ open, tenantCode, onCreated, onClose }: Prop
     }
   }, [open]);
 
-  const isValid = name.trim().length > 0 && documentNumber.trim().length > 0;
+  const isCpfValid = !documentNumber || Validators.cpf(documentNumber);
+  const isEmailValid = !email || Validators.email(email);
+  const isValid = name.trim().length > 0 && documentNumber.trim().length > 0 && isCpfValid && isEmailValid;
 
   const handleSubmit = async () => {
     if (!isValid) return;
@@ -57,7 +60,7 @@ export function CreatePersonModal({ open, tenantCode, onCreated, onClose }: Prop
     try {
       const person = await createPerson(tenantCode, {
         name: name.trim(),
-        documentNumber: documentNumber.trim(),
+        documentNumber: Masks.cleanDigits(documentNumber),
         type,
         email: email.trim() || undefined,
       });
@@ -100,9 +103,11 @@ export function CreatePersonModal({ open, tenantCode, onCreated, onClose }: Prop
               size="small"
               sx={{ flexGrow: 1 }}
               value={documentNumber}
-              onChange={e => setDocumentNumber(e.target.value)}
+              onChange={e => setDocumentNumber(Masks.cpf(e.target.value))}
               placeholder="000.000.000-00"
-              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' } } }}
+              error={documentNumber.length > 0 && !isCpfValid}
+              helperText={documentNumber.length > 0 && !isCpfValid ? "CPF inválido" : ""}
+              slotProps={{ htmlInput: { style: { fontFamily: 'monospace' }, maxLength: 14 } }}
             />
             <FormControl size="small" sx={{ minWidth: 180 }}>
               <InputLabel>Tipo</InputLabel>
@@ -122,6 +127,8 @@ export function CreatePersonModal({ open, tenantCode, onCreated, onClose }: Prop
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="joao@exemplo.com"
+            error={email.length > 0 && !isEmailValid}
+            helperText={email.length > 0 && !isEmailValid ? "E-mail inválido" : ""}
             onKeyDown={e => { if (e.key === 'Enter' && isValid) void handleSubmit(); }}
           />
         </Stack>

@@ -12,6 +12,7 @@ import { toUiErrorMessage } from '../../../shared/lib/http';
 import { MaterialCodeAutocomplete } from '../../inventory/components/MaterialCodeAutocomplete';
 import type { MaterialSearchResult } from '../../inventory/types';
 import { CurrencyFormatter } from '../../../shared/lib/utils/formatters';
+import { Masks, Validators } from '../../../shared/lib/utils/masks';
 
 type Props = { open: boolean; tenantCode: string; onCreated: (o: ShipmentOrder) => void; onClose: () => void };
 
@@ -84,8 +85,15 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
     }
   }, [open]);
 
-  const setH = (field: keyof HeaderForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setHeader(prev => ({ ...prev, [field]: e.target.value }));
+  const setH = (field: keyof HeaderForm) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value;
+    if (field === 'recipientCnpj') {
+      val = Masks.cpfCnpj(val);
+    } else if (field === 'recipientZipCode') {
+      val = Masks.cep(val);
+    }
+    setHeader(prev => ({ ...prev, [field]: val }));
+  };
 
   const setI = (field: keyof ItemForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setItemForm(prev => ({ ...prev, [field]: e.target.value }));
@@ -99,14 +107,20 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
     }));
   };
 
+  const isCnpjValid = !header.recipientCnpj || Validators.cpfCnpj(header.recipientCnpj);
+  const isEmailValid = !header.recipientEmail || Validators.email(header.recipientEmail);
+  const isZipValid = !header.recipientZipCode || Validators.cep(header.recipientZipCode);
+  const isStateValid = !header.recipientState || header.recipientState.length === 2;
+  const isHeaderValid = isCnpjValid && isEmailValid && isZipValid && isStateValid;
+
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (saving) return;
+    if (!isHeaderValid || saving) return;
     setSaving(true); setError(null);
     try {
       const order = await createShipmentOrder(tenantCode, {
         notes: header.notes.trim() || undefined,
-        recipientCnpj: header.recipientCnpj.trim() || undefined,
+        recipientCnpj: header.recipientCnpj.trim() ? Masks.cleanDigits(header.recipientCnpj) : undefined,
         recipientName: header.recipientName.trim() || undefined,
         recipientEmail: header.recipientEmail.trim() || undefined,
         recipientStreet: header.recipientStreet.trim() || undefined,
@@ -114,7 +128,7 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
         recipientDistrict: header.recipientDistrict.trim() || undefined,
         recipientCity: header.recipientCity.trim() || undefined,
         recipientState: header.recipientState.trim() || undefined,
-        recipientZipCode: header.recipientZipCode.trim() || undefined,
+        recipientZipCode: header.recipientZipCode.trim() ? Masks.cleanDigits(header.recipientZipCode) : undefined,
         recipientIe: header.recipientIe.trim() || undefined,
         modalidadeFrete: parseInt(header.modalidadeFrete || '0', 10),
         natureOfOperation: header.natureOfOperation.trim() || undefined,
@@ -211,15 +225,59 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
                       Preencha para habilitar emissão automática de NF-e ao despachar.
                     </Typography>
                     <Grid container spacing={1}>
-                      <Grid xs={6}><TextField label="CNPJ / CPF" value={header.recipientCnpj} onChange={setH('recipientCnpj')} fullWidth size="small" placeholder="00.000.000/0000-00" /></Grid>
+                      <Grid xs={6}>
+                        <TextField
+                          label="CNPJ / CPF"
+                          value={header.recipientCnpj}
+                          onChange={setH('recipientCnpj')}
+                          fullWidth
+                          size="small"
+                          placeholder="00.000.000/0000-00"
+                          error={header.recipientCnpj.length > 0 && !isCnpjValid}
+                          helperText={header.recipientCnpj.length > 0 && !isCnpjValid ? "CNPJ/CPF inválido" : ""}
+                          slotProps={{ htmlInput: { maxLength: 18 } }}
+                        />
+                      </Grid>
                       <Grid xs={6}><TextField label="Razão Social / Nome" value={header.recipientName} onChange={setH('recipientName')} fullWidth size="small" /></Grid>
-                      <Grid xs={12}><TextField label="E-mail" value={header.recipientEmail} onChange={setH('recipientEmail')} fullWidth size="small" /></Grid>
+                      <Grid xs={12}>
+                        <TextField
+                          label="E-mail"
+                          value={header.recipientEmail}
+                          onChange={setH('recipientEmail')}
+                          fullWidth
+                          size="small"
+                          error={header.recipientEmail.length > 0 && !isEmailValid}
+                          helperText={header.recipientEmail.length > 0 && !isEmailValid ? "E-mail inválido" : ""}
+                        />
+                      </Grid>
                       <Grid xs={8}><TextField label="Logradouro" value={header.recipientStreet} onChange={setH('recipientStreet')} fullWidth size="small" /></Grid>
                       <Grid xs={4}><TextField label="Número" value={header.recipientNumber} onChange={setH('recipientNumber')} fullWidth size="small" /></Grid>
                       <Grid xs={6}><TextField label="Bairro" value={header.recipientDistrict} onChange={setH('recipientDistrict')} fullWidth size="small" /></Grid>
-                      <Grid xs={6}><TextField label="CEP" value={header.recipientZipCode} onChange={setH('recipientZipCode')} fullWidth size="small" /></Grid>
+                      <Grid xs={6}>
+                        <TextField
+                          label="CEP"
+                          value={header.recipientZipCode}
+                          onChange={setH('recipientZipCode')}
+                          fullWidth
+                          size="small"
+                          placeholder="00000-000"
+                          error={header.recipientZipCode.length > 0 && !isZipValid}
+                          helperText={header.recipientZipCode.length > 0 && !isZipValid ? "CEP inválido" : ""}
+                          slotProps={{ htmlInput: { maxLength: 9 } }}
+                        />
+                      </Grid>
                       <Grid xs={8}><TextField label="Município" value={header.recipientCity} onChange={setH('recipientCity')} fullWidth size="small" /></Grid>
-                      <Grid xs={4}><TextField label="UF" value={header.recipientState} onChange={setH('recipientState')} fullWidth size="small" slotProps={{ htmlInput: { maxLength: 2 } }} placeholder="SP" /></Grid>
+                      <Grid xs={4}>
+                        <TextField
+                          label="UF"
+                          value={header.recipientState}
+                          onChange={setH('recipientState')}
+                          fullWidth
+                          size="small"
+                          placeholder="SP"
+                          slotProps={{ htmlInput: { maxLength: 2, style: { textTransform: 'uppercase' } } }}
+                        />
+                      </Grid>
                       <Grid xs={4}><TextField label="IE Destinatário" value={header.recipientIe} onChange={setH('recipientIe')} fullWidth size="small" placeholder="Opcional" /></Grid>
                       <Grid xs={4}><TextField label="Modalidade Frete" value={header.modalidadeFrete} onChange={setH('modalidadeFrete')} fullWidth size="small" helperText="0=CIF 1=FOB 2=Terc 9=Sem" /></Grid>
                       <Grid xs={4}><TextField label="Natureza da Operação" value={header.natureOfOperation} onChange={setH('natureOfOperation')} fullWidth size="small" /></Grid>
@@ -232,7 +290,7 @@ export function CreateShipmentOrderModal({ open, tenantCode, onCreated, onClose 
 
           <DialogActions sx={{ px: 3, pb: 2 }}>
             <Button onClick={handleClose} disabled={saving}>Cancelar</Button>
-            <Button type="submit" variant="contained" disabled={saving}>
+            <Button type="submit" variant="contained" disabled={saving || !isHeaderValid}>
               {saving ? <CircularProgress size={16} color="inherit" /> : 'Criar e Adicionar Itens →'}
             </Button>
           </DialogActions>

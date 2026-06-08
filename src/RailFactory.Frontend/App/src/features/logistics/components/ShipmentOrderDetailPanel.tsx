@@ -7,6 +7,7 @@ import {
 import { ArrowRight, PackageCheck, PackageOpen, Tag, Truck, X, XCircle } from 'lucide-react';
 import type { Dispatch, ShipmentOrder, ShipmentOrderStatus } from '../types';
 import { CurrencyFormatter, RelativeDateFormatter } from '../../../shared/lib/utils/formatters';
+import { Masks } from '../../../shared/lib/utils/masks';
 
 const STATUS_LABELS: Record<ShipmentOrderStatus, string> = {
   Draft: 'Rascunho', Picking: 'Separação', Packing: 'Embalagem',
@@ -138,7 +139,7 @@ export function ShipmentOrderDetailPanel({ order, dispatch, carrierName, onClose
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>{order.recipientName}</Typography>
                   )}
                   {order.recipientCnpj && (
-                    <Typography variant="caption" color="text.secondary">{order.recipientCnpj}</Typography>
+                    <Typography variant="caption" color="text.secondary">{Masks.cpfCnpj(order.recipientCnpj)}</Typography>
                   )}
                   {order.recipientStreet && (
                     <Typography variant="caption" color="text.secondary">
@@ -149,7 +150,7 @@ export function ShipmentOrderDetailPanel({ order, dispatch, carrierName, onClose
                   {order.recipientCity && (
                     <Typography variant="caption" color="text.secondary">
                       {order.recipientCity}{order.recipientState ? `/${order.recipientState}` : ''}
-                      {order.recipientZipCode ? ` — CEP ${order.recipientZipCode}` : ''}
+                      {order.recipientZipCode ? ` — CEP ${Masks.cep(order.recipientZipCode)}` : ''}
                     </Typography>
                   )}
                 </Stack>

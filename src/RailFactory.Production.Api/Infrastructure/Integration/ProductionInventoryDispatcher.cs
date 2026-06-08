@@ -72,6 +72,9 @@ public sealed class ProductionInventoryDispatcher(
 
         var dbContext = scope.ServiceProvider.GetRequiredService<ProductionDbContext>();
 
+        if (!await TenantServiceReadiness.IsReadyAsync(dbContext.Database.GetDbConnection(), cancellationToken))
+            return;
+
         // SKIP LOCKED ensures multiple dispatcher instances never process the same row.
         // The transaction is held until SaveChanges commits, then the row locks are released.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);

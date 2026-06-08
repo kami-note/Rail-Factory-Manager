@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Dispatch, ShipmentOrder, Carrier } from '../types';
 import type { Vehicle } from '../../fleet/types';
 import type { Person } from '../../hr/types';
+import { Masks } from '../../../shared/lib/utils/masks';
 
 type Props = {
   dispatch: Dispatch;
@@ -185,7 +186,7 @@ export function DispatchPrintView({ dispatch, order, vehicle, driver, carrier, o
   const addressLine2 = [
     order.recipientCity,
     order.recipientState,
-    order.recipientZipCode ? `CEP ${order.recipientZipCode}` : null,
+    order.recipientZipCode ? `CEP ${Masks.cep(order.recipientZipCode)}` : null,
   ].filter(Boolean).join(' — ');
 
   return createPortal(
@@ -229,14 +230,14 @@ export function DispatchPrintView({ dispatch, order, vehicle, driver, carrier, o
                 <div className="rfp-field-label">Transportadora</div>
                 <div className="rfp-field-value">{carrier.name}</div>
                 {carrier.documentNumber && (
-                  <div style={{ fontSize: 10, color: '#666' }}>CNPJ {carrier.documentNumber}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>CNPJ {Masks.cpfCnpj(carrier.documentNumber)}</div>
                 )}
               </div>
             )}
             {vehicle && (
               <div className="rfp-field">
                 <div className="rfp-field-label">Veículo</div>
-                <div className="rfp-field-value mono">{vehicle.plate}</div>
+                <div className="rfp-field-value mono">{Masks.plate(vehicle.plate)}</div>
                 <div style={{ fontSize: 10, color: '#666' }}>{vehicle.type.label}</div>
               </div>
             )}
@@ -266,7 +267,7 @@ export function DispatchPrintView({ dispatch, order, vehicle, driver, carrier, o
                 {order.recipientCnpj && (
                   <div className="rfp-field">
                     <div className="rfp-field-label">CNPJ / CPF</div>
-                    <div className="rfp-field-value normal">{order.recipientCnpj}</div>
+                    <div className="rfp-field-value normal">{Masks.cpfCnpj(order.recipientCnpj)}</div>
                   </div>
                 )}
               </div>

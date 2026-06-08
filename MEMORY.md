@@ -63,3 +63,84 @@ This file tracks architectural decisions, session status, and implementation mil
 - Executed backend tests successfully (35 passing tests).
 - Executed frontend unit tests successfully (6 test files / 25 tests passing).
 
+## Session Milestone: Verification of Asaas Payment Integration (2026-06-07)
+
+### Verification & Tests
+- Automated E2E verification using Playwright:
+  - Validated that the "Pagamento" category card is visible in the Services and Integrations grid.
+  - Validated that the "Conectar" button triggers the configuration modal for "Pagamento".
+  - Validated that the provider "Asaas" is selectable in the modal.
+  - Verified that the "Credenciais" tab contains the "Access Token" (required password), "Tipo de Cobrança" (BOLETO placeholder), and "URL Base (opcional)" fields.
+  - Verified that the "Webhook" tab contains the "Token do Webhook" field.
+  - Verified that the "Emitente" tab is correctly empty for Asaas.
+  - Verified that the Webhook URL points to `/api/logistics/webhooks/asaas/{tenantCode}`.
+- Captured screenshots:
+  - [01-integrations-grid.png](file:///home/levi/.gemini/antigravity-cli/brain/1c1f6af3-1413-4b34-b2b9-eb9d1422ecde/01-integrations-grid.png)
+  - [02-modal-credentials.png](file:///home/levi/.gemini/antigravity-cli/brain/1c1f6af3-1413-4b34-b2b9-eb9d1422ecde/02-modal-credentials.png)
+  - [03-modal-webhook.png](file:///home/levi/.gemini/antigravity-cli/brain/1c1f6af3-1413-4b34-b2b9-eb9d1422ecde/03-modal-webhook.png)
+
+## Session Milestone: Multitenant Image Storage with MinIO (2026-06-08)
+
+### Implemented Features
+- **MinIO Aspire Integration:**
+  - Added MinIO container orchestration to Aspire AppHost ([Program.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.AppHost/Program.cs)) with dynamic port mappings and standard dev credentials (`minioadmin`).
+  - Configured environment variables passing endpoint, access keys, and bucket names to the Frontend BFF.
+- **Multitenant Image Storage Abstraction:**
+  - Implemented [MinioImageStorage.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/Infrastructure/MinioImageStorage.cs) implementing `IImageStorage` using the official `AWSSDK.S3` library.
+  - Automatically isolates uploads by tenant code using directory prefixes (`{tenantCode}/{fileName}`) inside the `railfactory-images` bucket.
+  - Dynamically routes files starting with `person_` to the Human Resources image endpoint, and all others to the Inventory image endpoint.
+- **Employee (Pessoa) Image Support:**
+  - Added `ImageUrl` (nullable string, max length 2000) property to the `Person` domain model ([Person.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api/Domain/Person.cs)) and configured EF Core mapping in [HrDbContext.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api/Infrastructure/Persistence/HrDbContext.cs).
+  - Created and ran EF Core migrations to update the `people` database table schema for all tenants.
+  - Implemented the `UpdatePersonImage` Use Case ([UpdatePersonImage.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api/Application/People/UpdatePersonImage.cs)) and mapped the new `PUT /api/hr/people/{id}/image` endpoint in [HrEndpoints.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api/Api/HrEndpoints.cs).
+- **Frontend Enhancements:**
+  - Integrated beautiful, premium upload & preview interfaces with dashed borders, hover "Alterar" overlays, and loading indicators for both [MaterialDetailsPage.tsx](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/features/inventory/components/MaterialDetailsPage.tsx) and [PersonDetailPanel.tsx](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/features/hr/components/PersonDetailPanel.tsx).
+  - Displayed a small profile avatar for employees within the [PeoplePage.tsx](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/features/hr/components/PeoplePage.tsx) grid, falling back to a clean placeholder icon if no photo has been uploaded.
+
+### Verification & Tests
+- Created [MinioImageStorageTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend.Tests/MinioImageStorageTests.cs) to test the tenant routing path formatting rules.
+- Solution builds successfully (0 errors, 0 warnings).
+- All frontend assets compiled successfully (`vite build`).
+- Ran all tests: 17 passing tests in `RailFactory.Frontend.Tests`, 18 in `RailFactory.Tenancy.Api.Tests`, and 17 in `RailFactory.SupplyChain.Api.Tests`.
+
+## Session Milestone: Integration Fields Grid Layout (2026-06-08)
+
+### Implemented Features
+- **Arranged Integration Configuration Fields in a Grid Layout:**
+  - Added a smart helper `getFieldSize` in `ConfigureIntegrationModal.tsx` that determines grid column sizes dynamically based on the field key.
+  - Aligned shorter keys, documents (CNPJ/CPF, IE), contact info, postal codes, and address elements (street, number, complement, district, state, city, IBGE) in clean multi-column rows using MUI's modern `size` property.
+  - Kept longer credentials (API keys, OAuth2 tokens, URLs) full-width (`xs: 12`) to accommodate length.
+  - Replaced deprecated grid props (`xs={12} sm={...}`) in `ConfigureIntegrationModal.tsx` with modern responsive layout spans (`size={size}`).
+  - Updated legacy grid layout parameters in `IntegrationsPage.tsx` from `item xs={12} md={6} lg={4}` to `size={{ xs: 12, md: 6, lg: 4 }}`.
+
+### Verification & Tests
+- Created a unit test suite [ConfigureIntegrationModal.test.tsx](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/features/integrations/__tests__/ConfigureIntegrationModal.test.tsx) verifying modal elements render correctly and load pre-selected integration fields.
+- Ran and validated the entire frontend test suite successfully (27 tests across 7 files).
+
+## Session Milestone: Frontend Input Masks & Client-Side Validation (2026-06-08)
+
+### Implemented Features
+- **Centralized Masks and Validation Utilities:**
+  - Created a unified `masks.ts` helper library containing formatting masks and verification algorithms (verification digits check for CPF and CNPJ, pattern matching for Emails, CEPs, Phones, and Mercosul/standard license plates).
+- **Integrated Form Formatting & Validation:**
+  - **`CreatePersonModal`**: Formats input as CPF on the fly; validates CPF and Email format, showing error visual indicators and disabling submit on invalid values.
+  - **`CreateCarrierModal`**: Formats CNPJ; validates CNPJ, Email, and Webhook URL (strictly requiring http/https prefixes).
+  - **`CreateShipmentOrderModal`**: Formats recipient CPF/CNPJ and CEP dynamically; validates CPF/CNPJ, Email, CEP, and UF state length.
+  - **`FiscalSettingsPage`**: Formats emitter CNPJ; validates CNPJ, preventing save on invalid CNPJ inputs.
+  - **`ConfigureIntegrationModal`**: Dynamically resolves and applies masks/validations on dynamic schema fields (CNPJ, CPF/CNPJ, CEP, Phone, and Email keys).
+  - **`CreateVehicleModal`**: Formats Plate, validates license plate formats (Mercosul and standard), Renavam (9-11 digits), Chassi (17 characters), and RNTRC (8 digits).
+  - **`UsersManagementPage`**: Validates the invite email address format, visually flagging invalid inputs and disabling the confirm button until resolved.
+  - **`AssociationWorkbenchPage` & `AssociationWorkspace`**: Standardized SKU Interno to uppercase and stripped spaces; enforces numeric formatting constraints and validation on NCM (exactly 8 digits) and GTIN (valid sizes: 8, 12, 13, 14 digits) during custom material creation.
+- **Hardened Submit Buttons**:
+  - Dynamically disabled the save/submit actions on all updated forms if any input fails client-side verification, ensuring zero invalid format submissions to the backend.
+- **Backend Formatting & Sanitization Alignment**:
+  - *Constraint Analysis*: Checked the backend Value Object `FiscalId.cs`, which normalizes tax IDs to digits-only. Other fields (carrier CNPJ, employee CPF, recipient CNPJ, recipient CEP, vehicle plate) are currently stored as raw strings in the domain model and are passed uncleaned to third-party fiscal/shipping APIs (FocusNFe, PlugNotas, Melhor Envio). Formatting characters (dots, dashes) in these fields cause API validation errors and SEFAZ rejections.
+  - *Clean Submission*: Updated all frontend form submit payloads to strip formatting (cleaning documents, ZIP codes, and plates to digits/alphanumeric only) before posting to the backend APIs.
+  - *Format on Display*: Imported `Masks` in list pages (`CarriersPage.tsx`, `PeoplePage.tsx`, `FleetPage.tsx`), detail panels (`VehicleDetailPanel.tsx`, `ShipmentOrderDetailPanel.tsx`), print views (`DispatchPrintView.tsx`), and creation modals (`CreateDispatchModal.tsx`) to format the raw data back into clean, user-friendly Brazilian standard formats for the user.
+
+### Verification & Tests
+- Created [masks.test.ts](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/shared/lib/__tests__/masks.test.ts) unit test verifying formatters and mathematical digit validation check rules.
+- Ran all tests: 37 passing unit tests across 8 test files (`npm run test`).
+- Production frontend bundle compiles successfully with zero warnings or errors (`npm run build`).
+
+

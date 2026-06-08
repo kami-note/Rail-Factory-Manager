@@ -26,4 +26,33 @@ public static class TenantServiceReadiness
             """;
         await createCmd.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Returns true only after <see cref="MarkReadyAsync"/> has been called for this database,
+    /// i.e. all EF Core migrations have completed. Dispatchers call this before querying tenant
+    /// data to avoid hitting tables that do not exist yet.
+    /// </summary>
+    public static async Task<bool> IsReadyAsync(DbConnection connection, CancellationToken cancellationToken)
+    {
+        if (connection.State != ConnectionState.Open)
+            await connection.OpenAsync(cancellationToken);
+
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT EXISTS (
+                SELECT 1 FROM _rf_service_ready WHERE id = 1
+            );
+            """;
+
+        try
+        {
+            var result = await cmd.ExecuteScalarAsync(cancellationToken);
+            return result is true;
+        }
+        catch
+        {
+            // Table does not exist yet — migrations haven't run.
+            return false;
+        }
+    }
 }

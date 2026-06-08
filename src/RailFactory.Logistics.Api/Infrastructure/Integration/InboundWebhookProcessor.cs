@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.Logistics.Api.Application.Ports;
 using RailFactory.Logistics.Api.Domain;
@@ -59,6 +60,10 @@ public sealed class InboundWebhookProcessor(
             tenant.Code, tenant.Locale, tenant.TimeZone, tenant.ConnectionStrings);
 
         var db = scope.ServiceProvider.GetRequiredService<LogisticsDbContext>();
+
+        if (!await TenantServiceReadiness.IsReadyAsync(db.Database.GetDbConnection(), cancellationToken))
+            return;
+
         var handlers = scope.ServiceProvider.GetServices<IInboundWebhookHandler>()
             .ToDictionary(h => h.Provider, StringComparer.OrdinalIgnoreCase);
         var repo = new PostgresInboundWebhookEventRepository(db);

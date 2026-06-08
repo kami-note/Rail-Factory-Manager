@@ -13,6 +13,7 @@ import { useCarriers } from '../hooks/useCarriers';
 import { CreateCarrierModal } from './CreateCarrierModal';
 import type { Carrier } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { Masks } from '../../../shared/lib/utils/masks';
 
 type Props = { tenantCode: string };
 type ConfirmAction = { type: 'deactivate' | 'activate'; id: string; name: string };
@@ -92,7 +93,7 @@ export function CarriersPage({ tenantCode }: Props) {
             {carriers.map(c => (
               <TableRow key={c.id}>
                 <TableCell>{c.name}</TableCell>
-                <TableCell sx={{ fontFamily: 'monospace' }}>{c.documentNumber}</TableCell>
+                <TableCell sx={{ fontFamily: 'monospace' }}>{Masks.cpfCnpj(c.documentNumber)}</TableCell>
                 <TableCell>{c.ratePerKg.toFixed(4)}</TableCell>
                 <TableCell>{c.ratePerCbm.toFixed(4)}</TableCell>
                 <TableCell>

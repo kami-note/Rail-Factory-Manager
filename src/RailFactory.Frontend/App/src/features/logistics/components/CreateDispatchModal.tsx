@@ -13,6 +13,7 @@ import { useDriverAssignments } from '../../fleet/hooks/useDriverAssignments';
 import { usePeople } from '../../hr/hooks/usePeople';
 import type { Dispatch } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
+import { Masks } from '../../../shared/lib/utils/masks';
 
 type Props = {
   open: boolean;
@@ -200,7 +201,7 @@ export function CreateDispatchModal({ open, tenantCode, initialOrderId, onCreate
                       : resolvedDriver && (
                           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 1.5, py: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>{resolvedDriver.name}</Typography>
-                            <Typography variant="caption" color="text.secondary">{resolvedDriver.documentNumber}</Typography>
+                            <Typography variant="caption" color="text.secondary">{Masks.cpfCnpj(resolvedDriver.documentNumber)}</Typography>
                             <Chip label="Motorista ativo" size="small" color="success" sx={{ ml: 'auto' }} />
                           </Stack>
                         )
