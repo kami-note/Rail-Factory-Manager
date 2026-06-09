@@ -11,7 +11,8 @@ public sealed class CreateBom(IBomRepository repository)
     public async Task<BillOfMaterials> ExecuteAsync(CreateBomInput input, CancellationToken cancellationToken)
     {
         var nextVersion = await repository.GetLatestVersionNumberAsync(input.ProductCode, cancellationToken) + 1;
-        var bom = BillOfMaterials.Create(input.ProductCode, nextVersion);
+        var batchSize = input.BatchSize ?? 1.0m;
+        var bom = BillOfMaterials.Create(input.ProductCode, nextVersion, batchSize);
 
         await repository.AddAsync(bom, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
@@ -20,4 +21,4 @@ public sealed class CreateBom(IBomRepository repository)
     }
 }
 
-public sealed record CreateBomInput(string ProductCode);
+public sealed record CreateBomInput(string ProductCode, decimal? BatchSize = null);

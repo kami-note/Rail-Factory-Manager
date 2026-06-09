@@ -13,13 +13,14 @@ import { BookOpen, Plus, Search } from 'lucide-react';
 import { ModuleHeader } from '../../../../shared/components/common/ModuleHeader';
 import { InlineError } from '../../../../shared/components/common/InlineError';
 import { Authorized } from '../../../auth';
-import { activateBom } from '../../api/production';
+import { activateBom, cloneBom } from '../../api/production';
 import { useBoms } from '../../hooks/useBoms';
 import { MaterialCodeAutocomplete } from '../../../inventory';
 import type { Bom } from '../../types';
 import { toUiErrorMessage } from '../../../../shared/lib/http';
 import { CreateBomModal } from './CreateBomModal';
 import { ProductGroup } from './ProductGroup';
+import { BomCostRollupModal } from './BomCostRollupModal';
 
 type BomsPageProps = {
   tenantCode: string;
@@ -34,6 +35,7 @@ export function BomsPage({ tenantCode }: BomsPageProps) {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedRollupBom, setSelectedRollupBom] = useState<Bom | null>(null);
 
   const error = fetchError ?? mutationError;
 
@@ -72,6 +74,19 @@ export function BomsPage({ tenantCode }: BomsPageProps) {
       setMutationError(toUiErrorMessage(err, 'Não foi possível ativar a BOM.'));
     } finally {
       setActivatingId(null);
+    }
+  };
+
+  const handleClone = async (bomId: string) => {
+    setMutationError(null);
+    setSuccess(null);
+    try {
+      const cloned = await cloneBom(tenantCode, bomId);
+      setAllBoms(prev => [cloned, ...prev]);
+      setExpandedId(cloned.id);
+      setSuccess(`BOM v${cloned.version} clonada com sucesso para ${cloned.productCode}.`);
+    } catch (err) {
+      setMutationError(toUiErrorMessage(err, 'Não foi possível clonar a BOM.'));
     }
   };
 
@@ -142,6 +157,8 @@ export function BomsPage({ tenantCode }: BomsPageProps) {
                 onToggle={id => setExpandedId(expandedId === id ? null : id)}
                 onActivate={id => void handleActivate(id)}
                 onItemAdded={handleItemAdded}
+                onClone={handleClone}
+                onCostRollup={bom => setSelectedRollupBom(bom)}
               />
             ))}
           </Stack>
@@ -154,6 +171,16 @@ export function BomsPage({ tenantCode }: BomsPageProps) {
         tenantCode={tenantCode}
         onCreated={handleBomCreated}
         onClose={() => setShowCreateModal(false)}
+      />
+
+      {/* Cost Roll-up Modal */}
+      <BomCostRollupModal
+        open={selectedRollupBom !== null}
+        tenantCode={tenantCode}
+        bomId={selectedRollupBom?.id ?? null}
+        productCode={selectedRollupBom?.productCode ?? ''}
+        version={selectedRollupBom?.version ?? 0}
+        onClose={() => setSelectedRollupBom(null)}
       />
     </Box>
   );

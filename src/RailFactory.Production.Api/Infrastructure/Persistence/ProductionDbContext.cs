@@ -41,6 +41,7 @@ public sealed class ProductionDbContext(DbContextOptions<ProductionDbContext> op
 
             entity.Property(x => x.Version).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
+            entity.Property(x => x.BatchSize).HasColumnType("numeric(18,4)").HasDefaultValue(1.0m).IsRequired();
             entity.Property(x => x.CreatedAt).IsRequired();
             entity.Property(x => x.UpdatedAt).IsRequired();
 
@@ -66,6 +67,7 @@ public sealed class ProductionDbContext(DbContextOptions<ProductionDbContext> op
 
             entity.Property(x => x.Quantity).HasColumnType("numeric(18,4)").IsRequired();
             entity.Property(x => x.UnitOfMeasure).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ScrapFactor).HasColumnType("numeric(5,4)").HasDefaultValue(0.0m).IsRequired();
         });
 
         modelBuilder.Entity<ProductionOrder>(entity =>

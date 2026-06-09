@@ -1,7 +1,7 @@
 # Contexto Atual de Implementação
 
-**Última Atualização:** 2026-05-31
-**Marco Atual:** P10 — Webhooks (RF-22) + Auditoria Imutável (RF-05/RN-08) ✅ implementado
+**Última Atualização:** 2026-06-08
+**Marco Atual:** P15 — Evolução de BOMs — Fase 1 🔄 Em andamento
 
 Este documento é a fonte da verdade sobre o estado real do código. Ele descreve o que está "de pé", validado e funcional no monorepo.
 
@@ -22,6 +22,7 @@ Este documento é a fonte da verdade sobre o estado real do código. Ele descrev
 | **P8 - Expedição + Fleet Ext.** | ✅ Concluído | Fleet: Manutenção de Veículos (RF-26), Controle de Abastecimento (RF-27). Logistics: Transportadoras (RF-20), Ordens de Expedição (RF-19), Despachos + rastreamento B2B público (RF-21/23/24/RD-LOG-01). Novo microserviço `RailFactory.Logistics.Api`. |
 | **P9 - RabbitMQ Logistics** | ✅ Concluído | `logistics.shipment_dispatched` publicado por item via Outbox ao expedir despacho. Inventory Consumer debita saldo `Available` (FIFO, idempotente). Fix `AddShipmentItem` (EF Core 10 + Npgsql bug, raw SQL). |
 | **P10 - Webhooks + Auditoria** | ✅ Concluído | RF-22: Carrier ganha `WebhookUrl`, `LogisticsWebhookDispatcher` notifica por HTTP com retry/dead-letter. RF-05/RN-08: `IamAuditEntry` com IP, CorrelationId; trilha de `role_assigned`, `role_revoked`, `session_created`. Frontend: AuditPage + campo webhook no modal de transportadora. |
+| **P15 - Evolução de BOMs — Fase 1**| 🔄 Em andamento | Clonagem de BOMs (Clone BOM) e Lote Padrão (Batch Size) no backend, banco de dados e frontend. |
 
 ---
 

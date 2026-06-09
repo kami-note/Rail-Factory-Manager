@@ -18,6 +18,8 @@ export function ProductGroup({
   onToggle,
   onActivate,
   onItemAdded,
+  onClone,
+  onCostRollup,
 }: {
   productCode: string;
   boms: Bom[];
@@ -27,6 +29,8 @@ export function ProductGroup({
   onToggle: (id: string) => void;
   onActivate: (id: string) => void;
   onItemAdded: (bomId: string, updated: Bom) => void;
+  onClone: (bomId: string) => void;
+  onCostRollup: (bom: Bom) => void;
 }) {
   const activeCount = boms.filter(b => b.status.key === 'Active').length;
 
@@ -71,6 +75,8 @@ export function ProductGroup({
               onToggle={() => onToggle(bom.id)}
               onActivate={() => onActivate(bom.id)}
               onItemAdded={updated => onItemAdded(bom.id, updated)}
+              onClone={() => onClone(bom.id)}
+              onCostRollup={() => onCostRollup(bom)}
             />
           </Box>
         ))}

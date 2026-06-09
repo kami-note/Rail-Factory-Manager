@@ -64,6 +64,12 @@ public static class ProductionEndpoints
         secure.MapPut("/boms/{id:guid}/activate", HandleActivateBom)
             .RequirePermission(SystemPermissions.Production.Write);
 
+        secure.MapPost("/boms/{id:guid}/clone", HandleCloneBom)
+            .RequirePermission(SystemPermissions.Production.Write);
+
+        secure.MapGet("/boms/{id:guid}/cost-rollup", HandleGetBomCostRollup)
+            .RequirePermission(SystemPermissions.Production.Read);
+
         // Production Orders
         secure.MapGet("/production-orders", HandleListOrders)
             .RequirePermission(SystemPermissions.Production.Read);
@@ -175,8 +181,33 @@ public static class ProductionEndpoints
     private static async Task<IResult> HandleCreateBom(
         CreateBomRequest req, CreateBom useCase, CancellationToken ct)
     {
-        var bom = await useCase.ExecuteAsync(new CreateBomInput(req.ProductCode), ct);
+        var bom = await useCase.ExecuteAsync(new CreateBomInput(req.ProductCode, req.BatchSize), ct);
         return Results.Created($"{ApiGroup}/boms/{bom.Id}", MapBomResponse(bom));
+    }
+
+    private static async Task<IResult> HandleCloneBom(
+        Guid id, CloneBomVersion useCase, CancellationToken ct)
+    {
+        try
+        {
+            var newBom = await useCase.ExecuteAsync(id, ct);
+            return Results.Created($"{ApiGroup}/boms/{newBom.Id}", MapBomResponse(newBom));
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (ArgumentException ex) { return Results.BadRequest(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
+    }
+
+    private static async Task<IResult> HandleGetBomCostRollup(
+        Guid id, GetBomCostRollup useCase, CancellationToken ct)
+    {
+        try
+        {
+            var result = await useCase.ExecuteAsync(id, ct);
+            return Results.Ok(result);
+        }
+        catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Results.Conflict(new { Error = ex.Message }); }
     }
 
     private static async Task<IResult> HandleAddBomItem(
@@ -184,7 +215,7 @@ public static class ProductionEndpoints
     {
         try
         {
-            await useCase.ExecuteAsync(new AddBomItemInput(id, req.MaterialCode, req.Quantity, req.UnitOfMeasure), ct);
+            await useCase.ExecuteAsync(new AddBomItemInput(id, req.MaterialCode, req.Quantity, req.UnitOfMeasure, req.ScrapFactor), ct);
             return Results.NoContent();
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(new { Error = ex.Message }); }
@@ -354,12 +385,14 @@ public static class ProductionEndpoints
         ProductCode = bom.ProductCode.Value,
         bom.Version,
         Status = bom.Status.ToDisplayStatus(),
+        BatchSize = bom.BatchSize,
         Items = bom.Items.Select(i => new
         {
             i.Id,
             MaterialCode = i.MaterialCode.Value,
             i.Quantity,
-            i.UnitOfMeasure
+            i.UnitOfMeasure,
+            i.ScrapFactor
         }),
         bom.CreatedAt, bom.UpdatedAt
     };
