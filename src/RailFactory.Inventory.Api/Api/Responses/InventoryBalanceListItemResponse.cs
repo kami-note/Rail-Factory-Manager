@@ -17,4 +17,5 @@ public sealed record InventoryBalanceListItemResponse(
     DateTimeOffset CreatedAt,
     string? Ncm = null,
     string? Gtin = null,
-    string? MaterialImageUrl = null);
+    string? MaterialImageUrl = null,
+    string? ProductionOrderNumber = null);

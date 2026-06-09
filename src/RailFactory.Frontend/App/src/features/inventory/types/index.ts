@@ -16,6 +16,7 @@ export type InventoryBalance = {
   createdAt: string;
   ncm?: string;
   gtin?: string;
+  productionOrderNumber?: string;
 };
 
 export type MaterialSearchResult = {

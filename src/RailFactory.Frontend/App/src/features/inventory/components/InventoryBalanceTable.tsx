@@ -28,6 +28,8 @@ import {
   History as HistoryIcon,
   Package as PackageIcon,
   Eye as EyeIcon,
+  Factory as FactoryIcon,
+  Hash as HashIcon,
 } from 'lucide-react';
 import type { InventoryBalance } from '../types';
 import { MaterialAvatar } from '../../../shared/components/common/MaterialAvatar';
@@ -47,6 +49,7 @@ export function InventoryDesktopTable({ balances, onNavigate, onDetails }: {
   onNavigate: (code: string) => void;
   onDetails: (id: string) => void;
 }) {
+  const theme = useTheme();
   return (
     <TableContainer component={Paper} variant="outlined">
       <Table stickyHeader size="small">
@@ -93,17 +96,35 @@ export function InventoryDesktopTable({ balances, onNavigate, onDetails }: {
               <TableCell sx={{ fontWeight: 600 }}>{b.unitOfMeasure}</TableCell>
               <TableCell><StatusChip status={b.status} /></TableCell>
               <TableCell>
-                <StatusChip status={b.sourceType} label={b.supplierName || b.sourceType.label} />
-                <Tooltip title="Clique para copiar referência">
-                  <Typography
-                    variant="caption"
-                    color="text.disabled"
-                    sx={{ display: 'block', fontFamily: 'monospace', cursor: 'pointer', mt: 0.5 }}
-                    onClick={() => TechnicalIdFormatter.copyToClipboard(b.sourceReference)}
-                  >
-                    {TechnicalIdFormatter.truncate(b.sourceReference)}
-                  </Typography>
-                </Tooltip>
+                {b.sourceType.key === 'Production' ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <StatusChip status={b.sourceType} />
+                    {b.productionOrderNumber && (
+                      <Tooltip title="Número da Ordem de Produção">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <HashIcon size={11} style={{ color: theme.palette?.text?.secondary }} />
+                          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.68rem' }}>
+                            {b.productionOrderNumber}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    )}
+                  </Box>
+                ) : (
+                  <>
+                    <StatusChip status={b.sourceType} label={b.supplierName || b.sourceType.label} />
+                    <Tooltip title="Clique para copiar referência">
+                      <Typography
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{ display: 'block', fontFamily: 'monospace', cursor: 'pointer', mt: 0.5 }}
+                        onClick={() => TechnicalIdFormatter.copyToClipboard(b.sourceReference)}
+                      >
+                        {TechnicalIdFormatter.truncate(b.sourceReference)}
+                      </Typography>
+                    </Tooltip>
+                  </>
+                )}
               </TableCell>
               <TableCell>{formatDate(b.createdAt)}</TableCell>
               <TableCell align="right">
@@ -157,7 +178,18 @@ export function InventoryMobileList({ balances, onNavigate, onDetails }: {
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
               <Typography variant="caption" color="text.secondary">Qtd: <strong>{b.quantity}</strong> {b.unitOfMeasure}</Typography>
               <Typography variant="caption" color="text.secondary">Lote: <strong>{b.lotNumber || 'N/A'}</strong></Typography>
-              <Typography variant="caption" color="text.secondary">Origem: <StatusChip status={b.sourceType} label={b.supplierName || b.sourceType.label} /></Typography>
+              {b.sourceType.key === 'Production' ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <FactoryIcon size={12} />
+                  <Typography variant="caption" color="text.secondary">
+                    {b.productionOrderNumber ? (
+                      <strong style={{ fontFamily: 'monospace' }}>{b.productionOrderNumber}</strong>
+                    ) : 'Produto Acabado'}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography variant="caption" color="text.secondary">Origem: <StatusChip status={b.sourceType} label={b.supplierName || b.sourceType.label} /></Typography>
+              )}
               <Typography variant="caption" color="text.secondary">Criado: <strong>{formatDate(b.createdAt)}</strong></Typography>
             </Box>
             <Button
@@ -361,10 +393,28 @@ export function InventoryBalanceCardList({ balances, onNavigate, onDetails }: {
                     </Box>
                   )}
 
-                  {/* Origem */}
+                  {/* Origem / Produção */}
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>ORIGEM</Typography>
-                    <StatusChip status={b.sourceType} label={b.supplierName || b.sourceType.label} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                      {b.sourceType.key === 'Production' ? 'PRODUÇÃO' : 'ORIGEM'}
+                    </Typography>
+                    {b.sourceType.key === 'Production' ? (
+                      b.productionOrderNumber ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <FactoryIcon size={12} style={{ color: theme.palette.success.main }} />
+                          <Typography variant="caption" sx={{ fontWeight: 800, fontFamily: 'monospace', color: 'success.main' }}>
+                            {b.productionOrderNumber}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <FactoryIcon size={12} style={{ color: theme.palette.text.secondary }} />
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>Prod. Interno</Typography>
+                        </Box>
+                      )
+                    ) : (
+                      <StatusChip status={b.sourceType} label={b.supplierName || b.sourceType.label} />
+                    )}
                   </Box>
 
                   {/* Data Criado */}

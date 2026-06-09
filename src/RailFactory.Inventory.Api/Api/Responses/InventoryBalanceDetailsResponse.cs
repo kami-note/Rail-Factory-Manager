@@ -42,7 +42,9 @@ public record InventoryBalanceTraceabilityResponse(
     string? ExpirationDate, 
     DisplayStatus SourceType, 
     string SourceReference, 
-    string? SupplierName);
+    string? SupplierName,
+    Guid? ProductionOrderId = null,
+    string? ProductionOrderNumber = null);
 
 /// <summary>
 /// Ledger entry for the balance history.
