@@ -32,6 +32,9 @@ public sealed class GetInventoryBalanceDetails(
 
         string? supplierName = null;
         string? originalDescription = null;
+        Guid? productionOrderId = null;
+        string? productionOrderNumber = null;
+
         if (sourceMetadata.HasValue && sourceMetadata.Value.ValueKind == JsonValueKind.Object)
         {
             if (sourceMetadata.Value.TryGetProperty("SupplierName", out var prop) || 
@@ -44,6 +47,19 @@ public sealed class GetInventoryBalanceDetails(
                 sourceMetadata.Value.TryGetProperty("originalDescription", out descProp))
             {
                 originalDescription = descProp.GetString();
+            }
+
+            if (sourceMetadata.Value.TryGetProperty("ProductionOrderId", out var ordIdProp) ||
+                sourceMetadata.Value.TryGetProperty("productionOrderId", out ordIdProp))
+            {
+                if (ordIdProp.TryGetGuid(out var parsedGuid))
+                    productionOrderId = parsedGuid;
+            }
+
+            if (sourceMetadata.Value.TryGetProperty("OrderNumber", out var ordNumProp) ||
+                sourceMetadata.Value.TryGetProperty("orderNumber", out ordNumProp))
+            {
+                productionOrderNumber = ordNumProp.GetString();
             }
         }
 
@@ -67,6 +83,41 @@ public sealed class GetInventoryBalanceDetails(
                 null,
                 null);
 
+        // For FinishedGood balances, production info lives in ledger entries (production_output)
+        // since the balance is credited in-place rather than created fresh with SourceMetadata.
+        if (productionOrderId is null || productionOrderNumber is null)
+        {
+            var productionOutputEntry = ledger
+                .Where(l => l.Operation == "production_output")
+                .OrderByDescending(l => l.CreatedAt)
+                .FirstOrDefault();
+
+            if (productionOutputEntry is not null && !string.IsNullOrWhiteSpace(productionOutputEntry.DetailsJson))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(productionOutputEntry.DetailsJson);
+                    var root = doc.RootElement;
+
+                    if (productionOrderId is null &&
+                        (root.TryGetProperty("ProductionOrderId", out var pIdProp) ||
+                         root.TryGetProperty("productionOrderId", out pIdProp)))
+                    {
+                        if (pIdProp.TryGetGuid(out var parsedGuid))
+                            productionOrderId = parsedGuid;
+                    }
+
+                    if (productionOrderNumber is null &&
+                        (root.TryGetProperty("OrderNumber", out var pNumProp) ||
+                         root.TryGetProperty("orderNumber", out pNumProp)))
+                    {
+                        productionOrderNumber = pNumProp.GetString();
+                    }
+                }
+                catch { /* Ignore malformed DetailsJson */ }
+            }
+        }
+
         return new InventoryBalanceDetailsResponse(
             Id: balance.Id,
             MaterialCode: balance.MaterialCode,
@@ -85,7 +136,9 @@ public sealed class GetInventoryBalanceDetails(
                 ExpirationDate: balance.ExpirationDate?.ToString("yyyy-MM-dd"),
                 SourceType: balance.SourceType.ToDisplayStatus(),
                 SourceReference: balance.SourceReference,
-                SupplierName: supplierName
+                SupplierName: supplierName,
+                ProductionOrderId: productionOrderId,
+                ProductionOrderNumber: productionOrderNumber
             ),
             Ledger: ledger.Select(l => new InventoryBalanceLedgerResponse(
                 OccurredAt: l.CreatedAt,

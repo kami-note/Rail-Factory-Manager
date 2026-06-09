@@ -1,0 +1,14 @@
+- generic [ref=e13]:
+  - heading "RAIL FACTORY" [level=4] [ref=e30]
+  - paragraph [ref=e15]: Selecione sua organização para acessar o painel de operações.
+  - generic [ref=e17]:
+    - generic [ref=e22]: Organization
+    - generic [ref=e18]:
+      - combobox "Organization Tenant de desenvolvimento (dev)" [active] [ref=e31] [cursor=pointer]: Tenant de desenvolvimento (dev)
+      - textbox: dev
+      - img
+      - group:
+        - generic: Organization
+  - link "Entrar com Google" [ref=e32] [cursor=pointer]:
+    - /url: /api/iam/auth/google/start?tenantCode=dev&returnUrl=%2Fapp
+    - text: Entrar com Google

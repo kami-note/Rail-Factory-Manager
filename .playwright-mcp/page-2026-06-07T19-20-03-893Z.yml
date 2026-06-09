@@ -1,0 +1,1 @@
+- generic [ref=e2]: "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.1\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Tenant code is required.\",\"code\":\"tenant.code_required\",\"traceId\":\"00-86021759554fcaae6f43585e58d14194-fbce40a5538df0ba-01\",\"correlationId\":\"86021759554fcaae6f43585e58d14194\",\"service\":\"RailFactory.Frontend\"}"
