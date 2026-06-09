@@ -23,6 +23,9 @@ import {
   Checkbox,
   IconButton,
   Grid,
+  ToggleButton,
+  ToggleButtonGroup,
+  Divider,
 } from '@mui/material';
 import {
   RefreshCw as RefreshIcon,
@@ -33,6 +36,8 @@ import {
   Lock,
   FilterX,
   X,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { InventoryBalance } from '../types';
@@ -42,7 +47,7 @@ import { BalanceDetailsModal } from './BalanceDetailsModal';
 import { useInventoryBalances } from '../hooks/useInventoryBalances';
 import { Authorized } from '../../auth';
 import { CreateMaterialModal } from './CreateMaterialModal';
-import { InventoryDesktopTable, InventoryMobileList } from './InventoryBalanceTable';
+import { InventoryDesktopTable, InventoryMobileList, InventoryBalanceCardList } from './InventoryBalanceTable';
 import { StatCard } from '../../../shared/components/common/StatCard';
 
 interface InventoryStocksPageProps {
@@ -73,6 +78,9 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
   const [selectedBalanceId, setSelectedBalanceId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+    return (localStorage.getItem('inventory_view_mode') as 'grid' | 'table') || 'grid';
+  });
 
   // Reset filters when switching tabs
   useEffect(() => {
@@ -333,10 +341,31 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
               startIcon={<RefreshIcon size={14} />}
               onClick={reload}
               disabled={loading}
-              sx={{ fontWeight: 700 }}
+              sx={{ fontWeight: 700, mr: 1 }}
             >
               Atualizar
             </Button>
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+            <ToggleButtonGroup
+              size="small"
+              value={viewMode}
+              exclusive
+              onChange={(_, nextView) => {
+                if (nextView !== null) {
+                  setViewMode(nextView);
+                  localStorage.setItem('inventory_view_mode', nextView);
+                }
+              }}
+              aria-label="modo de exibição"
+              sx={{ height: 32 }}
+            >
+              <ToggleButton value="grid" aria-label="grade de cards" sx={{ px: 1.5 }}>
+                <LayoutGrid size={14} />
+              </ToggleButton>
+              <ToggleButton value="table" aria-label="tabela" sx={{ px: 1.5 }}>
+                <List size={14} />
+              </ToggleButton>
+            </ToggleButtonGroup>
           </Stack>
         </Stack>
       </Paper>
@@ -366,6 +395,12 @@ export function InventoryStocksPage({ tenantCode }: InventoryStocksPageProps) {
             </Button>
           )}
         </Paper>
+      ) : viewMode === 'grid' ? (
+        <InventoryBalanceCardList
+          balances={filtered}
+          onNavigate={code => navigate(`/app/inventory/materials/${code}`)}
+          onDetails={id => setSelectedBalanceId(id)}
+        />
       ) : isMobile ? (
         <InventoryMobileList
           balances={filtered}

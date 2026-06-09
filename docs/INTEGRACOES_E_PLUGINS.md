@@ -35,9 +35,10 @@ Os plugins abaixo foram mapeados e homologados quanto à disponibilidade de APIs
 ### 2.2. Financeiro e Pagamentos (Gateway)
 *Responsabilidade: Novo Consumer no RabbitMQ escutando `logistics.shipment_dispatched`*
 
-*   🔌 **Plugin: Asaas**
+*   ✅ **Plugin: Asaas (Implementado)**
     *   **Funcionalidade:** Emissão de Boletos e Pix B2B, automatização de cobranças.
     *   **Developer Experience:** Excelente. Possui o `sandbox.asaas.com`, onde é possível criar uma conta grátis para simular pagamentos e testar webhooks sem cartão de crédito ou contrato ativo.
+    *   **Status:** Adapter (busca/cria customer → cria cobrança Boleto/PIX), dispatcher, webhook handler (X-Asaas-Access-Token) e UI implementados. Campos `PaymentExternalId/Status/BoletoUrl/PixUrl` na entidade Dispatch. Testado end-to-end no sandbox: cobrança `pay_tj3uqzlu1rjted2a` criada com sucesso. **Atenção:** URL correta do sandbox é `api-sandbox.asaas.com/v3` (não `sandbox.asaas.com/v3`); auth via header `access_token` (não Bearer); `User-Agent` obrigatório.
 *   🔌 **Plugin: Iugu / Stripe**
     *   **Funcionalidade:** Faturamentos complexos, divisão de recebíveis (Split).
 

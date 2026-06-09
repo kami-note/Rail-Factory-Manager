@@ -34,24 +34,24 @@ public static class TenantServiceReadiness
     /// </summary>
     public static async Task<bool> IsReadyAsync(DbConnection connection, CancellationToken cancellationToken)
     {
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
-
-        await using var cmd = connection.CreateCommand();
-        cmd.CommandText = """
-            SELECT EXISTS (
-                SELECT 1 FROM _rf_service_ready WHERE id = 1
-            );
-            """;
-
         try
         {
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
+
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = """
+                SELECT EXISTS (
+                    SELECT 1 FROM _rf_service_ready WHERE id = 1
+                );
+                """;
+
             var result = await cmd.ExecuteScalarAsync(cancellationToken);
             return result is true;
         }
         catch
         {
-            // Table does not exist yet — migrations haven't run.
+            // Table does not exist, connection is not ready, or database is not reachable yet.
             return false;
         }
     }

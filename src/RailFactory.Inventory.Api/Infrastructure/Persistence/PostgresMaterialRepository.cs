@@ -32,6 +32,14 @@ public sealed class PostgresMaterialRepository(InventoryDbContext dbContext) : I
             .ToDictionaryAsync(x => x.MaterialCode.Value, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public Task<List<Material>> ListAllAsync(CancellationToken cancellationToken)
+    {
+        return dbContext.Materials
+            .OrderBy(x => x.OfficialName)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Material material, CancellationToken cancellationToken)
     {
         await dbContext.Materials.AddAsync(material, cancellationToken);

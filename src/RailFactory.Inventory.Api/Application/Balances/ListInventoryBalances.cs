@@ -13,22 +13,30 @@ public sealed class ListInventoryBalances(
     IInventoryRepository repository,
     IMaterialRepository materialRepository)
 {
+    /// <summary>
+    /// Executes the query to list all inventory balances.
+    /// </summary>
+    /// <remarks>
+    /// To ensure operators can view, edit, and manage all registered materials (even when they have no active stock),
+    /// this query performs a left-join simulation: it fetches all active stock balances and then appends synthetic
+    /// zero-quantity balances for any registered catalog materials that do not have active stock records in the database.
+    /// </remarks>
     public async Task<List<InventoryBalanceListItemResponse>> ExecuteAsync(
         InventoryBalanceStatus? status,
         InventorySourceType? sourceType,
         CancellationToken cancellationToken)
     {
         var balances = await repository.ListBalancesAsync(status, sourceType, cancellationToken);
-        if (balances.Count == 0) return [];
+        var allMaterials = await materialRepository.ListAllAsync(cancellationToken);
 
-        // Exclude zero-quantity Available entries — they are fully depleted and offer no actionable stock.
-        balances = balances.Where(b => !(b.Status == InventoryBalanceStatus.Available && b.Quantity == 0)).ToList();
+        // Group materials by code for fast lookup
+        var materialsDict = allMaterials.ToDictionary(m => m.MaterialCode.Value, m => m);
 
-        // ELITE FIX: Bulk fetch materials to eliminate N+1 query pattern.
-        var materialCodes = balances.Select(x => x.MaterialCode).Distinct();
-        var materials = await materialRepository.GetByCodesAsync(materialCodes, cancellationToken);
+        // Output list
+        var results = new List<InventoryBalanceListItemResponse>();
 
-        return balances.Select(x =>
+        // 1. Process active balances
+        foreach (var x in balances)
         {
             string? supplierName = null;
             string? ncm = null;
@@ -67,9 +75,9 @@ public sealed class ListInventoryBalances(
                 catch { /* Ignore malformed JSON */ }
             }
 
-            var material = materials.TryGetValue(x.MaterialCode, out var m) ? m : null;
+            var material = materialsDict.TryGetValue(x.MaterialCode, out var m) ? m : null;
 
-            return new InventoryBalanceListItemResponse(
+            results.Add(new InventoryBalanceListItemResponse(
                 x.Id,
                 x.MaterialCode,
                 material?.OfficialName ?? originalDescription ?? x.MaterialCode,
@@ -85,7 +93,57 @@ public sealed class ListInventoryBalances(
                 material?.Ncm ?? ncm,
                 material?.Gtin ?? gtin,
                 material?.ImageUrl
-            );
-        }).ToList();
+            ));
+        }
+
+        // 2. Identify materials that have no balances and add a synthetic zero-balance row
+        var codesWithBalances = balances.Select(x => x.MaterialCode).ToHashSet();
+
+        // Map sourceType parameter to the expected MaterialCategory
+        MaterialCategory? expectedCategory = sourceType switch
+        {
+            InventorySourceType.Purchase => MaterialCategory.RawMaterial,
+            InventorySourceType.Production => MaterialCategory.FinishedGood,
+            _ => null
+        };
+
+        // If a status filter is active, only include zero-quantity balances if the filter is 'Available'
+        var matchesStatusFilter = !status.HasValue || status.Value == InventoryBalanceStatus.Available;
+
+        if (matchesStatusFilter)
+        {
+            foreach (var material in allMaterials)
+            {
+                if (expectedCategory.HasValue && material.Category != expectedCategory.Value)
+                {
+                    continue;
+                }
+
+                if (!codesWithBalances.Contains(material.MaterialCode.Value))
+                {
+                    // Generate a synthetic zero-quantity Available balance
+                    results.Add(new InventoryBalanceListItemResponse(
+                        Guid.Empty, // Synthetic indicator
+                        material.MaterialCode.Value,
+                        material.OfficialName,
+                        0m,
+                        material.UnitOfMeasure,
+                        InventoryBalanceStatus.Available.ToDisplayStatus(),
+                        $"catalog-init:{material.MaterialCode.Value}",
+                        null,
+                        null,
+                        (material.Category == MaterialCategory.RawMaterial ? InventorySourceType.Purchase : InventorySourceType.Production).ToDisplayStatus(),
+                        null,
+                        material.CreatedAt,
+                        material.Ncm,
+                        material.Gtin,
+                        material.ImageUrl
+                    ));
+                }
+            }
+        }
+
+        // Return ordered by material name
+        return results.OrderBy(r => r.MaterialName).ToList();
     }
 }
