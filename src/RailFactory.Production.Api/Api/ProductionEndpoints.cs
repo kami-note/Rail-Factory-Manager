@@ -237,13 +237,13 @@ public static class ProductionEndpoints
     // ── Production Orders ─────────────────────────────────────────────────────
 
     private static async Task<IResult> HandleListOrders(
-        string? status, Guid? workCenterId, ListProductionOrders useCase, CancellationToken ct)
+        string? status, Guid? workCenterId, string? productCode, ListProductionOrders useCase, CancellationToken ct)
     {
         ProductionOrderStatus? parsedStatus = null;
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ProductionOrderStatus>(status, true, out var s))
             parsedStatus = s;
 
-        var result = await useCase.ExecuteAsync(parsedStatus, workCenterId, ct);
+        var result = await useCase.ExecuteAsync(parsedStatus, workCenterId, ct, productCode);
         return Results.Ok(result.Select(MapOrderResponse));
     }
 
