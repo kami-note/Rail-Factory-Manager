@@ -11,6 +11,7 @@ public sealed class ListProductionOrders(IProductionOrderRepository repository)
     public Task<List<ProductionOrder>> ExecuteAsync(
         ProductionOrderStatus? status,
         Guid? workCenterId,
-        CancellationToken cancellationToken)
-        => repository.ListAsync(status, workCenterId, cancellationToken);
+        CancellationToken cancellationToken,
+        string? productCode = null)
+        => repository.ListAsync(status, workCenterId, productCode, cancellationToken);
 }

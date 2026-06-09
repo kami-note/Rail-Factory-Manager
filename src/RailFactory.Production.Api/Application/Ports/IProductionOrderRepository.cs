@@ -9,7 +9,7 @@ public interface IProductionOrderRepository
 {
     Task AddAsync(ProductionOrder order, CancellationToken cancellationToken);
     Task<ProductionOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<ProductionOrder>> ListAsync(ProductionOrderStatus? status, Guid? workCenterId, CancellationToken cancellationToken);
+    Task<List<ProductionOrder>> ListAsync(ProductionOrderStatus? status, Guid? workCenterId, string? productCode, CancellationToken cancellationToken);
 
     /// <summary>
     /// Persists an outbox message alongside the order state change in the same transaction.

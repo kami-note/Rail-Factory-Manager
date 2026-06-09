@@ -15,6 +15,7 @@ public sealed class PostgresProductionOrderRepository(ProductionDbContext contex
     public Task<List<ProductionOrder>> ListAsync(
         ProductionOrderStatus? status,
         Guid? workCenterId,
+        string? productCode,
         CancellationToken cancellationToken)
     {
         var query = context.ProductionOrders.AsQueryable();
@@ -24,6 +25,12 @@ public sealed class PostgresProductionOrderRepository(ProductionDbContext contex
 
         if (workCenterId.HasValue)
             query = query.Where(x => x.WorkCenterId == workCenterId.Value);
+
+        if (!string.IsNullOrWhiteSpace(productCode))
+        {
+            var normalized = productCode.Trim().ToUpperInvariant();
+            query = query.Where(x => x.ProductCode.Value == normalized);
+        }
 
         return query.OrderByDescending(x => x.CreatedAt).ToListAsync(cancellationToken);
     }
