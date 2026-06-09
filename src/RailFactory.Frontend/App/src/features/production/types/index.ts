@@ -15,6 +15,7 @@ export type BomItem = {
   materialCode: string;
   quantity: number;
   unitOfMeasure: string;
+  scrapFactor: number;
 };
 
 export type Bom = {
@@ -23,6 +24,7 @@ export type Bom = {
   version: number;
   /** DisplayStatus object from the backend — use StatusChip to render. */
   status: DisplayStatus;
+  batchSize: number;
   items: BomItem[];
   createdAt: string;
   updatedAt: string;

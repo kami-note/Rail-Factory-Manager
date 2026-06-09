@@ -6,6 +6,7 @@ using RailFactory.Production.Api.Application.Orders;
 using RailFactory.Production.Api.Application.Ports;
 using RailFactory.Production.Api.Application.WorkCenters;
 using RailFactory.BuildingBlocks.Events;
+using RailFactory.Production.Api.Infrastructure.Adapters;
 using RailFactory.Production.Api.Infrastructure.Integration;
 using RailFactory.Production.Api.Infrastructure.Persistence;
 
@@ -31,6 +32,12 @@ public static class ProductionModule
             sp.GetRequiredService<RabbitMQ.Client.IConnection>(),
             IntegrationConstants.Exchanges.Production));
 
+        services.AddHttpClient("supply-chain-integration", client =>
+        {
+            client.BaseAddress = new Uri("http://supply-chain");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
         services.AddScoped<GetProductionInfo>();
 
         services.AddScoped<IWorkCenterRepository, PostgresWorkCenterRepository>();
@@ -38,6 +45,7 @@ public static class ProductionModule
         services.AddScoped<IProductionOrderRepository, PostgresProductionOrderRepository>();
         services.AddScoped<IExecutionRepository, PostgresExecutionRepository>();
         services.AddScoped<IProductionDashboardRepository, PostgresProductionDashboardRepository>();
+        services.AddScoped<IMaterialCostProvider, HttpMaterialCostProvider>();
 
         services.AddScoped<CreateWorkCenter>();
         services.AddScoped<DeactivateWorkCenter>();
@@ -47,7 +55,9 @@ public static class ProductionModule
         services.AddScoped<CreateBom>();
         services.AddScoped<AddBomItem>();
         services.AddScoped<ActivateBomVersion>();
+        services.AddScoped<CloneBomVersion>();
         services.AddScoped<ListBoms>();
+        services.AddScoped<GetBomCostRollup>();
 
         services.AddScoped<CreateProductionOrder>();
         services.AddScoped<ReleaseProductionOrder>();

@@ -12,7 +12,8 @@ public sealed class AddBomItem(IBomRepository repository)
         var bom = await repository.GetByIdAsync(input.BomId, cancellationToken)
             ?? throw new KeyNotFoundException($"BOM '{input.BomId}' not found.");
 
-        var newItem = bom.AddItem(input.MaterialCode, input.Quantity, input.UnitOfMeasure);
+        var scrap = input.ScrapFactor ?? 0m;
+        var newItem = bom.AddItem(input.MaterialCode, input.Quantity, input.UnitOfMeasure, scrap);
 
         // Use raw-SQL path to bypass EF Core 10 + Npgsql 10 change-tracking quirk where
         // a new BomItem with a non-zero Guid PK (ValueGeneratedOnAdd convention) is treated
@@ -21,4 +22,4 @@ public sealed class AddBomItem(IBomRepository repository)
     }
 }
 
-public sealed record AddBomItemInput(Guid BomId, string MaterialCode, decimal Quantity, string UnitOfMeasure);
+public sealed record AddBomItemInput(Guid BomId, string MaterialCode, decimal Quantity, string UnitOfMeasure, decimal? ScrapFactor = null);

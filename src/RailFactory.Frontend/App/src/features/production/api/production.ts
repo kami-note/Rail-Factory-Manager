@@ -27,14 +27,38 @@ export const listBoms = (tenantCode: string, productCode?: string, signal?: Abor
 export const getBom = (tenantCode: string, bomId: string): Promise<Bom> =>
   fetchJsonOrThrow<Bom>(`${base}/boms/${bomId}`, { headers: buildTenantHeaders(tenantCode), credentials: 'include' }, 'Falha ao carregar BOM');
 
-export const createBom = (tenantCode: string, payload: { productCode: string }): Promise<Bom> =>
+export const createBom = (tenantCode: string, payload: { productCode: string; batchSize?: number }): Promise<Bom> =>
   fetchJsonOrThrow<Bom>(`${base}/boms`, { method: 'POST', headers: buildTenantHeaders(tenantCode), credentials: 'include', body: JSON.stringify(payload) }, 'Falha ao criar BOM');
 
-export const addBomItem = (tenantCode: string, bomId: string, payload: { materialCode: string; quantity: number; unitOfMeasure: string }): Promise<void> =>
+export const addBomItem = (tenantCode: string, bomId: string, payload: { materialCode: string; quantity: number; unitOfMeasure: string; scrapFactor?: number }): Promise<void> =>
   fetchJsonOrThrow<void>(`${base}/boms/${bomId}/items`, { method: 'POST', headers: buildTenantHeaders(tenantCode), credentials: 'include', body: JSON.stringify(payload) }, 'Falha ao adicionar item à BOM');
 
 export const activateBom = (tenantCode: string, bomId: string): Promise<void> =>
   fetchJsonOrThrow<void>(`${base}/boms/${bomId}/activate`, { method: 'PUT', headers: buildTenantHeaders(tenantCode), credentials: 'include', body: '{}' }, 'Falha ao ativar BOM');
+
+export const cloneBom = (tenantCode: string, bomId: string): Promise<Bom> =>
+  fetchJsonOrThrow<Bom>(`${base}/boms/${bomId}/clone`, { method: 'POST', headers: buildTenantHeaders(tenantCode), credentials: 'include', body: '{}' }, 'Falha ao clonar BOM');
+
+export type BomCostRollupItem = {
+  materialCode: string;
+  quantity: number;
+  unitOfMeasure: string;
+  scrapFactor: number;
+  scaledQuantity: number;
+  unitPrice: number;
+  totalCost: number;
+};
+
+export type BomCostRollup = {
+  bomId: string;
+  productCode: string;
+  batchSize: number;
+  totalEstimatedCost: number;
+  items: BomCostRollupItem[];
+};
+
+export const getBomCostRollup = (tenantCode: string, bomId: string): Promise<BomCostRollup> =>
+  fetchJsonOrThrow<BomCostRollup>(`${base}/boms/${bomId}/cost-rollup`, { headers: buildTenantHeaders(tenantCode), credentials: 'include' }, 'Falha ao obter custo teórico da BOM');
 
 // --- Production Orders ---
 

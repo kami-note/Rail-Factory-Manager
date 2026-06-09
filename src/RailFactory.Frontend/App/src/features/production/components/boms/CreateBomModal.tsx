@@ -10,6 +10,7 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { Plus, X } from 'lucide-react';
@@ -31,6 +32,7 @@ export function CreateBomModal({
 }) {
   const [productInput, setProductInput] = useState('');
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
+  const [batchSize, setBatchSize] = useState('1.0');
   const justSelectedRef = useRef<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +42,7 @@ export function CreateBomModal({
     if (!open) {
       setProductInput('');
       setSelectedCode(null);
+      setBatchSize('1.0');
       setError(null);
       setSaving(false);
       justSelectedRef.current = null;
@@ -50,8 +53,12 @@ export function CreateBomModal({
     if (!selectedCode) return;
     setSaving(true);
     setError(null);
+
+    const parsedBatchSize = parseFloat(batchSize);
+    const finalBatchSize = isNaN(parsedBatchSize) || parsedBatchSize <= 0 ? 1.0 : parsedBatchSize;
+
     try {
-      const newBom = await createBom(tenantCode, { productCode: selectedCode });
+      const newBom = await createBom(tenantCode, { productCode: selectedCode, batchSize: finalBatchSize });
       onCreated(newBom);
     } catch (err) {
       setError(toUiErrorMessage(err, 'Não foi possível criar a BOM.'));
@@ -108,6 +115,18 @@ export function CreateBomModal({
                 Selecione um produto da lista de sugestões.
               </Typography>
             )}
+
+            <TextField
+              label="Lote Padrão (Batch Size)"
+              type="number"
+              value={batchSize}
+              onChange={e => setBatchSize(e.target.value)}
+              placeholder="Ex: 1.0, 100"
+              fullWidth
+              sx={{ mt: 2 }}
+              inputProps={{ min: "0.0001", step: "any" }}
+              helperText="Define a quantidade base produzida por esta receita. O padrão é 1.0."
+            />
           </Box>
         </Stack>
       </DialogContent>

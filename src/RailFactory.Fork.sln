@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RailFactory.Logistics.Api",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RailFactory.Tenancy.Api.Tests", "RailFactory.Tenancy.Api.Tests\RailFactory.Tenancy.Api.Tests.csproj", "{D07F160C-2D95-4408-B86F-2FC440D9368C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RailFactory.Production.Api.Tests", "RailFactory.Production.Api.Tests\RailFactory.Production.Api.Tests.csproj", "{7449C65F-2E49-4D5E-8C35-DA3696037A8B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -217,6 +219,18 @@ Global
 		{D07F160C-2D95-4408-B86F-2FC440D9368C}.Release|x64.Build.0 = Release|Any CPU
 		{D07F160C-2D95-4408-B86F-2FC440D9368C}.Release|x86.ActiveCfg = Release|Any CPU
 		{D07F160C-2D95-4408-B86F-2FC440D9368C}.Release|x86.Build.0 = Release|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Debug|x64.Build.0 = Debug|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Debug|x86.Build.0 = Debug|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Release|x64.ActiveCfg = Release|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Release|x64.Build.0 = Release|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Release|x86.ActiveCfg = Release|Any CPU
+		{7449C65F-2E49-4D5E-8C35-DA3696037A8B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

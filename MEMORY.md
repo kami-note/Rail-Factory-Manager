@@ -2,6 +2,55 @@
 
 This file tracks architectural decisions, session status, and implementation milestones.
 
+## Session Milestone: BOM Evolution - Phase 2: Technical Scrap & Costing Roll-up (2026-06-09)
+
+### Implemented Features
+- **Technical Scrap Factor (Fator de Perda Técnica):**
+  - Configured `ScrapFactor` validation bounds ($[0, 1)$) at both the domain model and client-side levels.
+  - Generated database migration `AddBomItemScrapFactor` in the Production database context to persist the scrap factor column.
+  - Placed input field in the frontend `AddBomItemForm.tsx` that accepts percentage inputs (0% to 99.99%) and normalizes to decimals before backend submission.
+  - Displayed the scrap factor percentage in the BOM item table on `BomCard.tsx`.
+- **Costing Roll-up (Custo Teórico da BOM):**
+  - Created `IMaterialCostProvider` Application port decoupled from the Supply Chain boundary.
+  - Implemented `HttpMaterialCostProvider` adapter that queries the `/api/supply-chain/internal/material-costs` endpoint.
+  - Registered the named HttpClient `supply-chain-integration` using Aspire service discovery and the adapter in `ProductionModule.cs`.
+  - Implemented the `GetBomCostRollup` Use Case that fetches component purchase prices, scales quantities by batch size, applies technical loss, and aggregates the total theoretical cost.
+  - Exposed the `GET /api/production/boms/{id}/cost-rollup` route in `ProductionEndpoints.cs`.
+  - Added a "Custo" button to `BomCard.tsx` and implemented `BomCostRollupModal.tsx` in Portuguese (Brazil) with local currency formatting (BRL) to display the detailed cost rollup breakdown.
+- **Bugfixes & Optimizations (Timeout Resolution):**
+  - **Service Discovery Configuration:** Added `.WithReference(supplyChain)` to the `production` project in the Aspire AppHost ([Program.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.AppHost/Program.cs)). This injects the service discovery environment variables needed for the production API to resolve `http://supply-chain`, eliminating HTTP client lookup timeout issues.
+  - **Query Performance Optimization:** Optimized the `HandleGetMaterialCosts` database query in [SupplyChainEndpoints.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.SupplyChain.Api/Api/SupplyChainEndpoints.cs) to run its grouping and sorting logic in-memory. This prevents complex subqueries or window functions on PostgreSQL, preventing DB-level query hangs or locks.
+  - **Internal Endpoint Security:** Fixed a `401 Unauthorized` issue on `/api/supply-chain/internal/material-costs` by moving the route out of the public JWT-secured `secureGroup` and registering a new `internalGroup` mapping in [SupplyChainEndpoints.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.SupplyChain.Api/Api/SupplyChainEndpoints.cs). The endpoint is now validated via the `ValidateInternalApiKeyAsync` filter using the shared internal API key, aligning with patterns established for Inventory internal routes.
+  - **LINQ Translation Bugfix:** Resolved a `409 Conflict` (due to an untranslatable LINQ expression) by mapping the string filter array to a list of `MaterialCode` Value Objects. This allows EF Core to translate `.Contains(...)` using the mapped value converter without attempting to translate member property access (`.Value`) in the SQL query. Projecting the full `InternalMaterialCode` entity value and resolving `.Value` in-memory completes the fix.
+
+### Verification & Tests
+- Added domain and application tests in `RailFactory.Production.Api.Tests` for invalid scrap factors boundaries and `GetBomCostRollup` costing calculation accuracy.
+- Ran backend test suite successfully: 15 passing tests in `Production.Api.Tests` (total 53 passing tests).
+- Ran frontend test suite successfully: 38 passing tests.
+- Vite build completed successfully with zero compilation warnings/errors.
+
+## Session Milestone: BOM Evolution - Phase 1 (2026-06-09)
+
+### Implemented Features
+- **BOM Version Cloning (Clone BOM):**
+  - Implemented the `CloneAsDraft` method on the `BillOfMaterials` domain aggregate. It copies all items and properties to a new aggregate instance in `Draft` status.
+  - Implemented the `CloneBomVersion` Application Use Case. It calculates the next available version number automatically, saves the cloned parent BOM, and copies items using a direct raw SQL insert pattern to bypass EF Core 10/Npgsql 10 change-tracking PK constraints.
+  - Exposed the `POST /api/production/boms/{id}/clone` endpoint in `ProductionEndpoints.cs` and registered `CloneBomVersion` in the DI container.
+  - Integrated the "Clonar" action button in `BomCard.tsx` on the frontend, mapping the API call from `production.ts` and updating state in `BomsPage.tsx`.
+- **BOM Batch Size support (Lote Padrão):**
+  - Added the `BatchSize` property (decimal, default 1.0) with validation (`> 0`) on `BillOfMaterials` aggregate.
+  - Created a EF Core DB migration `AddBomBatchSize` adding the `batch_size` column to the `boms` table.
+  - Mapped `BatchSize` inside `ProductionDbContext.cs` and exposed it via API responses.
+  - Adjusted the required quantity reservation calculations in `ProductionInventoryDispatcher.cs` to scale dynamically based on the BOM's batch size: `requiredQuantity = (item.Quantity * payload.PlannedQuantity) / bom.BatchSize`.
+  - Added a "Lote Padrão" field to `CreateBomModal.tsx` and displayed it on the UI as a chip next to component count on `BomCard.tsx`.
+
+### Verification & Tests
+- Created a xUnit test project `RailFactory.Production.Api.Tests` containing:
+  - Domain tests validating `BatchSize` constraint checks and `CloneAsDraft` item copy behavior on the BOM aggregate.
+  - Application use case tests verifying `CloneBomVersion` mock repository executions and key-not-found exceptions.
+- Solution compiles cleanly (0 C# warnings/errors) and all 10 tests in the new project pass.
+- Compiled the frontend React application bundle successfully (`npm run build`) with zero compilation warnings or type errors.
+
 ## Session Milestone: Inventory Enhancements (2026-06-05)
 
 ### Implemented Features

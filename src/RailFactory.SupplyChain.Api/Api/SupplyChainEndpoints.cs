@@ -1,4 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RailFactory.BuildingBlocks.Auth;
 using RailFactory.BuildingBlocks.Tenancy;
 using RailFactory.SupplyChain.Api.Api.Requests;
@@ -10,6 +13,7 @@ using RailFactory.SupplyChain.Api.Application.Ports;
 using RailFactory.SupplyChain.Api.Application.Receiving;
 using RailFactory.SupplyChain.Api.Application.Suppliers;
 using RailFactory.SupplyChain.Api.Domain;
+using RailFactory.SupplyChain.Api.Infrastructure.Persistence;
 
 namespace RailFactory.SupplyChain.Api.Api;
 
@@ -48,6 +52,11 @@ public static class SupplyChainEndpoints
         var group = app.MapGroup(ApiGroup).WithTags("SupplyChain");
 
         group.MapGet(InfoPath, HandleGetInfo).AllowAnonymous();
+
+        // INTERNAL API (Secured via internal API key, bypasses public JWT auth)
+        var internalGroup = group.MapGroup("/internal");
+        internalGroup.AddEndpointFilter(ValidateInternalApiKeyAsync);
+        internalGroup.MapGet("/material-costs", HandleGetMaterialCosts);
         
         // SECURE PUBLIC API
         var secureGroup = group.MapGroup("/").RequireAuthorization();
@@ -93,7 +102,9 @@ public static class SupplyChainEndpoints
         
         secureGroup.MapGet(ReceiptXmlPath, HandleGetReceiptXml)
             .RequirePermission(SystemPermissions.SupplyChain.Read);
-        
+
+        // Internal costs endpoint moved to internalGroup bypass
+
         secureGroup.MapPost(StartConferencePath, HandleStartConference)
             .RequirePermission(SystemPermissions.SupplyChain.Write);
         
@@ -440,5 +451,70 @@ public static class SupplyChainEndpoints
     private static IResult ToProblemResult(RailFactory.BuildingBlocks.Results.Error error)
     {
         return ToProblemResult(error.Code, error.Message);
+    }
+
+    private static async Task<IResult> HandleGetMaterialCosts(
+        [FromQuery] string[] codes,
+        SupplyChainDbContext dbContext,
+        CancellationToken ct)
+    {
+        if (codes == null || codes.Length == 0)
+            return Results.Ok(new Dictionary<string, decimal>());
+
+        var normalizedCodes = codes.Select(c => c.Trim().ToUpperInvariant()).ToList();
+
+        // Convert query string parameters to domain Value Objects so EF Core can translate with the mapped value converter
+        var materialCodes = normalizedCodes.Select(MaterialCode.From).ToList();
+
+        // Fetch only relevant columns for the target material codes to avoid complex group-by translations
+        var items = await dbContext.ReceiptItems.AsNoTracking()
+            .Where(i => i.InternalMaterialCode != null && i.UnitPrice != null && materialCodes.Contains(i.InternalMaterialCode))
+            .Select(i => new
+            {
+                i.InternalMaterialCode,
+                i.UnitPrice,
+                i.AssociationUpdatedAt
+            })
+            .ToListAsync(ct);
+
+        // Group and extract the latest unit price for each material code in-memory
+        var result = items
+            .GroupBy(i => i.InternalMaterialCode!.Value)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.AssociationUpdatedAt)
+                      .Select(x => x.UnitPrice)
+                      .FirstOrDefault() ?? 0m
+            );
+
+        return Results.Ok(result);
+    }
+
+    private static ValueTask<object?> ValidateInternalApiKeyAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var configuration = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+        var expectedApiKey = configuration["InternalApiKey"];
+
+        if (string.IsNullOrWhiteSpace(expectedApiKey))
+        {
+            return ValueTask.FromResult<object?>(Results.Problem(
+                title: "Internal API key is not configured.",
+                statusCode: StatusCodes.Status500InternalServerError));
+        }
+
+        if (!context.HttpContext.Request.Headers.TryGetValue("X-Internal-Key", out var providedApiKey)
+            || !FixedTimeEquals(providedApiKey.ToString(), expectedApiKey))
+        {
+            return ValueTask.FromResult<object?>(Results.Unauthorized());
+        }
+
+        return next(context);
+    }
+
+    private static bool FixedTimeEquals(string providedApiKey, string expectedApiKey)
+    {
+        var providedBytes = Encoding.UTF8.GetBytes(providedApiKey);
+        var expectedBytes = Encoding.UTF8.GetBytes(expectedApiKey);
+        return CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes);
     }
 }

@@ -147,7 +147,7 @@ public sealed class ProductionInventoryDispatcher(
 
         foreach (var item in bom.Items)
         {
-            var requiredQuantity = item.Quantity * payload.PlannedQuantity;
+            var requiredQuantity = (item.Quantity * payload.PlannedQuantity) / bom.BatchSize;
 
             // Deterministic EventId: derived from outbox message ID + BOM item ID.
             // Guarantees idempotency even if the dispatcher crashes mid-batch and retries.

@@ -26,11 +26,19 @@ export function AddBomItemForm({
   const [materialCode, setMaterialCode] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unitOfMeasure, setUnitOfMeasure] = useState('UN');
+  const [scrapFactorPercent, setScrapFactorPercent] = useState('0');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!materialCode.trim() || !quantity || !unitOfMeasure.trim()) return;
+    
+    const loss = Number(scrapFactorPercent);
+    if (isNaN(loss) || loss < 0 || loss >= 100) {
+      setError('A perda técnica deve ser entre 0% e 99.99%.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -38,6 +46,7 @@ export function AddBomItemForm({
         materialCode: materialCode.trim().toUpperCase(),
         quantity: Number(quantity),
         unitOfMeasure: unitOfMeasure.trim().toUpperCase(),
+        scrapFactor: loss / 100,
       });
       const freshBom = await getBom(tenantCode, bom.id);
       onAdded(freshBom);
@@ -68,16 +77,25 @@ export function AddBomItemForm({
           label="Qtd"
           type="number"
           size="small"
-          sx={{ width: 90 }}
+          sx={{ width: 80 }}
           value={quantity}
           onChange={e => setQuantity(e.target.value)}
         />
         <TextField
           label="Unidade"
           size="small"
-          sx={{ width: 90 }}
+          sx={{ width: 80 }}
           value={unitOfMeasure}
           slotProps={{ input: { readOnly: true } }}
+        />
+        <TextField
+          label="Perda (%)"
+          type="number"
+          size="small"
+          sx={{ width: 90 }}
+          value={scrapFactorPercent}
+          onChange={e => setScrapFactorPercent(e.target.value)}
+          slotProps={{ htmlInput: { min: 0, max: 99.99, step: 0.1 } }}
         />
         <Button
           variant="contained"

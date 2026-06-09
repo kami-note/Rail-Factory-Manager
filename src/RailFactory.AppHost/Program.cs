@@ -115,13 +115,15 @@ static AppHostDomainServices AddDomainServices(
 
     var production = builder.AddProject<Projects.RailFactory_Production_Api>("production")
         .WithReference(tenantManagement)
+        .WithReference(supplyChain)
         .WithReference(infra.RabbitMq)
         .WithEnvironment("TenantRouting__ServiceKey", "productiondb")
         .WithEnvironment("TenantRouting__DefaultTenantCode", DefaultTenantCode)
         .WithEnvironment("InternalApiKey", parameters.InternalApiKey)
         .WithEnvironment("InternalToken__SigningKey", parameters.InternalTokenSigningKey)
         .WaitFor(infra.RabbitMq)
-        .WaitFor(tenantManagement);
+        .WaitFor(tenantManagement)
+        .WaitFor(supplyChain);
 
     var humanResources = builder.AddProject<Projects.RailFactory_HumanResources_Api>("human-resources")
         .WithReference(tenantManagement)

@@ -306,4 +306,25 @@ Objetivo: Ao expedir um despacho (`Ship`), publicar eventos `logistics.shipment_
 - **P10 - Hardening**: Auditoria imutável, performance, segurança avançada e integrações B2B (Sefaz, Webhooks).
 
 ---
+
+## P15 - Evolução de BOMs - Fase 1: Usabilidade & Escala
+
+Objetivo: Implementar a clonagem de BOMs (Clone BOM) e o suporte a Lote Padrão (Batch Size) para permitir receitas com dimensionamento variável.
+
+### P15.1 — Clonagem de BOM (Clone BOM)
+- [x] **Domínio:** Implementar o método `CloneFrom(BillOfMaterials source, int newVersion)` / `CloneAsDraft` em `BillOfMaterials.cs` (feito e testado).
+- [x] **Application:** Criar o use case `CloneBomVersion.cs` com a lógica de recuperar a BOM original, obter a versão seguinte disponível e persistir o novo rascunho (feito e testado).
+- [x] **API:** Criar o endpoint `POST /api/production/boms/{id}/clone` que retorna o rascunho clonado (feito e compilado).
+- [x] **Frontend:** Adicionar o botão "Clonar" na `BomsPage.tsx` e integrar com a API (feito e compilado).
+- [x] **Testes:** Criar testes de unidade C# e testes de integração para o fluxo de clonagem (feito, passaram).
+
+### P15.2 — Lote Padrão (Batch Size)
+- [x] **Domínio:** Adicionar a propriedade `BatchSize` (decimal, default 1.0) com validação `> 0` em `BillOfMaterials.cs` (feito e testado).
+- [x] **Banco de Dados:** Criar uma migração EF Core para adicionar a coluna `batch_size` na tabela `boms` (feito).
+- [x] **Application (OP):** Ajustar o cálculo de necessidade de materiais na OP para levar em conta o `BatchSize`: `Necessidade = (Quantidade BOM * OP.PlannedQuantity) / BOM.BatchSize` (feito no dispatcher).
+- [x] **API / DTOs:** Atualizar endpoints de criação de BOM para receber opcionalmente o `BatchSize` (feito).
+- [x] **Frontend:** Exibir o "Lote Padrão" na listagem de BOMs e adicionar o campo correspondente no `CreateBomModal.tsx` (feito e compilado).
+- [x] **Testes:** Criar testes garantindo que o cálculo de materiais da OP seja escalonado corretamente com base em diferentes tamanhos de lote (feito e testado).
+
+---
 *Nota: Este plano é atualizado dinamicamente conforme a evolução dos domínios.*

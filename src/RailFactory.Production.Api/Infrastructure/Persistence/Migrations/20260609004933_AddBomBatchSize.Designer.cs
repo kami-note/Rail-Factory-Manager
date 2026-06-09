@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RailFactory.Production.Api.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using RailFactory.Production.Api.Infrastructure.Persistence;
 namespace RailFactory.Production.Api.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ProductionDbContext))]
-    partial class ProductionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260609004933_AddBomBatchSize")]
+    partial class AddBomBatchSize
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -76,11 +79,6 @@ namespace RailFactory.Production.Api.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("numeric(18,4)");
-
-                    b.Property<decimal>("ScrapFactor")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("numeric(5,4)")
-                        .HasDefaultValue(0.0m);
 
                     b.Property<string>("UnitOfMeasure")
                         .IsRequired()

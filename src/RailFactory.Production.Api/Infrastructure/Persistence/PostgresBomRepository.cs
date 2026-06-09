@@ -59,8 +59,8 @@ public sealed class PostgresBomRepository(ProductionDbContext context) : IBomRep
         // row → DbUpdateConcurrencyException. Raw SQL is the reliable escape hatch.
         await context.Database.ExecuteSqlAsync(
             $"""
-            INSERT INTO bom_items ("Id", "BomId", "MaterialCode", "Quantity", "UnitOfMeasure")
-            VALUES ({item.Id}, {bomId}, {item.MaterialCode.Value}, {item.Quantity}, {item.UnitOfMeasure})
+            INSERT INTO bom_items ("Id", "BomId", "MaterialCode", "Quantity", "UnitOfMeasure", "ScrapFactor")
+            VALUES ({item.Id}, {bomId}, {item.MaterialCode.Value}, {item.Quantity}, {item.UnitOfMeasure}, {item.ScrapFactor})
             """,
             cancellationToken);
 
