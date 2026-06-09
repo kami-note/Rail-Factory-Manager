@@ -29,6 +29,13 @@ public interface IMaterialRepository
     Task<Dictionary<string, Material>> GetByCodesAsync(IEnumerable<string> materialCodes, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Retrieves all materials from the catalog.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of all materials in the catalog.</returns>
+    Task<List<Material>> ListAllAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Adds a new material to the catalog.
     /// </summary>
     /// <param name="material">The material aggregate root.</param>

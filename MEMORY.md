@@ -143,4 +143,55 @@ This file tracks architectural decisions, session status, and implementation mil
 - Ran all tests: 37 passing unit tests across 8 test files (`npm run test`).
 - Production frontend bundle compiles successfully with zero warnings or errors (`npm run build`).
 
+## Session Milestone: Materials Card Grid View & Visual Catalog (2026-06-08)
 
+### Implemented Features
+- **Visual Materials Card Layout (`InventoryBalanceCardList`):**
+  - Designed a highly polished, responsive card view (`xs: 12`, `sm: 6`, `md: 4`, `lg: 3` grid) for the inventory stocks listing.
+  - Cards feature the material's image (loaded from `b.materialImageUrl`) with a hover zoom effect. If no image exists, a beautiful gradient fallback generated from the deterministic HSL color of the material code is shown with a Lucide package icon in the center.
+  - Highlights critical information:
+    - **Saldo Disponível**: Rendered in a large bold metric block with the unit of measure.
+    - **Lote / Validade**: Styled lot codes and expiry dates with custom Lucide icons.
+    - **Origem / Fornecedor**: Uses the unified `StatusChip` to display the purchase/production origin and supplier names.
+    - **Status**: Visual status tags overlayed cleanly on top of the image area.
+- **Dynamic View Layout Toggle:**
+  - Added a responsive layout switcher (`ToggleButtonGroup` with `LayoutGrid` and `List` icons) on `InventoryStocksPage.tsx`.
+  - Remembers the user's preference by saving it to local storage (`inventory_view_mode`), defaulting to the visual cards view (`'grid'`).
+- **Tests & Verification:**
+  - Validated that the existing unit tests pass cleanly under the new card rendering architecture.
+
+### Verification & Tests
+- Ran frontend unit tests successfully: 8 test files, 37 tests passing.
+- Checked C# and TypeScript code compilation.
+
+## Session Milestone: Dynamic Connection String Port Rewriting (2026-06-08)
+
+### Implemented Features
+- **Dynamic Connection String Port & Credential Rewriting (`Tenancy.Api`):**
+  - Problem: In local development with .NET Aspire, restarting Aspire launches the PostgreSQL container on a new dynamic host port. Since the tenant catalog database resides in a persistent docker volume, stored connection strings for active tenants point to stale ports, causing connection refusal errors (`SocketException 111`) in client microservices background dispatchers in an infinite loop.
+  - Solution: Modified [PostgresTenantRepository](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Tenancy.Api/Infrastructure/PostgresTenantRepository.cs) to inject `IConfiguration` and retrieve the current `postgres` connection string.
+  - Implementation: In the `ToTenant` mapping method, if the `postgres` server connection string is configured and the stored connection string points to `localhost` or `127.0.0.1`, it dynamically replaces the `Host`, `Port`, `Username`, and `Password` of the stored connection string with those of the current container instance. This propagates the corrected connection settings to all consuming services automatically.
+- **Robust Readiness Checks (`BuildingBlocks`):**
+  - Wrapped `OpenAsync` inside the `try-catch` block in [TenantServiceReadiness.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.BuildingBlocks/Tenancy/TenantServiceReadiness.cs).
+  - This ensures that if a database server is momentarily unreachable (e.g. during startup delays or restarts), background dispatchers receive a clean `false` readiness indication instead of throwing raw connection exceptions that pollute host diagnostics logs.
+- **Clarified Blind Conference Purpose On-Screen (`Frontend`):**
+  - Modified the informational banner in [ConferenceWorkspace.tsx](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/features/supply-chain/components/ConferenceWorkspace.tsx).
+  - Explicitly states that the blind conference is validating the physical delivery against the supplier's invoice (NF-e) to ensure only correct counts enter the warehouse stock, resolving any conceptual ambiguity directly for the operator.
+
+### Verification & Tests
+- Created [PostgresTenantRepositoryTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Tenancy.Api.Tests/PostgresTenantRepositoryTests.cs) containing unit and integration tests (using an in-memory SQLite provider) to validate the rewriting logic under various conditions.
+- Ran all tests: 21 passing tests in `RailFactory.Tenancy.Api.Tests` (previously 18) and 17 in `RailFactory.SupplyChain.Api.Tests`. All build and test suites pass cleanly.
+- Compiled the production React frontend bundle successfully (`npm run build`) with zero compilation errors.
+
+## Session Milestone: Zero Stock Catalog Items Visibility & History Hardening (2026-06-08)
+
+### Implemented Features
+- **Zero-Stock Catalog Items Visibility:**
+  - Standardized the synthetic balance items generated for registered catalog materials with no active stock balances. They are returned by the backend as zero-quantity `Available` balances under the respective source categories (Purchase raw materials vs. Production finished goods).
+- **Disabled History for Synthetic Balances:**
+  - Modified the frontend views in [InventoryBalanceTable.tsx](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/features/inventory/components/InventoryBalanceTable.tsx) (desktop table, mobile list, and grid card view) to disable the "Histórico" action buttons for synthetic stock records (having `id = '00000000-0000-0000-0000-000000000000'`).
+  - Added a descriptive tooltip `"Item sem movimentações no estoque"` (Item has no stock movements yet) on hover to provide clear guidance and prevent operators from viewing empty history or getting `404` errors.
+- **Tests & Verification:**
+  - Fixed compilation errors in backend unit tests [ListInventoryBalancesTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Inventory.Api.Tests/ListInventoryBalancesTests.cs) (aligned parameters order for `Material.Create` and expected prefix `catalog-init`).
+  - Added frontend unit test to [InventoryStocksPage.test.tsx](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/features/inventory/__tests__/InventoryStocksPage.test.tsx) verifying that synthetic zero-stock items disable the stock history button correctly.
+  - Successfully executed and verified all C# and TypeScript tests, and successfully completed the production build.

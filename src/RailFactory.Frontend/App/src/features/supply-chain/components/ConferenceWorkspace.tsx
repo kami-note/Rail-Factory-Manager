@@ -183,8 +183,15 @@ export function ConferenceWorkspace({ receiptId, tenantCode, onClose, onSuccess 
       />
 
       <Alert severity="info" sx={{ mt: 3, mb: 3 }}>
-        Informe as quantidades reais, números de lote e datas de validade conforme contado fisicamente. 
-        <strong> As quantidades esperadas estão ocultas para garantir a integridade do processo.</strong>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+          CONFERÊNCIA CEGA DE RECEBIMENTO
+        </Typography>
+        <Typography variant="body2">
+          Você está confrontando a carga física recebida com a Nota Fiscal (NF-e) emitida pelo fornecedor.
+          Informe as quantidades reais, números de lote e validades conforme a contagem física.
+          As quantidades faturadas estão ocultas para garantir a integridade da conferência.
+          Após a finalização, as quantidades fisicamente contadas serão registradas no saldo de estoque.
+        </Typography>
       </Alert>
 
       {saveError && (

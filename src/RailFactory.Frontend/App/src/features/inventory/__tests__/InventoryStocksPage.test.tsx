@@ -179,4 +179,40 @@ describe('InventoryStocksPage', () => {
     expect(screen.getByText('Bobina de Cobre')).toBeInTheDocument();
     expect(screen.queryByText('Componente Especial')).not.toBeInTheDocument();
   });
+
+  it('disables the Histórico button when balance is synthetic (zero stock catalog init)', () => {
+    const syntheticBalances: InventoryBalance[] = [
+      ...mockBalances,
+      {
+        id: '00000000-0000-0000-0000-000000000000',
+        materialCode: 'RAW-04',
+        materialName: 'Material Sintético',
+        quantity: 0,
+        unitOfMeasure: 'un',
+        status: { key: 'Available', label: 'Disponível', color: 'success' },
+        sourceReference: 'catalog-init:RAW-04',
+        lotNumber: undefined,
+        sourceType: { key: 'Purchase', label: 'Compra', color: 'primary' },
+        supplierName: undefined,
+        createdAt: '2026-06-04T10:00:00Z',
+      }
+    ];
+
+    vi.mocked(useInventoryBalances).mockReturnValue({
+      data: syntheticBalances,
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    renderWithTheme(<InventoryStocksPage tenantCode="dev" />);
+
+    // Check that Material Sintético is rendered
+    expect(screen.getByText('Material Sintético')).toBeInTheDocument();
+
+    // Verify the "Sem Histórico" button is rendered as disabled
+    const semHistoricoBtn = screen.getByRole('button', { name: /Sem Histórico/i });
+    expect(semHistoricoBtn).toBeInTheDocument();
+    expect(semHistoricoBtn).toBeDisabled();
+  });
 });
