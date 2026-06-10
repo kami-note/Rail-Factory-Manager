@@ -15,10 +15,10 @@ jobs:
         working-directory: src/RailFactory.Frontend/App
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore src/RailFactory.Fork.sln
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build src/RailFactory.Fork.sln --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test src/RailFactory.Fork.sln --no-build --configuration Release --verbosity normal
