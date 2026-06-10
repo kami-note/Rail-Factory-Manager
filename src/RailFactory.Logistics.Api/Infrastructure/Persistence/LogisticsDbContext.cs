@@ -146,10 +146,13 @@ public sealed class LogisticsDbContext(DbContextOptions<LogisticsDbContext> opti
             entity.Property(x => x.FiscalAccessKey).HasMaxLength(100);
             entity.Property(x => x.FiscalStatus).HasMaxLength(50);
             entity.Property(x => x.FiscalErrorMessage).HasMaxLength(500);
+            entity.Property(x => x.FiscalPdfUrl).HasMaxLength(2000);
+            entity.Property(x => x.FiscalXmlUrl).HasMaxLength(2000);
             entity.Property(x => x.MdfeExternalId).HasMaxLength(200);
             entity.Property(x => x.MdfeAccessKey).HasMaxLength(100);
             entity.Property(x => x.MdfeStatus).HasMaxLength(50);
             entity.Property(x => x.MdfeErrorMessage).HasMaxLength(500);
+            entity.Property(x => x.MdfePdfUrl).HasMaxLength(2000);
             entity.Property(x => x.MdfeLinkedNfeKey).HasMaxLength(100);
             entity.Property(x => x.MdfeUfCarregamento).HasMaxLength(2);
             entity.Property(x => x.MdfeUfDescarregamento).HasMaxLength(2);

@@ -267,7 +267,9 @@ public sealed class LogisticsFiscalDispatcher(
             ModalidadeFrete: order.ModalidadeFrete);
 
         var result = await adapter.EmitirNfeAsync(nfeRequest, cancellationToken);
-        dispatch.UpdateFiscalStatus(result.ExternalId, result.Status, result.AccessKey);
+        dispatch.UpdateFiscalStatus(
+            result.ExternalId, result.Status, result.AccessKey,
+            pdfUrl: result.PdfUrl, xmlUrl: result.XmlUrl);
 
         // If NF-e is authorized synchronously (mock) and vehicle data is present, queue MDF-e
         if (IsNfeAuthorized(result.Status) && !string.IsNullOrEmpty(dispatch.VehiclePlate))
@@ -361,7 +363,10 @@ public sealed class LogisticsFiscalDispatcher(
             NfeLinks: nfeLinks);
 
         var result = await adapter.EmitirMdfeAsync(mdfeRequest, cancellationToken);
-        dispatch.UpdateMdfeStatus(result.ExternalId, result.Status, result.AccessKey, result.ErrorMessage, resolvedNfeAccessKey, ufOrigem, ufDestino);
+        dispatch.UpdateMdfeStatus(
+            result.ExternalId, result.Status, result.AccessKey,
+            result.ErrorMessage, resolvedNfeAccessKey, ufOrigem, ufDestino,
+            pdfUrl: result.PdfUrl);
 
         logger.LogInformation(
             "MDF-e emitted for dispatch {DispatchId}: externalId={ExternalId} status={Status}",

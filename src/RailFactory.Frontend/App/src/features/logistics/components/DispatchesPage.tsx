@@ -4,7 +4,10 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
   Tooltip, IconButton, Typography,
 } from '@mui/material';
-import { AlertTriangle, CheckCircle, ExternalLink, Package, Plus, Printer, RefreshCw, Truck } from 'lucide-react';
+import {
+  AlertTriangle, CheckCircle, Download, ExternalLink, FileCheck, FileText, Package,
+  Plus, Printer, QrCode, RefreshCw, Receipt, Truck,
+} from 'lucide-react';
 import { ModuleHeader } from '../../../shared/components/common/ModuleHeader';
 import { PageError } from '../../../shared/components/common/PageError';
 import { ConfirmDialog } from '../../../shared/components/common/ConfirmDialog';
@@ -20,11 +23,34 @@ import { CreateDispatchModal } from './CreateDispatchModal';
 import { ConferenceModal } from './ConferenceModal';
 import { DispatchPrintView } from './DispatchPrintView';
 import { DamdfePrintView } from './DamdfePrintView';
+import { CustomerDocumentPrintView } from './CustomerDocumentPrintView';
+import { BoletoPrintView } from './BoletoPrintView';
 import { FiscalStatusCell } from './FiscalStatusCell';
 import { SnackbarAlert } from '../../../shared/components/common/SnackbarAlert';
 import type { Dispatch, DispatchStatus } from '../types';
 import { toUiErrorMessage } from '../../../shared/lib/http';
 import { RelativeDateFormatter, CurrencyFormatter } from '../../../shared/lib/utils/formatters';
+
+/** Payment status labels for display. */
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  pending: 'Pendente',
+  confirmed: 'Confirmado',
+  received: 'Recebido',
+  overdue: 'Vencido',
+  refunded: 'Estornado',
+  chargedback: 'Chargeback',
+  error: 'Erro',
+};
+
+const PAYMENT_STATUS_COLOR: Record<string, 'default' | 'warning' | 'success' | 'error'> = {
+  pending: 'warning',
+  confirmed: 'success',
+  received: 'success',
+  overdue: 'error',
+  refunded: 'default',
+  chargedback: 'error',
+  error: 'error',
+};
 
 function toIdMap<T extends { id: string }>(items: T[] | null | undefined) {
   return new Map(items?.map(x => [x.id, x]) ?? []);
@@ -64,6 +90,8 @@ export function DispatchesPage({ tenantCode }: Props) {
   const [conferenceDispatch, setConferenceDispatch] = useState<Dispatch | null>(null);
   const [printDispatch, setPrintDispatch] = useState<Dispatch | null>(null);
   const [damdfeDispatch, setDamdfeDispatch] = useState<Dispatch | null>(null);
+  const [customerDocDispatch, setCustomerDocDispatch] = useState<Dispatch | null>(null);
+  const [boletoDispatch, setBoletoDispatch] = useState<Dispatch | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -158,6 +186,7 @@ export function DispatchesPage({ tenantCode }: Props) {
               <TableCell>NF-e</TableCell>
               <TableCell>MDF-e</TableCell>
               <TableCell>Etiqueta</TableCell>
+              <TableCell>Pagamento</TableCell>
               <TableCell align="right">Frete (R$)</TableCell>
               <TableCell>Criado em</TableCell>
               <TableCell />
@@ -166,7 +195,7 @@ export function DispatchesPage({ tenantCode }: Props) {
           <TableBody>
             {dispatches.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={12} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   Nenhum despacho cadastrado.
                 </TableCell>
               </TableRow>
@@ -178,6 +207,11 @@ export function DispatchesPage({ tenantCode }: Props) {
               const isProcessing = processingId === d.id;
               const isRetrying = retryingId === d.id;
               const hasFiscalError = !!d.fiscalStatus && RETRYABLE_FISCAL_STATUSES.has(d.fiscalStatus);
+              // Normalize payment status to lowercase for label lookup (Asaas/gateway returns UPPERCASE)
+              const payStatus = d.paymentStatus?.toLowerCase();
+              // PDF fallback only when document is actually authorized (not just processing/error)
+              const isFiscalAuthorized = d.fiscalStatus === 'autorizado' || d.fiscalStatus === 'CONCLUIDO' || d.fiscalStatus === 'authorized';
+              const isMdfeAuthorized = d.mdfeStatus === 'autorizado' || d.mdfeStatus === 'CONCLUIDO' || d.mdfeStatus === 'authorized';
               return (
                 <TableRow key={d.id} hover sx={hasFiscalError ? { bgcolor: 'error.50' } : undefined}>
                   <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
@@ -205,10 +239,83 @@ export function DispatchesPage({ tenantCode }: Props) {
                     />
                   </TableCell>
                   <TableCell>
-                    <FiscalStatusCell status={d.fiscalStatus} accessKey={d.fiscalAccessKey} externalId={d.fiscalExternalId} errorMessage={d.fiscalErrorMessage} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <FiscalStatusCell
+                        status={d.fiscalStatus}
+                        accessKey={d.fiscalAccessKey}
+                        externalId={d.fiscalExternalId}
+                        errorMessage={d.fiscalErrorMessage}
+                      />
+                      {d.fiscalPdfUrl && (
+                        <Tooltip title="Baixar PDF da NF-e">
+                          <IconButton
+                            size="small"
+                            component="a"
+                            href={d.fiscalPdfUrl}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            color="primary"
+                          >
+                            <Download size={13} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {!d.fiscalPdfUrl && d.fiscalExternalId && isFiscalAuthorized && (
+                        <Tooltip title="Baixar PDF da NF-e (via servidor)">
+                          <IconButton
+                            size="small"
+                            component="a"
+                            href={`/api/logistics/dispatches/${d.id}/nfe-pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            color="primary"
+                          >
+                            <Download size={13} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                   </TableCell>
                   <TableCell>
-                    <FiscalStatusCell status={d.mdfeStatus ?? null} accessKey={d.mdfeAccessKey} externalId={d.mdfeExternalId} errorMessage={d.mdfeErrorMessage} label="MDF-e" />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <FiscalStatusCell
+                        status={d.mdfeStatus ?? null}
+                        accessKey={d.mdfeAccessKey}
+                        externalId={d.mdfeExternalId}
+                        errorMessage={d.mdfeErrorMessage}
+                        label="MDF-e"
+                      />
+                      {d.mdfePdfUrl && (
+                        <Tooltip title="Baixar PDF do MDF-e">
+                          <IconButton
+                            size="small"
+                            component="a"
+                            href={d.mdfePdfUrl}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            color="secondary"
+                          >
+                            <Download size={13} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {!d.mdfePdfUrl && d.mdfeExternalId && isMdfeAuthorized && (
+                        <Tooltip title="Baixar PDF do MDF-e (via servidor)">
+                          <IconButton
+                            size="small"
+                            component="a"
+                            href={`/api/logistics/dispatches/${d.id}/mdfe-pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            color="secondary"
+                          >
+                            <Download size={13} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                   </TableCell>
                   <TableCell>
                     {d.shippingStatus ? (
@@ -222,9 +329,62 @@ export function DispatchesPage({ tenantCode }: Props) {
                           />
                         </Tooltip>
                         {d.shippingLabelUrl && (
-                          <Tooltip title="Abrir etiqueta">
-                            <IconButton size="small" component="a" href={d.shippingLabelUrl} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink size={13} />
+                          <Tooltip title="Baixar etiqueta de frete">
+                            <IconButton
+                              size="small"
+                              component="a"
+                              href={d.shippingLabelUrl}
+                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Download size={13} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">—</Typography>
+                    )}
+                  </TableCell>
+                  {/* Payment column */}
+                  <TableCell>
+                    {d.paymentStatus ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                        <Tooltip title={d.paymentErrorMessage ?? d.paymentStatus ?? ''}>
+                          <Chip
+                            label={PAYMENT_STATUS_LABEL[payStatus ?? ''] ?? d.paymentStatus}
+                            size="small"
+                            color={PAYMENT_STATUS_COLOR[payStatus ?? ''] ?? 'default'}
+                            variant="outlined"
+                          />
+                        </Tooltip>
+                        {d.paymentBoletoUrl && (
+                          <Tooltip title="Baixar boleto (gateway)">
+                            <IconButton
+                              size="small"
+                              component="a"
+                              href={d.paymentBoletoUrl}
+                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              color="primary"
+                            >
+                              <Download size={13} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {d.paymentPixUrl && (
+                          <Tooltip title="Abrir link PIX">
+                            <IconButton
+                              size="small"
+                              component="a"
+                              href={d.paymentPixUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              color="success"
+                            >
+                              <QrCode size={13} />
                             </IconButton>
                           </Tooltip>
                         )}
@@ -259,12 +419,36 @@ export function DispatchesPage({ tenantCode }: Props) {
                         <AlertTriangle size={14} color="var(--mui-palette-error-main, #d32f2f)" style={{ verticalAlign: 'middle', marginRight: 4 }} />
                       </Tooltip>
                     )}
-                    <Tooltip title="Imprimir Romaneio">
+                    <Tooltip title="Imprimir Romaneio de Carga">
                       <IconButton
                         size="small"
                         onClick={() => setPrintDispatch(d)}
                       >
                         <Printer size={15} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={d.status === 'Pending' ? 'Disponível após o despacho' : 'Documento para Cliente'}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="secondary"
+                          disabled={d.status === 'Pending'}
+                          onClick={() => setCustomerDocDispatch(d)}
+                        >
+                          <FileText size={15} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={d.paymentExternalId
+                      ? 'Imprimir Boleto de Frete'
+                      : 'Boleto de Frete — representação visual (configure integração de pagamento para boleto real)'
+                    }>
+                      <IconButton
+                        size="small"
+                        color={d.paymentExternalId ? 'info' : 'default'}
+                        onClick={() => setBoletoDispatch(d)}
+                      >
+                        <Receipt size={15} />
                       </IconButton>
                     </Tooltip>
                     {d.mdfeExternalId && (
@@ -274,19 +458,22 @@ export function DispatchesPage({ tenantCode }: Props) {
                           color="primary"
                           onClick={() => setDamdfeDispatch(d)}
                         >
-                          <Printer size={15} />
+                          <FileCheck size={15} />
                         </IconButton>
                       </Tooltip>
                     )}
                     {d.status === 'Pending' && !d.conferencedAt && (
                       <Tooltip title="Conferir itens">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => setConferenceDispatch(d)}
-                        >
-                          <CheckCircle size={15} />
-                        </IconButton>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            disabled={isProcessing}
+                            onClick={() => setConferenceDispatch(d)}
+                          >
+                            <CheckCircle size={15} />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                     )}
                     {d.status === 'Pending' && d.conferencedAt && (
@@ -378,6 +565,25 @@ export function DispatchesPage({ tenantCode }: Props) {
           driver={damdfeDispatch.driverPersonId ? personMap.get(damdfeDispatch.driverPersonId) : undefined}
           fiscalProfile={fiscalProfile ?? undefined}
           onClose={() => setDamdfeDispatch(null)}
+        />
+      )}
+
+      {customerDocDispatch && orderMap.get(customerDocDispatch.shipmentOrderId) && (
+        <CustomerDocumentPrintView
+          dispatch={customerDocDispatch}
+          order={orderMap.get(customerDocDispatch.shipmentOrderId)!}
+          carrier={carrierMap.get(customerDocDispatch.carrierId)}
+          fiscalProfile={fiscalProfile ?? undefined}
+          onClose={() => setCustomerDocDispatch(null)}
+        />
+      )}
+
+      {boletoDispatch && orderMap.get(boletoDispatch.shipmentOrderId) && (
+        <BoletoPrintView
+          dispatch={boletoDispatch}
+          order={orderMap.get(boletoDispatch.shipmentOrderId)!}
+          fiscalProfile={fiscalProfile ?? undefined}
+          onClose={() => setBoletoDispatch(null)}
         />
       )}
 

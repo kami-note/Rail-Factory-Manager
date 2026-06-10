@@ -80,6 +80,14 @@ public static class LogisticsEndpoints
         secure.MapPut("/dispatches/{id:guid}/deliver", HandleDeliverDispatch)
             .RequirePermission(SystemPermissions.Logistics.Write);
 
+        // Document download redirects — redirect to the provider's URL (no proxy)
+        secure.MapGet("/dispatches/{id:guid}/nfe-pdf", HandleDownloadNfePdf)
+            .RequirePermission(SystemPermissions.Logistics.Read);
+        secure.MapGet("/dispatches/{id:guid}/mdfe-pdf", HandleDownloadMdfePdf)
+            .RequirePermission(SystemPermissions.Logistics.Read);
+        secure.MapGet("/dispatches/{id:guid}/boleto", HandleDownloadBoleto)
+            .RequirePermission(SystemPermissions.Logistics.Read);
+
         // Heat Map (RF-35)
         secure.MapGet("/shipment-orders/heatmap", HandleGetDeliveryHeatmap)
             .RequirePermission(SystemPermissions.Logistics.Read);
@@ -339,13 +347,58 @@ public static class LogisticsEndpoints
         d.TrackingCode, d.FreightValueBrl,
         Status = d.Status.ToString(),
         d.FiscalExternalId, d.FiscalStatus, d.FiscalAccessKey, d.FiscalErrorMessage,
+        d.FiscalPdfUrl, d.FiscalXmlUrl,
         d.MdfeExternalId, d.MdfeStatus, d.MdfeAccessKey, d.MdfeErrorMessage, d.MdfeLinkedNfeKey,
-        d.MdfeUfCarregamento, d.MdfeUfDescarregamento,
+        d.MdfeUfCarregamento, d.MdfeUfDescarregamento, d.MdfePdfUrl,
         d.ShippingExternalId, d.ShippingStatus, d.ShippingLabelUrl, d.ShippingTrackingCode, d.ShippingErrorMessage,
         d.PaymentExternalId, d.PaymentStatus, d.PaymentBoletoUrl, d.PaymentPixUrl, d.PaymentErrorMessage,
         d.VehiclePlate, d.VehicleRntrc, d.DriverCpf, d.DriverName,
         d.ConferencedAt, d.DispatchedAt, d.DeliveredAt, d.CreatedAt
     };
+
+    // ── Document Downloads (redirect to provider URL) ─────────────────────────
+
+    /// <summary>
+    /// Redirects to the NF-e PDF URL returned by the fiscal provider.
+    /// Returns 404 if the NF-e PDF URL is not available yet.
+    /// </summary>
+    private static async Task<IResult> HandleDownloadNfePdf(
+        Guid id, IDispatchRepository repo, CancellationToken ct)
+    {
+        var dispatch = await repo.GetByIdAsync(id, ct);
+        if (dispatch is null) return Results.NotFound(new { error = "Dispatch not found." });
+        if (string.IsNullOrEmpty(dispatch.FiscalPdfUrl))
+            return Results.NotFound(new { error = "NF-e PDF not available. The document may still be processing or the provider did not return a PDF URL." });
+        return Results.Redirect(dispatch.FiscalPdfUrl);
+    }
+
+    /// <summary>
+    /// Redirects to the MDF-e PDF URL returned by the fiscal provider.
+    /// Returns 404 if the MDF-e PDF URL is not available yet.
+    /// </summary>
+    private static async Task<IResult> HandleDownloadMdfePdf(
+        Guid id, IDispatchRepository repo, CancellationToken ct)
+    {
+        var dispatch = await repo.GetByIdAsync(id, ct);
+        if (dispatch is null) return Results.NotFound(new { error = "Dispatch not found." });
+        if (string.IsNullOrEmpty(dispatch.MdfePdfUrl))
+            return Results.NotFound(new { error = "MDF-e PDF not available. The document may still be processing or the provider did not return a PDF URL." });
+        return Results.Redirect(dispatch.MdfePdfUrl);
+    }
+
+    /// <summary>
+    /// Redirects to the boleto PDF URL returned by the payment gateway.
+    /// Returns 404 if the boleto URL is not available yet.
+    /// </summary>
+    private static async Task<IResult> HandleDownloadBoleto(
+        Guid id, IDispatchRepository repo, CancellationToken ct)
+    {
+        var dispatch = await repo.GetByIdAsync(id, ct);
+        if (dispatch is null) return Results.NotFound(new { error = "Dispatch not found." });
+        if (string.IsNullOrEmpty(dispatch.PaymentBoletoUrl))
+            return Results.NotFound(new { error = "Boleto not available. Payment may still be processing or no payment integration is configured." });
+        return Results.Redirect(dispatch.PaymentBoletoUrl);
+    }
 
     // ── Fiscal Documents ─────────────────────────────────────────────────────
 
