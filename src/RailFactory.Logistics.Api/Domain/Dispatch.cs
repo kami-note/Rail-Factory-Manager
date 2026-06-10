@@ -22,12 +22,18 @@ public sealed class Dispatch
     public string? FiscalAccessKey { get; private set; }
     public string? FiscalStatus { get; private set; }
     public string? FiscalErrorMessage { get; private set; }
+    /// <summary>PDF URL returned by the fiscal provider (FocusNFe, PlugNotas, etc.) after NF-e authorization.</summary>
+    public string? FiscalPdfUrl { get; private set; }
+    /// <summary>XML URL returned by the fiscal provider after NF-e authorization.</summary>
+    public string? FiscalXmlUrl { get; private set; }
 
     // MDF-e fields — populated after NF-e is authorized
     public string? MdfeExternalId { get; private set; }
     public string? MdfeAccessKey { get; private set; }
     public string? MdfeStatus { get; private set; }
     public string? MdfeErrorMessage { get; private set; }
+    /// <summary>PDF URL returned by the fiscal provider after MDF-e authorization.</summary>
+    public string? MdfePdfUrl { get; private set; }
     // NF-e access key stamped into the MDF-e at emission time — immutable after emission
     public string? MdfeLinkedNfeKey { get; private set; }
     // UF de carregamento e descarregamento — snapshot do momento da emissão do MDF-e
@@ -110,15 +116,23 @@ public sealed class Dispatch
         Status = DispatchStatus.Returned;
     }
 
-    public void UpdateFiscalStatus(string externalId, string fiscalStatus, string? accessKey, string? errorMessage = null)
+    public void UpdateFiscalStatus(
+        string externalId, string fiscalStatus, string? accessKey,
+        string? errorMessage = null, string? pdfUrl = null, string? xmlUrl = null)
     {
         FiscalExternalId = externalId;
         FiscalStatus = fiscalStatus;
         FiscalAccessKey = accessKey;
         FiscalErrorMessage = errorMessage;
+        if (pdfUrl is not null) FiscalPdfUrl = pdfUrl;
+        if (xmlUrl is not null) FiscalXmlUrl = xmlUrl;
     }
 
-    public void UpdateMdfeStatus(string externalId, string mdfeStatus, string? accessKey, string? errorMessage = null, string? linkedNfeKey = null, string? ufCarregamento = null, string? ufDescarregamento = null)
+    public void UpdateMdfeStatus(
+        string externalId, string mdfeStatus, string? accessKey,
+        string? errorMessage = null, string? linkedNfeKey = null,
+        string? ufCarregamento = null, string? ufDescarregamento = null,
+        string? pdfUrl = null)
     {
         MdfeExternalId = externalId;
         MdfeStatus = mdfeStatus;
@@ -127,6 +141,7 @@ public sealed class Dispatch
         if (linkedNfeKey is not null) MdfeLinkedNfeKey = linkedNfeKey;
         if (ufCarregamento is not null) MdfeUfCarregamento = ufCarregamento;
         if (ufDescarregamento is not null) MdfeUfDescarregamento = ufDescarregamento;
+        if (pdfUrl is not null) MdfePdfUrl = pdfUrl;
     }
 
     public void UpdateShippingStatus(string externalId, string status, string? labelUrl, string? trackingCode = null, string? errorMessage = null)

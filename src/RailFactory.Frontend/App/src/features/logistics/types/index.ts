@@ -128,10 +128,16 @@ export interface Dispatch {
   fiscalAccessKey?: string;
   fiscalStatus?: FiscalStatus;
   fiscalErrorMessage?: string;
+  /** PDF URL returned by the fiscal provider (FocusNFe, PlugNotas, etc.) after NF-e authorization. */
+  fiscalPdfUrl?: string;
+  /** XML URL returned by the fiscal provider after NF-e authorization. */
+  fiscalXmlUrl?: string;
   mdfeExternalId?: string;
   mdfeAccessKey?: string;
   mdfeStatus?: string;
   mdfeErrorMessage?: string;
+  /** PDF URL returned by the fiscal provider after MDF-e authorization. */
+  mdfePdfUrl?: string;
   mdfeLinkedNfeKey?: string;
   mdfeUfCarregamento?: string;
   mdfeUfDescarregamento?: string;
@@ -140,6 +146,12 @@ export interface Dispatch {
   shippingLabelUrl?: string;
   shippingTrackingCode?: string;
   shippingErrorMessage?: string;
+  // Payment charge (boleto / PIX gateway)
+  paymentExternalId?: string;
+  paymentStatus?: string;
+  paymentBoletoUrl?: string;
+  paymentPixUrl?: string;
+  paymentErrorMessage?: string;
   vehiclePlate?: string;
   vehicleRntrc?: string;
   driverCpf?: string;
