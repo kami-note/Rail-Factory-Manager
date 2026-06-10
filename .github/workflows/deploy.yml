@@ -67,6 +67,7 @@ jobs:
           dotnet run \
             --project src/RailFactory.AppHost/RailFactory.AppHost.csproj \
             --configuration Release \
+            --no-launch-profile \
             -- --publisher docker-compose \
             --output-path ${{ github.workspace }}/deploy-output
 
