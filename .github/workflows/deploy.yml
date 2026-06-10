@@ -1,0 +1,98 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: src/RailFactory.Frontend/App
+
+      - name: Restore .NET packages
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --verbosity normal
+
+      # Escreve appsettings.Production.json com os secrets do GitHub.
+      # Usa env vars intermediárias para evitar interpolação insegura de strings no shell.
+      - name: Write production configuration
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
+          INTERNAL_TOKEN_SIGNING_KEY: ${{ secrets.INTERNAL_TOKEN_SIGNING_KEY }}
+          TENANCY_KEK: ${{ secrets.TENANCY_KEK }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          FRONTEND_PUBLIC_ORIGIN: ${{ secrets.FRONTEND_PUBLIC_ORIGIN }}
+        run: |
+          python3 - << 'EOF'
+          import json, os
+          config = {
+              "Parameters": {
+                  "postgres-password": os.environ["POSTGRES_PASSWORD"],
+                  "internal-api-key": os.environ["INTERNAL_API_KEY"],
+                  "internal-token-signing-key": os.environ["INTERNAL_TOKEN_SIGNING_KEY"],
+                  "tenancy-kek": os.environ["TENANCY_KEK"],
+                  "google-client-id": os.environ["GOOGLE_CLIENT_ID"],
+                  "google-client-secret": os.environ["GOOGLE_CLIENT_SECRET"],
+                  "frontend-public-origin": os.environ["FRONTEND_PUBLIC_ORIGIN"]
+              }
+          }
+          with open("src/RailFactory.AppHost/appsettings.Production.json", "w") as f:
+              json.dump(config, f, indent=2)
+          EOF
+
+      # Gera docker-compose.yml + Dockerfiles para todos os serviços via Aspire publisher.
+      - name: Publish Docker Compose manifest
+        env:
+          DOTNET_ENVIRONMENT: Production
+          ASPNETCORE_ENVIRONMENT: Production
+        run: |
+          dotnet run \
+            --project src/RailFactory.AppHost/RailFactory.AppHost.csproj \
+            --configuration Release \
+            -- --publisher docker-compose \
+            --output-path ${{ github.workspace }}/deploy-output
+
+      # Sobe a stack. --project-name fixa o nome para evitar conflitos entre runs do workspace.
+      - name: Deploy stack
+        working-directory: ${{ github.workspace }}/deploy-output
+        run: |
+          docker compose --project-name rail-factory pull --ignore-pull-failures
+          docker compose --project-name rail-factory up -d --build --remove-orphans
+
+      - name: Verify deployment
+        working-directory: ${{ github.workspace }}/deploy-output
+        run: |
+          sleep 20
+          docker compose --project-name rail-factory ps
+
+      # Garante que o arquivo com segredos seja sempre removido, mesmo em caso de falha.
+      - name: Cleanup production config
+        if: always()
+        run: rm -f src/RailFactory.AppHost/appsettings.Production.json
