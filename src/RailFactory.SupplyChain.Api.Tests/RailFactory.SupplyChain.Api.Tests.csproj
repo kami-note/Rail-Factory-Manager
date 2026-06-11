@@ -9,6 +9,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="NSubstitute" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RailFactory.SupplyChain.Api\RailFactory.SupplyChain.Api.csproj" />
