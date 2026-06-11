@@ -38,12 +38,12 @@ public sealed class Person : AggregateRoot<Guid>
     /// <summary>
     /// Factory method to register a new person.
     /// </summary>
-    public static Person Create(string name, string documentNumber, PersonType type, string? email = null, string? imageUrl = null)
+    public static Person Create(string name, string documentNumber, PersonType type, string? email = null, string? imageUrl = null, Guid? id = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(documentNumber);
 
-        return new Person(Guid.NewGuid(), name.Trim(), documentNumber.Trim(), type, email?.Trim().ToLowerInvariant(), imageUrl);
+        return new Person(id ?? Guid.NewGuid(), name.Trim(), documentNumber.Trim(), type, email?.Trim().ToLowerInvariant(), imageUrl);
     }
 
     /// <summary>

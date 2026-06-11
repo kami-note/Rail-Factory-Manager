@@ -1,18 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\RailFactory.Iam.Api\RailFactory.Iam.Api.csproj" />
+    <Using Include="Xunit" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RailFactory.Logistics.Api\RailFactory.Logistics.Api.csproj" />
+  </ItemGroup>
+
 </Project>
