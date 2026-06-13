@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 
 const projectRoot = path.join(__dirname, '..');
-const mdPath = path.join(projectRoot, 'docs', 'MANUAL_DO_USUARIO.md');
-const screenshotsDir = path.join(projectRoot, 'docs', 'actual_screenshots');
-const outputPath = path.join(screenshotsDir, 'copiar_manual_usuario.html');
+const mdPath = path.join(projectRoot, 'docs', 'manuals', 'MANUAL_DO_USUARIO.md');
+const screenshotsDir = path.join(projectRoot, 'docs', 'manuals', 'screenshots');
+const outputPath = path.join(projectRoot, 'docs', 'manuals', 'copiar_manual_usuario.html');
 
 console.log('Starting User Manual compilation...');
 
@@ -16,7 +16,7 @@ if (!fs.existsSync(mdPath)) {
 let mdContent = fs.readFileSync(mdPath, 'utf8');
 
 // Replace custom centered figures blocks with base64 embedded images
-const figureRegex = /<div align="center">\s*<p>(Figura \d+(?:\.\d+)? - [^<]+)<\/p>\s*<img\s+src="actual_screenshots\/([^"]+)"\s+alt="[^"]+"\s+width="90%"\s*\/?>\s*<p>(Fonte: Produzido pelo autor\.)<\/p>\s*<\/div>/gi;
+const figureRegex = /<div align="center">\s*<p>(Figura \d+(?:\.\d+)? - [^<]+)<\/p>\s*<img\s+src="screenshots\/([^"]+)"\s+alt="[^"]+"\s+width="90%"\s*\/?>\s*<p>(Fonte: Produzido pelo autor\.)<\/p>\s*<\/div>/gi;
 
 let replacedCount = 0;
 mdContent = mdContent.replace(figureRegex, (match, title, filename, caption) => {

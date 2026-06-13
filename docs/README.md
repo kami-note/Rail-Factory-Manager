@@ -30,16 +30,48 @@ Esta pasta centraliza toda a documentação do projeto. Organizada para **busca 
 |---|---|
 | **[REQUISITOS.md](./REQUISITOS.md)** | Requisitos canônicos do PDF (RF/NF/RN) + requisitos derivados (RD). |
 | **[ANALISE_REQUISITOS_E_PASSADAS.md](./ANALISE_REQUISITOS_E_PASSADAS.md)** | Matriz de mapeamento: qual requisito entra em qual passada e por quê. |
-| **[FLUXOS_DE_TRABALHO.md](./FLUXOS_DE_TRABALHO.md)** | Mapeamento dos principais fluxos de trabalho (Recebimento, Conferência, Produção, Expedição, Webhooks, Auditoria). |
+| **[FLUXOS_DE_TRABALHO.md](./technical/FLUXOS_DE_TRABALHO.md)** | Mapeamento dos principais fluxos de trabalho (Recebimento, Conferência, Produção, Expedição, Webhooks, Auditoria). |
 
 ---
 
-## 📖 Manuais e Guias de Operação
+## 🏗️ Documentação Técnica Adicional
 
 | Documento | O que responde |
 |---|---|
-| **[MANUAL_DO_USUARIO.md](./MANUAL_DO_USUARIO.md)** | Guia operacional completo de ponta a ponta com capturas de tela reais formatadas. |
-| **[copiar_manual_usuario.html](./actual_screenshots/copiar_manual_usuario.html)** | Página HTML compilada com imagens em Base64 para cópia direta e formatação automática no Word/Docs. |
+| **[DOCUMENTACAO_TECNICA.md](./technical/DOCUMENTACAO_TECNICA.md)** | Guia de engenharia, padrões de código de microsserviços e diretrizes do sistema. |
+| **[ENTREGA_4_IAM_MESSAGERIA_ORQUESTRACAO.md](./technical/ENTREGA_4_IAM_MESSAGERIA_ORQUESTRACAO.md)** | Relatório técnico de Identidade (IAM/RBAC), Mensageria (Outbox/RabbitMQ) e BFF/Gateway. |
+
+---
+
+## 📊 Diagramas e Engenharia Visual
+
+| Documento | O que responde |
+|---|---|
+| **[DIAGRAMAS.md](./diagrams/DIAGRAMAS.md)** | Inventário geral de diagramas, fluxogramas, tabelas ER e BPMN. |
+| **[Pasta Principal](./diagrams/principal/)** | Repositório de arquivos PlantUML (`.puml`) e diagramas renderizados (`.png`). |
+
+---
+
+## 📖 Manuais, Guias e Simulador de Telas
+
+| Documento | O que responde |
+|---|---|
+| **[MANUAL_DO_USUARIO.md](./manuals/MANUAL_DO_USUARIO.md)** | Guia operacional completo com capturas de tela reais formatadas. |
+| **[copiar_manual_usuario.html](./manuals/copiar_manual_usuario.html)** | Página HTML compilada (Base64) para cópia direta e formatação automática no Word/Docs. |
+| **[wireframes.html](./wireframes/wireframes.html)** | Simulador local interativo off-line para navegação entre telas do sistema. |
+| **[copiar_documento.html](./wireframes/copiar_documento.html)** | Página HTML compilada com as 21 telas do simulador em Base64 para documentação simplificada. |
+
+---
+
+## 🎓 Acadêmico (TCC & Entregas)
+
+| Documento | O que responde |
+|---|---|
+| **[TCC_RELATORIO_DESENVOLVIMENTO.md](./academic/TCC_RELATORIO_DESENVOLVIMENTO.md)** | Relatório consolidado das passadas e desenvolvimento do projeto do TCC. |
+| **[RESPOSTAS_TCC.md](./academic/RESPOSTAS_TCC.md)** | Caderno com perguntas e respostas acadêmicas preparadas para a defesa do TCC. |
+| **[RESPOSTAS_CADERNO.md](./academic/RESPOSTAS_CADERNO.md)** | Caderno de respostas e atividades teóricas/práticas do TCC. |
+| **[docfinal-7.pdf](./academic/docfinal-7.pdf)** | Arquivo PDF final oficial do relatório acadêmico de TCC. |
+| **[rascunho-dde-ers/](./academic/rascunho-dde-ers/)** | Rascunho inicial do DDE + ERS com detalhes estruturais. |
 
 ---
 
@@ -83,5 +115,7 @@ Esta pasta centraliza toda a documentação do projeto. Organizada para **busca 
 | Estrutura de pastas do frontend? | `src/RailFactory.Frontend/GEMINI.md` |
 | Como adicionar um tenant? | `TENANT_ONBOARDING_STRATEGY.md` |
 | Há algum bug conhecido? | `ISSUES_CONHECIDOS.md` |
-| Como funciona o fluxo de trabalho de X? | `FLUXOS_DE_TRABALHO.md` |
-| Como operar o sistema ou ver capturas de tela? | `MANUAL_DO_USUARIO.md` |
+| Como funciona o fluxo de trabalho de X? | `./technical/FLUXOS_DE_TRABALHO.md` |
+| Como operar o sistema ou ver capturas de tela? | `./manuals/MANUAL_DO_USUARIO.md` |
+| Como visualizar ou copiar as telas do simulador? | `./wireframes/wireframes.html` ou `./wireframes/copiar_documento.html` |
+| Onde estão as respostas do caderno do TCC? | `./academic/RESPOSTAS_CADERNO.md` ou `./academic/RESPOSTAS_TCC.md` |
