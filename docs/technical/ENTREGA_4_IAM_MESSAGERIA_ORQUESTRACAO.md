@@ -74,17 +74,17 @@ Abaixo estão os registros visuais de gerenciamento de permissões e auditoria d
 
 #### Visão Geral dos Usuários e Papéis Cadastrados no IAM
 Nesta tela, o administrador do tenant consegue visualizar os operadores e atribuir papéis hierárquicos a eles.
-![Usuários no IAM](actual_screenshots/15_users_iam.png)
+![Usuários no IAM](../manuals/screenshots/15_users_iam.png)
 *Figura 01: Painel de visualização de Usuários no IAM. Fonte: Produzido pelo autor.*
 
 #### Configuração de Matriz de Permissões (RBAC)
 Tela de configuração detalhada de perfis de acesso, onde cada Role tem suas permissões atômicas ativadas (ex: `inventory.read`, `production.write`).
-![Papéis e Permissões](actual_screenshots/16_roles_permissions.png)
+![Papéis e Permissões](../manuals/screenshots/16_roles_permissions.png)
 *Figura 02: Matriz de permissões e papéis. Fonte: Produzido pelo autor.*
 
 #### Trilha de Auditoria Imutável (Audit Trail)
 O sistema mantém uma trilha onde ações como `session_created` ou `role_assigned` são salvas no banco de dados com IP e ID de correlação para rastreabilidade de segurança.
-![Trilha de Auditoria](actual_screenshots/17_audit_logs.png)
+![Trilha de Auditoria](../manuals/screenshots/17_audit_logs.png)
 *Figura 03: Trilha de auditoria operacional do IAM. Fonte: Produzido pelo autor.*
 
 ---

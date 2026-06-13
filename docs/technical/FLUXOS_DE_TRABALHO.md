@@ -22,10 +22,10 @@ Inicia quando um fornecedor emite uma NF-e (Nota Fiscal Eletrônica). O operador
 
 ### 🖥️ Visual das Telas
 *Gaveta de Upload XML de Notas (BFF/SupplyChain):*
-![Upload XML](./actual_screenshots/02_receipts_xml_import.png)
+![Upload XML](../manuals/screenshots/02_receipts_xml_import.png)
 
 *Workbench de Associação de SKUs:*
-![Associação de SKUs](./actual_screenshots/03_sku_association.png)
+![Associação de SKUs](../manuals/screenshots/03_sku_association.png)
 
 ### 📖 Passo a Passo de Operação (Operador)
 1. **Importação do Arquivo:** Acesse a tela de **Recebimentos** (`/app/receipts`). No topo da página, clique no botão **"IMPORTAR XML"**.
@@ -86,10 +86,10 @@ Quando a carga física chega, o operador inicia a Conferência Cega. Ele insere 
 
 ### 🖥️ Visual das Telas
 *Fila de Recebimento de Notas (Módulo Supply Chain):*
-![Fila de Recebimento](./actual_screenshots/02_receipts_list.png)
+![Fila de Recebimento](../manuals/screenshots/02_receipts_list.png)
 
 *Saldos no Almoxarifado (Módulo de Estoque):*
-![Painel de Estoque](./actual_screenshots/04_inventory.png)
+![Painel de Estoque](../manuals/screenshots/04_inventory.png)
 
 ### 📖 Passo a Passo de Operação (Operador)
 1. **Entrada de Mercadoria:** Na tela de **Recebimentos** (`/app/receipts`), localize a nota fiscal da carga que chegou e clique no botão **"Iniciar Conferência"**. A nota mudará para o status `Em Conferência`.
@@ -153,10 +153,10 @@ Engenheiros criam estruturas de produtos (BOM) sob a forma de Rascunho. O cadast
 
 ### 🖥️ Visual das Telas
 *Estrutura de Produtos (BOM) - Lista:*
-![Estruturas BOM](./actual_screenshots/06_boms_list.png)
+![Estruturas BOM](../manuals/screenshots/06_boms_list.png)
 
 *Custo Teórico Consolidado (BOM Costing Roll-up):*
-![Custo Teórico BOM](./actual_screenshots/06_boms_cost_rollup.png)
+![Custo Teórico BOM](../manuals/screenshots/06_boms_cost_rollup.png)
 
 ### 📖 Passo a Passo de Operação (Engenheiro)
 1. **Criar Estrutura Principal:** Vá na tela **Estrutura de Produtos** (`/app/production/boms`) e clique em **"NOVA ESTRUTURA (BOM)"**.
@@ -222,7 +222,7 @@ Uma Ordem de Produção (OP) é criada no estado `Draft`. Ao liberá-la (`Releas
 
 ### 🖥️ Visual das Telas
 *Lista de Ordens de Produção (Estados Draft/Released/InExecution):*
-![Ordens de Produção](./actual_screenshots/07_production_orders.png)
+![Ordens de Produção](../manuals/screenshots/07_production_orders.png)
 
 ### 📖 Passo a Passo de Operação (Operador de Fábrica)
 1. **Abrir Ordem:** Na tela **Ordens de Produção** (`/app/production/orders`), clique no botão **"NOVA ORDEM"**.
@@ -298,10 +298,10 @@ Materiais acabados e faturados são organizados em Ordens de Expedição. Para d
 
 ### 🖥️ Visual das Telas
 *Montagem e Cadastro de Novo Despacho:*
-![Criar Despacho](./actual_screenshots/10_logistics_dispatches_create_modal.png)
+![Criar Despacho](../manuals/screenshots/10_logistics_dispatches_create_modal.png)
 
 *Ordens de Expedição Faturadas:*
-![Ordens de Expedição](./actual_screenshots/09_shipment_orders.png)
+![Ordens de Expedição](../manuals/screenshots/09_shipment_orders.png)
 
 ### 📖 Passo a Passo de Operação (Logística/Expedição)
 1. **Visualizar Ordens:** Verifique as cargas faturadas prontas na tela **Ordens de Expedição** (`/app/logistics/shipment-orders`).
@@ -365,7 +365,7 @@ Sempre que um despacho tem alteração de estado (expedido ou entregue), se a tr
 
 ### 🖥️ Visual das Telas
 *Cadastro de Webhook no Modal de Transportadora:*
-![Modal de Cadastro de Transportadora](./actual_screenshots/08_carriers_create_modal.png)
+![Modal de Cadastro de Transportadora](../manuals/screenshots/08_carriers_create_modal.png)
 
 ### 📖 Passo a Passo de Operação (Operador de Transporte)
 1. **Acessar Cadastro:** Vá na tela **Transportadoras** (`/app/logistics/carriers`) e clique em **"NOVA TRANSPORTADORA"** (ou edite uma existente).
@@ -423,7 +423,7 @@ Para assegurar a rastreabilidade (compliance e segurança), toda operação crí
 
 ### 🖥️ Visual das Telas
 *Histórico Imutável de Eventos e IP de Acesso:*
-![Trilha de Auditoria](./actual_screenshots/17_audit_logs.png)
+![Trilha de Auditoria](../manuals/screenshots/17_audit_logs.png)
 
 ### 📖 Passo a Passo de Operação (Administrador)
 1. **Acessar Trilha:** Acesse a tela **Auditoria** (`/app/iam/audit`).
