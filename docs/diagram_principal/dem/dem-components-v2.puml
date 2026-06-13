@@ -1,0 +1,58 @@
+@startuml
+title Componentes - RAIL Factory (TO-BE) (v2)
+left to right direction
+skinparam linetype ortho
+
+component "Frontend (Blazor)\nUI" as UI
+component "Gateway (YARP)\nAPI Gateway" as GW
+component "IAM API" as IAM
+component "Production Service" as PRD
+component "Supply Chain Service" as SUP
+component "Logistics Service" as LOG
+component "Fleet Service" as FLE
+component "HR Service" as HR
+component "Dashboard/Reporting" as DSH
+component "TenantResolver\n(cross-cutting)" as TR
+
+database "Tenant Registry DB\n(separado)" as TREG
+database "Tenant PostgreSQL Instances\n(1+ por tenant, isoladas)" as TDBS
+component "Redis" as REDIS
+queue "RabbitMQ" as MQ
+cloud "Google OAuth2" as Google
+cloud "SEFAZ" as SEFAZ
+cloud "Carrier APIs" as CAR
+
+UI --> GW
+GW --> IAM
+GW --> PRD
+GW --> SUP
+GW --> LOG
+GW --> FLE
+GW --> HR
+GW --> DSH
+
+IAM --> TR
+PRD --> TR
+SUP --> TR
+LOG --> TR
+FLE --> TR
+HR --> TR
+DSH --> TR
+
+TR --> TREG : tenant -> connection
+TR --> TDBS : tenant-scoped connection
+
+IAM --> REDIS
+IAM --> MQ
+PRD --> MQ
+SUP --> MQ
+LOG --> MQ
+FLE --> MQ
+HR --> MQ
+DSH --> MQ
+
+IAM --> Google
+SUP --> SEFAZ
+LOG --> CAR
+
+@enduml

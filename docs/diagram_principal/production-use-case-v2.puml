@@ -1,0 +1,32 @@
+@startuml Production-Use-Case
+left to right direction
+
+actor "Admin Filial" as AF
+actor "Operador" as OP
+actor "Sistema" as SYS
+
+rectangle "Production Service" {
+  usecase "Gerenciar BOM (versionado)" as UC_BOM
+  usecase "Gerenciar Work Centers" as UC_WC
+  usecase "Ciclo de Vida da OP" as UC_OP
+  usecase "Reserva de Materiais" as UC_Reserve
+  usecase "Registrar Refugo" as UC_Scrap
+  usecase "Apontar Parada" as UC_Downtime
+  usecase "Controle de Qualidade" as UC_QC
+  usecase "Lote e Rastreabilidade" as UC_Lot
+}
+
+AF --> UC_BOM
+AF --> UC_WC
+OP --> UC_BOM
+OP --> UC_WC
+OP --> UC_OP
+OP --> UC_Scrap
+OP --> UC_Downtime
+OP --> UC_QC
+OP --> UC_Lot
+SYS --> UC_Reserve
+UC_OP ..> UC_Reserve : <<include>>
+UC_OP ..> UC_Lot : <<include>>
+
+@enduml

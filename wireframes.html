@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rail Factory - Classic Wireframe Viewer</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* VARIABLES & THEMES */
+    :root {
+      /* Theme Classic Wireframe (Default - Cinza, Branco & Preto) */
+      --bg-app: #f4f4f4;
+      --bg-card: #ffffff;
+      --bg-sidebar: #ffffff;
+      --bg-topbar: #ffffff;
+      --text-main: #000000;
+      --text-secondary: #444444;
+      --text-light: #888888;
+      --text-white: #000000;
+      --border-color-default: #000000;
+      --border-style-default: dashed;
+      --border-width-default: 1px;
+      
+      /* All wireframe outlines in black for classic mode */
+      --border-container: #000000;
+      --border-data: #000000;
+      --border-input: #000000;
+      --border-action: #000000;
+      --border-text: #000000;
+      --border-decoration: #000000;
+      
+      --sidebar-width: 240px;
+      --topbar-height: 48px;
+    }
+
+    [data-theme="multicolor"] {
+      --bg-app: #faf9f8;
+      --bg-card: #ffffff;
+      --bg-sidebar: #ffffff;
+      --bg-topbar: #107c10;
+      --text-main: #201f1e;
+      --text-secondary: #605e5c;
+      --text-light: #a19f9d;
+      --text-white: #ffffff;
+      --border-color-default: #8a8886;
+
+      /* Categorized colors */
+      --border-container: #0078d4; /* Blue */
+      --border-data: #107c10;      /* Green */
+      --border-input: #d83b01;     /* Orange */
+      --border-action: #a80000;    /* Red */
+      --border-text: #5c2d91;      /* Purple */
+      --border-decoration: #008272;/* Cyan */
+    }
+
+    [data-theme="blueprint"] {
+      --bg-app: #0a192f;
+      --bg-card: #112240;
+      --bg-sidebar: #0f1c3f;
+      --bg-topbar: #0d2a4a;
+      --text-main: #e6f1ff;
+      --text-secondary: #8892b0;
+      --text-light: #576d91;
+      --text-white: #e6f1ff;
+      --border-color-default: #64ffda;
+      
+      --border-container: #64ffda;
+      --border-data: #64ffda;
+      --border-input: #64ffda;
+      --border-action: #64ffda;
+      --border-text: #64ffda;
+      --border-decoration: #64ffda;
+    }
+
+    [data-theme="dark"] {
+      --bg-app: #121212;
+      --bg-card: #1e1e1e;
+      --bg-sidebar: #181818;
+      --bg-topbar: #242424;
+      --text-main: #f3f2f1;
+      --text-secondary: #a19f9d;
+      --text-light: #605e5c;
+      --text-white: #ffffff;
+      --border-color-default: #d1d1d1;
+      
+      --border-container: #00bcd4;
+      --border-data: #4caf50;
+      --border-input: #ff9800;
+      --border-action: #f44336;
+      --border-text: #9c27b0;
+      --border-decoration: #009688;
+    }
+
+    /* GENERAL STYLES */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 13px;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    code, pre, .monospace {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    /* CONTROLS FLOATING BAR */
+    .control-panel {
+      background: var(--bg-card);
+      border-bottom: 2px solid var(--text-main);
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      flex-shrink: 0;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-group label {
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .control-select, .control-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border-color-default);
+      background: var(--bg-card);
+      color: var(--text-main);
+      border-radius: 4px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .control-select:hover, .control-btn:hover {
+      border-color: var(--text-main);
+    }
+
+    .control-btn.active {
+      background: var(--text-main);
+      color: var(--bg-card);
+    }
+
+    /* APP LAYOUT FRAME */
+    .app-frame {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* APP BODY (SIDEBAR + CONTENT) */
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* TOP BAR MOCK */
+    .topbar {
+      height: var(--topbar-height);
+      background: var(--bg-topbar);
+      border: var(--border-width-default) var(--border-style-default) var(--border-color-default);
+      border-bottom-width: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: relative;
+      z-index: 50;
+      color: var(--text-main);
+      flex-shrink: 0;
+    }
+
+    .topbar-brand {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar-title {
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      line-height: 1.1;
+    }
+
+    .topbar-subtitle {
+      font-size: 9px;
+      font-weight: 700;
+      opacity: 0.8;
+      letter-spacing: 0.5px;
+    }
+
+    .topbar-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-username {
+      font-size: 11px;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+
+    .topbar-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 10px;
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    /* SIDEBAR MOCK */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--bg-sidebar);
+      border-right: var(--border-width-default) var(--border-style-default) var(--border-color-default);
+      display: flex;
+      flex-direction: column;
+      padding-top: 12px;
+      overflow-y: auto;
+      z-index: 40;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .nav-group-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--text-secondary);
+      padding: 8px 16px 4px 16px;
+      letter-spacing: 0.5px;
+      opacity: 0.7;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 16px;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      background: rgba(0, 0, 0, 0.04);
+      color: var(--text-main);
+    }
+
+    .nav-item.active {
+      border-left-color: var(--border-container);
+      font-weight: 800;
+    }
+
+    [data-theme="blueprint"] .nav-item:hover, [data-theme="blueprint"] .nav-item.active {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px;
+      border-top: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+    }
+
+    /* CONTENT WRAPPER */
+    .content-area {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    /* WIREFRAME COMPONENT STYLING */
+    .wf-box {
+      border: var(--border-width-default) var(--border-style-default) var(--border-color-default);
+      border-radius: 4px;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: var(--bg-card);
+      position: relative;
+    }
+
+    /* Labels for wireframe analysis */
+    .wf-box::after, .topbar::after, .sidebar::after, .wf-item::after {
+      content: attr(data-label);
+      position: absolute;
+      top: -9px;
+      right: 8px;
+      background: var(--bg-card);
+      padding: 0 4px;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--border-color-default);
+      border: 1px solid var(--border-color-default);
+      border-radius: 2px;
+      opacity: 0.8;
+      display: none;
+      z-index: 10;
+    }
+
+    /* Put topbar label inside the bar to prevent screen cut */
+    .topbar::after {
+      top: 4px !important;
+      right: 8px !important;
+    }
+
+    .sidebar::after {
+      top: 4px !important;
+      right: 8px !important;
+    }
+
+    .wf-item::after {
+      top: -8px;
+      right: 4px;
+      font-size: 8px;
+      border-style: dashed;
+    }
+
+    .show-labels .wf-box::after, 
+    .show-labels .topbar::after, 
+    .show-labels .sidebar::after, 
+    .show-labels .wf-item::after {
+      display: block !important;
+    }
+
+    /* Colored Borders for UI Elements */
+    .wf-container { border-color: var(--border-container) !important; }
+    .wf-data { border-color: var(--border-data) !important; }
+    .wf-input { border-color: var(--border-input) !important; }
+    .wf-action { border-color: var(--border-action) !important; }
+    .wf-text { border-color: var(--border-text) !important; }
+    .wf-decoration { border-color: var(--border-decoration) !important; }
+
+    /* INNER ITEMS FOR NESTING */
+    .wf-item {
+      border: var(--border-width-default) var(--border-style-default) var(--border-color-default);
+      border-radius: 3px;
+      padding: 8px;
+      margin: 4px 0;
+      position: relative;
+    }
+
+    /* WIREFRAME TYPOGRAPHY */
+    .wf-title {
+      font-weight: 800;
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wf-subtitle {
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .wf-text-placeholder {
+      height: 8px;
+      background: var(--text-light);
+      margin: 6px 0;
+      border-radius: 2px;
+      opacity: 0.3;
+    }
+
+    .wf-text-placeholder.w-full { width: 100%; }
+    .wf-text-placeholder.w-3-4 { width: 75%; }
+    .wf-text-placeholder.w-1-2 { width: 50%; }
+    .wf-text-placeholder.w-1-4 { width: 25%; }
+
+    /* LAYOUT UTILITIES */
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .grid-1-2 {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 16px;
+    }
+
+    .grid-2-1 {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    /* WIREFRAME TABLES */
+    .wf-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    .wf-table th, .wf-table td {
+      border: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+      padding: 8px;
+      text-align: left;
+    }
+
+    .wf-table th {
+      background: rgba(0, 0, 0, 0.02);
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    /* BUTTON MOCK */
+    .wf-button-mock {
+      padding: 6px 12px;
+      border: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+      background: var(--bg-card);
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .wf-button-mock.filled {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    /* INPUT MOCK */
+    .wf-input-mock {
+      padding: 6px 10px;
+      border: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+      border-radius: 4px;
+      background: var(--bg-card);
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    /* DIAGONAL CROSS "X" WIREFRAME PLACEHOLDER */
+    .wf-placeholder-x {
+      background-color: #fafafa;
+      background-image: 
+        linear-gradient(to top right, transparent calc(50% - 1px), var(--border-color-default) calc(50% - 1px), var(--border-color-default) calc(50% + 1px), transparent calc(50% + 1px)),
+        linear-gradient(to bottom right, transparent calc(50% - 1px), var(--border-color-default) calc(50% - 1px), var(--border-color-default) calc(50% + 1px), transparent calc(50% + 1px)) !important;
+    }
+
+    /* IMAGE MOCK WITH X */
+    .wf-image-mock {
+      width: 100%;
+      height: 120px;
+      border: 1px dashed var(--border-color-default);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-main);
+      font-weight: 800;
+      gap: 8px;
+      position: relative;
+    }
+
+    /* STAT CARD MOCK */
+    .stat-card-mock {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-val {
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* CHIP MOCK */
+    .wf-chip {
+      display: inline-flex;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      border: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+    }
+
+    /* MODAL WINDOW SIMULATION */
+    .wf-modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .wf-modal {
+      width: 600px;
+      max-width: 90%;
+      background: var(--bg-card);
+      border: 2px solid var(--text-main);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .wf-modal-header {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.02);
+      border-bottom: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .wf-modal-body {
+      padding: 16px;
+      max-height: 450px;
+      overflow-y: auto;
+    }
+
+    .wf-modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* PROGRESS BAR MOCK */
+    .wf-progress-bar {
+      height: 8px;
+      border: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+      border-radius: 4px;
+      background: rgba(0,0,0,0.02);
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .wf-progress-fill {
+      height: 100%;
+      background: var(--text-secondary);
+      border-right: 1px solid var(--border-color-default);
+    }
+
+    /* TAB SELECTOR MOCK */
+    .wf-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-color-default);
+      border-style: var(--border-style-default);
+      margin-bottom: 12px;
+    }
+
+    .wf-tab {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .wf-tab.active {
+      border-bottom-color: var(--border-container);
+    }
+
+    /* PAGE VISIBILITY CLASSES */
+    .page-content {
+      display: none;
+    }
+
+    .page-content.active {
+      display: block;
+    }
+
+    /* DAMDFE (MANIFEST DOCUMENT MOCK A4) */
+    .damdfe-container {
+      background: #ffffff;
+      color: #000000 !important;
+      padding: 20px;
+      border: 2px solid #000000;
+      max-width: 800px;
+      margin: 0 auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+    }
+
+    .damdfe-header {
+      border-bottom: 1px solid #000000;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .damdfe-box {
+      border: 1px solid #000000;
+      padding: 4px;
+      margin-bottom: 4px;
+    }
+
+    .damdfe-label {
+      font-size: 7px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .damdfe-val {
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .damdfe-barcode {
+      height: 32px;
+      border: 1px solid #000000;
+      margin: 4px 0;
+      background: repeating-linear-gradient(
+        90deg,
+        #000000,
+        #000000 2px,
+        #ffffff 2px,
+        #ffffff 6px
+      );
+    }
+  </style>
+</head>
+<body class="show-labels">
+
+  <!-- TOP LEVEL WIREFRAME CONTROL BAR -->
+  <div class="control-panel">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <i data-lucide="layout" style="color: var(--border-container)"></i>
+      <span style="font-weight: 900; font-size: 14px; letter-spacing: -0.5px;">RAIL FACTORY WIREFRAME TOOL</span>
+    </div>
+    
+    <div class="control-group">
+      <label for="themeSelect">Tema:</label>
+      <select id="themeSelect" class="control-select" onchange="changeTheme(this.value)">
+        <option value="classic">Cinza, Branco & Preto (Clássico)</option>
+        <option value="multicolor">Colorido (Categorizado)</option>
+        <option value="blueprint">Blueprint Azul</option>
+        <option value="dark">Grafite Escuro</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="borderMode">Estilo de Bordas:</label>
+      <select id="borderMode" class="control-select" onchange="changeBorderMode(this.value)">
+        <option value="mono">Monocromático (Preto/Cinza)</option>
+        <option value="multicolor">Colorido (Categorizado)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="lineStyle">Linhas:</label>
+      <select id="lineStyle" class="control-select" onchange="changeLineStyle(this.value)">
+        <option value="dashed">Tracejado (Wireframe)</option>
+        <option value="solid">Contínuo (Sólido)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="thickness">Espessura:</label>
+      <select id="thickness" class="control-select" onchange="changeThickness(this.value)">
+        <option value="1px">1px</option>
+        <option value="2px">2px</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <button class="control-btn active" id="toggleLabelsBtn" onclick="toggleLabels()">Ocultar Labels</button>
+    </div>
+  </div>
+
+  <div class="app-frame">
+    <!-- TOP BAR MOCK -->
+    <div class="topbar wf-container" data-label="Barra Superior (Topbar)">
+      <div class="topbar-brand">
+        <span class="topbar-title">RAIL FACTORY</span>
+        <span class="topbar-subtitle">SISTEMA DE CONTROLE</span>
+      </div>
+      <div class="topbar-user">
+        <span class="topbar-username">operador@railfactory.com.br</span>
+        <div class="topbar-avatar">OP</div>
+        <i data-lucide="bell" size="14" style="cursor: pointer;"></i>
+        <i data-lucide="settings" size="14" style="cursor: pointer;"></i>
+      </div>
+    </div>
+
+    <!-- APP BODY -->
+    <div class="app-body">
+      <!-- SIDEBAR NAVIGATION MOCK -->
+      <div class="sidebar wf-container" data-label="Menu Lateral (Sidebar)">
+        <div class="nav-group-title">GERAL</div>
+        <a class="nav-item active" onclick="switchPage('dashboard', this)">
+          <i data-lucide="layout-dashboard" size="14"></i> INÍCIO
+        </a>
+
+        <div class="nav-group-title">SUPRIMENTOS</div>
+        <a class="nav-item" onclick="switchPage('receipts', this)">
+          <i data-lucide="receipt-text" size="14"></i> RECEBIMENTOS
+        </a>
+        <a class="nav-item" onclick="switchPage('sku-association', this)">
+          <i data-lucide="link-2" size="14"></i> ASSOCIAÇÃO DE SKUs
+        </a>
+        <a class="nav-item" onclick="switchPage('inventory', this)">
+          <i data-lucide="boxes" size="14"></i> ESTOQUE
+        </a>
+
+        <div class="nav-group-title">PRODUÇÃO</div>
+        <a class="nav-item" onclick="switchPage('work-centers', this)">
+          <i data-lucide="factory" size="14"></i> CENTROS DE TRABALHO
+        </a>
+        <a class="nav-item" onclick="switchPage('boms', this)">
+          <i data-lucide="book-open" size="14"></i> ESTRUTURA DE PRODUTOS
+        </a>
+        <a class="nav-item" onclick="switchPage('production-orders', this)">
+          <i data-lucide="clipboard-list" size="14"></i> ORDENS DE PRODUÇÃO
+        </a>
+
+        <div class="nav-group-title">LOGÍSTICA</div>
+        <a class="nav-item" onclick="switchPage('carriers', this)">
+          <i data-lucide="truck" size="14"></i> TRANSPORTADORAS
+        </a>
+        <a class="nav-item" onclick="switchPage('shipment-orders', this)">
+          <i data-lucide="package-check" size="14"></i> EXPEDIÇÃO
+        </a>
+        <a class="nav-item" onclick="switchPage('logistics', this)">
+          <i data-lucide="send-horizontal" size="14"></i> DESPACHOS & DAMDFE
+        </a>
+        <a class="nav-item" onclick="switchPage('nfe-monitor', this)">
+          <i data-lucide="file-check-2" size="14"></i> MONITOR NF-e
+        </a>
+        <a class="nav-item" onclick="switchPage('fiscal-settings', this)">
+          <i data-lucide="settings" size="14"></i> CONFIG. FISCAL
+        </a>
+
+        <div class="nav-group-title">FROTA</div>
+        <a class="nav-item" onclick="switchPage('fleet', this)">
+          <i data-lucide="truck" size="14"></i> FROTA
+        </a>
+
+        <div class="nav-group-title">EQUIPE</div>
+        <a class="nav-item" onclick="switchPage('hr', this)">
+          <i data-lucide="user-check" size="14"></i> FUNCIONÁRIOS
+        </a>
+
+        <div class="nav-group-title">ACESSO E SEGURANÇA</div>
+        <a class="nav-item" onclick="switchPage('users', this)">
+          <i data-lucide="users" size="14"></i> USUÁRIOS
+        </a>
+        <a class="nav-item" onclick="switchPage('roles', this)">
+          <i data-lucide="shield-check" size="14"></i> NÍVEIS DE ACESSO
+        </a>
+        <a class="nav-item" onclick="switchPage('audit', this)">
+          <i data-lucide="scroll-text" size="14"></i> AUDITORIA
+        </a>
+
+        <div class="nav-group-title">CONFIGURAÇÕES</div>
+        <a class="nav-item" onclick="switchPage('integrations', this)">
+          <i data-lucide="plug" size="14"></i> INTEGRAÇÕES
+        </a>
+        <a class="nav-item" onclick="switchPage('tenants', this)">
+          <i data-lucide="building-2" size="14"></i> EMPRESAS
+        </a>
+
+        <div class="sidebar-footer">
+          <div class="wf-item wf-decoration" data-label="Chip Organização">
+            <span style="font-weight: 800; font-size: 10px;">ORG: KAMI-NOTE</span>
+          </div>
+          <a class="nav-item" style="color: var(--border-action); padding: 8px 0;">
+            <i data-lucide="log-out" size="14"></i> SAIR DO SISTEMA
+          </a>
+        </div>
+      </div>
+
+      <!-- MAIN CONTENT AREA -->
+      <div class="content-area">
+        
+        <!-- ==================== DASHBOARD PAGE ==================== -->
+        <div id="page-dashboard" class="page-content active">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Dashboard)">
+            <div class="wf-title wf-text" data-label="Título da Página">
+              <i data-lucide="layout-dashboard"></i> INÍCIO - RESUMO OPERACIONAL
+            </div>
+
+            <!-- KPI STRIP -->
+            <div class="grid-4" style="margin-bottom: 24px;">
+              <div class="wf-box wf-data stat-card-mock" data-label="KPI Card: Ordens Ativas">
+                <span class="wf-subtitle wf-text" data-label="Legenda">ORDENS ATIVAS</span>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span class="stat-val wf-text">8</span>
+                  <i data-lucide="factory" style="color: var(--border-container)"></i>
+                </div>
+              </div>
+              
+              <div class="wf-box wf-data stat-card-mock" data-label="KPI Card: Saldos Disponíveis">
+                <span class="wf-subtitle wf-text" data-label="Legenda">SALDOS DISPONÍVEIS</span>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span class="stat-val wf-text">142</span>
+                  <i data-lucide="packages" style="color: var(--border-data)"></i>
+                </div>
+              </div>
+              
+              <div class="wf-box wf-data stat-card-mock" data-label="KPI Card: Taxa de Aprovação">
+                <span class="wf-subtitle wf-text" data-label="Legenda">TAXA DE APROVAÇÃO</span>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span class="stat-val wf-text">96.4%</span>
+                  <i data-lucide="check-circle" style="color: var(--border-decoration)"></i>
+                </div>
+              </div>
+              
+              <div class="wf-box wf-data stat-card-mock" data-label="KPI Card: Lead Time Médio">
+                <span class="wf-subtitle wf-text" data-label="Legenda">LEAD TIME MÉDIO</span>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span class="stat-val wf-text">4.2h</span>
+                  <i data-lucide="timer" style="color: var(--border-text)"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- QUICK ACTIONS -->
+            <div class="wf-box wf-container flex-between" data-label="Barra de Ações Rápidas" style="background: rgba(0,0,0,0.01);">
+              <div class="wf-text" data-label="Identificador do Tenant">
+                <span>Organização Ativa: <strong>KAMI-NOTE</strong></span>
+              </div>
+              <div class="flex-row">
+                <div class="wf-button-mock wf-action" data-label="Ação Secundária"><i data-lucide="plus" size="12"></i> Nova Ordem</div>
+                <div class="wf-button-mock filled wf-action" data-label="Ação Primária"><i data-lucide="arrow-up-right" size="12"></i> Gerenciar Recebimentos</div>
+              </div>
+            </div>
+
+            <!-- WORKSPACE COLUMNS -->
+            <div class="grid-2">
+              <!-- Left Column -->
+              <div>
+                <div class="wf-box wf-container" data-label="Card: Top Scrap por Material">
+                  <span class="wf-subtitle wf-text" data-label="Subtítulo"><i data-lucide="trash-2" size="14"></i> TOP SCRAP POR MATERIAL</span>
+                  <table class="wf-table wf-data" data-label="Tabela de Dados de Descarte">
+                    <thead>
+                      <tr>
+                        <th>Material</th>
+                        <th>Qtd. Scrap</th>
+                        <th>UM</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="monospace">MAT-STEEL-001</td>
+                        <td style="color: var(--text-main); font-weight: 700;">14.500</td>
+                        <td>KG</td>
+                      </tr>
+                      <tr>
+                        <td class="monospace">MAT-COPPER-02</td>
+                        <td style="color: var(--text-main); font-weight: 700;">8.120</td>
+                        <td>M</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="wf-box wf-container" data-label="Card: Acuracidade de Estoque">
+                  <span class="wf-subtitle wf-text" data-label="Subtítulo"><i data-lucide="bar-chart-2" size="14"></i> ACURACIDADE DE ESTOQUE</span>
+                  <div class="wf-item wf-data" data-label="Estatística de Acuracidade" style="margin-top: 12px;">
+                    <div class="flex-between" style="margin-bottom: 6px;">
+                      <span>Itens Disponíveis vs Bloqueados</span>
+                      <span style="font-weight: 900; color: var(--text-main)">98.2%</span>
+                    </div>
+                    <div class="wf-progress-bar wf-decoration" data-label="Barra de Progresso">
+                      <div class="wf-progress-fill" style="width: 98%; background-color: var(--text-main);"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column -->
+              <div>
+                <div class="wf-box wf-container" data-label="Card: Status de Ordens de Produção">
+                  <span class="wf-subtitle wf-text" data-label="Subtítulo"><i data-lucide="clipboard-list" size="14"></i> ORDENS DE PRODUÇÃO</span>
+                  <div class="wf-item wf-data" data-label="Item de Ordem em Execução">
+                    <div class="flex-between">
+                      <span class="monospace">OP-2026-004</span>
+                      <span class="wf-chip wf-decoration">Em Execução</span>
+                    </div>
+                    <div class="wf-text-placeholder w-full"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== RECEBIMENTOS ==================== -->
+        <div id="page-receipts" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Recebimentos)">
+            <div class="wf-title wf-text" data-label="Título da Página"><i data-lucide="receipt-text"></i> RECEBIMENTO DE CARGAS</div>
+            <div class="wf-box wf-container flex-between" data-label="Filtros">
+              <div class="wf-input-mock wf-input" style="width: 250px;"><i data-lucide="search" size="12"></i><span>Buscar NF-e...</span></div>
+              <div class="wf-button-mock filled wf-action"><i data-lucide="plus" size="12"></i> Novo Recebimento</div>
+            </div>
+            <table class="wf-table wf-data">
+              <thead>
+                <tr><th>Chave NF-e</th><th>Fornecedor</th><th>Emissão</th><th>Valor</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="monospace">35260612345678901234550010001234561001234567</td><td>MINAS AÇO LTDA</td><td>05/06/2026</td><td>R$ 45.230,00</td><td><span class="wf-chip wf-decoration">Concluído</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== ASSOCIAÇÃO DE SKUs ==================== -->
+        <div id="page-sku-association" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Associação de SKUs)">
+            <div class="wf-title wf-text"><i data-lucide="link-2"></i> ASSOCIAÇÃO DE SKUs</div>
+            <div class="grid-2">
+              <div class="wf-box wf-data" data-label="Item Emitente">
+                <span class="wf-subtitle">Item da NF-e</span>
+                <div class="wf-item monospace">SKU Fornecedor: MET-BARRA-38</div>
+                <div class="wf-item">BARRA AÇO TRATADO 3/8 COMP 6M</div>
+              </div>
+              <div class="wf-box wf-input" data-label="Mapeamento Interno">
+                <span class="wf-subtitle">Vínculo de Estoque</span>
+                <div class="wf-input-mock" style="margin-bottom: 12px;"><span>Selecione Material do Catálogo...</span></div>
+                <div class="wf-button-mock filled wf-action">Confirmar Vínculo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== ESTOQUE ==================== -->
+        <div id="page-inventory" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Estoque)">
+            <div class="wf-title wf-text"><i data-lucide="boxes"></i> SALDOS DE ESTOQUE</div>
+            
+            <div class="grid-4" data-label="Grade de Balanço de Lotes">
+              <div class="wf-box wf-container" style="padding: 8px;">
+                <div class="wf-image-mock wf-placeholder-x" data-label="Image Placeholder (X)">
+                  <span style="background: var(--bg-card); padding: 2px 6px; border: 1px solid var(--border-color-default);">FOTO PRODUTO</span>
+                </div>
+                <div style="padding: 8px 0 4px 0;">
+                  <div class="flex-between">
+                    <span class="monospace" style="font-weight: 800;">MAT-STEEL-001</span>
+                    <span class="wf-chip wf-decoration">Disponível</span>
+                  </div>
+                  <div style="font-size: 14px; font-weight: 800; margin-top: 8px;">45.200 KG</div>
+                  <div style="font-size: 8px; color: var(--text-light); margin-top: 4px;">Lote: 20260605-01</div>
+                </div>
+              </div>
+
+              <div class="wf-box wf-container" style="padding: 8px;">
+                <div class="wf-image-mock wf-placeholder-x" data-label="Image Placeholder (X)">
+                  <span style="background: var(--bg-card); padding: 2px 6px; border: 1px solid var(--border-color-default);">FOTO PRODUTO</span>
+                </div>
+                <div style="padding: 8px 0 4px 0;">
+                  <div class="flex-between">
+                    <span class="monospace" style="font-weight: 800;">MAT-COPPER-02</span>
+                    <span class="wf-chip wf-decoration">Disponível</span>
+                  </div>
+                  <div style="font-size: 14px; font-weight: 800; margin-top: 8px;">34.120 M</div>
+                  <div style="font-size: 8px; color: var(--text-light); margin-top: 4px;">Lote: 20260605-02</div>
+                </div>
+              </div>
+
+              <div class="wf-box wf-container" style="padding: 8px;">
+                <div class="wf-image-mock wf-placeholder-x" data-label="Image Placeholder (X)">
+                  <span style="background: var(--bg-card); padding: 2px 6px; border: 1px solid var(--border-color-default);">FOTO PRODUTO</span>
+                </div>
+                <div style="padding: 8px 0 4px 0;">
+                  <div class="flex-between">
+                    <span class="monospace" style="font-weight: 800;">MAT-FIT-12</span>
+                    <span class="wf-chip wf-action">Bloqueado</span>
+                  </div>
+                  <div style="font-size: 14px; font-weight: 800; margin-top: 8px;">120 PC</div>
+                  <div style="font-size: 8px; color: var(--text-light); margin-top: 4px;">Lote: 20260607-09</div>
+                </div>
+              </div>
+
+              <div class="wf-box wf-container" style="padding: 8px;">
+                <div class="wf-image-mock wf-placeholder-x" data-label="Image Placeholder (X)">
+                  <span style="background: var(--bg-card); padding: 2px 6px; border: 1px solid var(--border-color-default);">FOTO PRODUTO</span>
+                </div>
+                <div style="padding: 8px 0 4px 0;">
+                  <div class="flex-between">
+                    <span class="monospace" style="font-weight: 800;">MAT-ALUM-30</span>
+                    <span class="wf-chip">Catálogo</span>
+                  </div>
+                  <div style="font-size: 14px; font-weight: 800; margin-top: 8px;">0 KG</div>
+                  <div style="font-size: 8px; color: var(--text-light); margin-top: 4px;">Lote: --</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== CENTROS DE TRABALHO ==================== -->
+        <div id="page-work-centers" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Centros de Trabalho)">
+            <div class="wf-title wf-text" data-label="Título da Página">
+              <i data-lucide="factory"></i> CENTROS DE TRABALHO (WORK CENTERS)
+            </div>
+            <div class="wf-box wf-container flex-between" data-label="Filtros">
+              <div class="wf-input-mock wf-input" style="width: 250px;"><i data-lucide="search" size="12"></i><span>Buscar Centro...</span></div>
+              <div class="wf-button-mock filled wf-action"><i data-lucide="plus" size="12"></i> Novo Centro</div>
+            </div>
+            <div class="grid-3" data-label="Centros Cadastrados">
+              <div class="wf-box wf-data" data-label="Centro 1">
+                <span class="monospace" style="font-weight: 800;">CT-LASER-CNC</span>
+                <div class="wf-subtitle">Corte Laser CNC</div>
+                <div class="wf-item wf-decoration" style="margin-top: 8px;">Capacidade: 150 pç/h</div>
+                <div class="flex-between" style="margin-top: 12px;">
+                  <span class="wf-chip wf-decoration">Operacional</span>
+                  <div class="wf-button-mock wf-action">Editar</div>
+                </div>
+              </div>
+              <div class="wf-box wf-data" data-label="Centro 2">
+                <span class="monospace" style="font-weight: 800;">CT-WELD-ROB</span>
+                <div class="wf-subtitle">Célula de Soldagem Robotizada</div>
+                <div class="wf-item wf-decoration" style="margin-top: 8px;">Capacidade: 80 pç/h</div>
+                <div class="flex-between" style="margin-top: 12px;">
+                  <span class="wf-chip wf-decoration">Operacional</span>
+                  <div class="wf-button-mock wf-action">Editar</div>
+                </div>
+              </div>
+              <div class="wf-box wf-data" data-label="Centro 3">
+                <span class="monospace" style="font-weight: 800;">CT-PAINT-AUTO</span>
+                <div class="wf-subtitle">Linha de Pintura Automotiva</div>
+                <div class="wf-item wf-decoration" style="margin-top: 8px;">Capacidade: 200 pç/h</div>
+                <div class="flex-between" style="margin-top: 12px;">
+                  <span class="wf-chip wf-action">Manutenção</span>
+                  <div class="wf-button-mock wf-action">Editar</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== ESTRUTURA DE PRODUTOS ==================== -->
+        <div id="page-boms" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (BOM)">
+            <div class="wf-title wf-text"><i data-lucide="book-open"></i> ESTRUTURAS DE PRODUTOS (BOM)</div>
+            <div class="grid-2">
+              <div class="wf-box wf-data" data-label="BOM Card 1">
+                <div class="flex-between">
+                  <span class="monospace" style="font-weight: 800;">PROD-RAIL-01</span>
+                  <span class="wf-chip wf-decoration">V2 (Ativa)</span>
+                </div>
+                <div class="wf-subtitle" style="margin-top: 6px;">GRADE METÁLICA DE SEGURANÇA</div>
+                <div class="wf-button-mock filled wf-action" onclick="openCostRollup()" style="margin-top: 12px;"><i data-lucide="dollar-sign" size="12"></i> Custo Roll-up</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- COST ROLLUP DIALOG MOCK -->
+          <div id="cost-rollup-dialog" class="wf-modal-overlay" style="display: none;">
+            <div class="wf-modal wf-container" data-label="Modal: Custo Teórico">
+              <div class="wf-modal-header wf-text">
+                <span>Custo Teórico - PROD-RAIL-01 (100 UN)</span>
+                <i data-lucide="x" size="16" onclick="closeCostRollup()" style="cursor: pointer;"></i>
+              </div>
+              <div class="wf-modal-body">
+                <table class="wf-table wf-data">
+                  <thead><tr><th>Componente</th><th>Qtd</th><th>Perda</th><th>Custo Unit</th><th>Custo Total</th></tr></thead>
+                  <tbody>
+                    <tr><td class="monospace">MAT-STEEL-001</td><td>441 KG</td><td>5%</td><td>R$ 10,00</td><td>R$ 4.410,00</td></tr>
+                    <tr><td class="monospace">MAT-COPPER-02</td><td>1.212 M</td><td>1%</td><td>R$ 35,00</td><td>R$ 42.420,00</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="wf-modal-footer"><div class="wf-button-mock" onclick="closeCostRollup()">Fechar</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== ORDENS DE PRODUÇÃO ==================== -->
+        <div id="page-production-orders" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Ordens de Produção)">
+            <div class="wf-title wf-text"><i data-lucide="clipboard-list"></i> ORDENS DE PRODUÇÃO</div>
+            <table class="wf-table wf-data">
+              <thead>
+                <tr><th>Ordem</th><th>Produto</th><th>Planejada</th><th>Produzida</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="monospace">OP-2026-004</td><td>PROD-RAIL-01</td><td>500 UN</td><td>240 UN</td><td><span class="wf-chip wf-decoration">Em Execução</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== TRANSPORTADORAS ==================== -->
+        <div id="page-carriers" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Transportadoras)">
+            <div class="wf-title wf-text" data-label="Título da Página">
+              <i data-lucide="truck"></i> TRANSPORTADORAS CREDENCIADAS
+            </div>
+            <div class="wf-box wf-container flex-between" data-label="Filtros">
+              <div class="wf-input-mock wf-input" style="width: 250px;"><i data-lucide="search" size="12"></i><span>Buscar Transportadora...</span></div>
+              <div class="wf-button-mock filled wf-action"><i data-lucide="plus" size="12"></i> Nova Transportadora</div>
+            </div>
+            <div class="grid-3" data-label="Grade de Credenciados">
+              <div class="wf-box wf-data" data-label="Card Transportadora 1">
+                <span style="font-weight: 800; font-size: 12px;">RÁPIDO PAULISTA LTDA</span>
+                <div style="font-size: 9px; color: var(--text-secondary); margin-top: 4px;">CNPJ: 12.345.678/0001-90</div>
+                <div style="font-size: 9px; color: var(--text-light)">Abrangência: Estadual (SP)</div>
+                <div class="flex-between" style="margin-top: 12px; border-top: 1px dashed var(--border-color-default); padding-top: 8px;">
+                  <span class="wf-chip wf-decoration">Ativa</span>
+                  <div class="wf-button-mock wf-action">Detalhes</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== EXPEDIÇÃO ==================== -->
+        <div id="page-shipment-orders" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Expedição)">
+            <div class="wf-title wf-text" data-label="Título da Página">
+              <i data-lucide="package-check"></i> EXPEDIÇÃO E EMBARQUE (SHIPMENT ORDERS)
+            </div>
+            <table class="wf-table wf-data" data-label="Pedidos Pendentes">
+              <thead>
+                <tr><th>Ordem de Envio</th><th>Cliente</th><th>Cidade/UF</th><th>Volume</th><th>Status Envio</th><th>Ação</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="monospace">SHP-2026-554</td>
+                  <td>CONSTRUTORA E ENGENHARIA BRASIL</td>
+                  <td>Campinas/SP</td>
+                  <td>1.250 KG</td>
+                  <td><span class="wf-chip wf-container">Aguardando Faturamento</span></td>
+                  <td><div class="wf-button-mock filled wf-action" style="padding: 2px 6px;">Faturar</div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== DESPACHOS & DAMDFE ==================== -->
+        <div id="page-logistics" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Despachos)">
+            <div class="wf-title wf-text"><i data-lucide="send-horizontal"></i> DESPACHOS & EMISSÃO DE DAMDFE</div>
+            <div class="grid-2">
+              <div class="wf-box wf-data">
+                <span class="wf-subtitle">Despacho Ativo</span>
+                <div class="wf-item monospace">Despacho: DSP-2026-90</div>
+                <div class="wf-item">Transporte Rápido Paulista | ABC1D23</div>
+                <div class="wf-button-mock filled wf-action" onclick="viewDamdfe()" style="margin-top: 12px;">Visualizar DAMDFE A4</div>
+              </div>
+            </div>
+
+            <div id="damdfe-view-panel" style="margin-top: 20px; display: none;">
+              <div class="wf-box wf-container" data-label="Documento DAMDFE A4">
+                <div class="damdfe-container">
+                  <div style="text-align: center; font-weight: 800; border: 1px solid #000000; padding: 4px; margin-bottom: 8px;">DAMDFE - Manifesto Fiscal Eletrônico</div>
+                  <div class="damdfe-header">
+                    <div class="damdfe-box">
+                      <div class="damdfe-label">Emitente</div>
+                      <div class="damdfe-val">KAMI-NOTE METALURGICA LTDA</div>
+                    </div>
+                    <div class="damdfe-box"><div class="damdfe-barcode"></div></div>
+                    <div class="damdfe-box">
+                      <div class="damdfe-label">Número</div>
+                      <div class="damdfe-val">000000090</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== MONITOR NF-e ==================== -->
+        <div id="page-nfe-monitor" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Monitor NF-e)">
+            <div class="wf-title wf-text" data-label="Título da Página"><i data-lucide="file-check-2"></i> MONITOR DE NOTAS FISCAIS (NF-e)</div>
+            <table class="wf-table wf-data">
+              <thead>
+                <tr><th>Nº Nota</th><th>Chave de Acesso</th><th>Cliente</th><th>Valor Total</th><th>Status SEFAZ</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1024</td>
+                  <td class="monospace">35260611222333000144550010000010241001234567</td>
+                  <td>CONSTRUTORA E ENGENHARIA BRASIL</td>
+                  <td>R$ 15.200,00</td>
+                  <td><span class="wf-chip wf-decoration">Autorizada</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== CONFIGURAÇÃO FISCAL ==================== -->
+        <div id="page-fiscal-settings" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Configuração Fiscal)">
+            <div class="wf-title wf-text"><i data-lucide="settings"></i> CONFIGURAÇÃO FISCAL</div>
+            <div class="wf-box wf-container" data-label="Formulário">
+              <div class="grid-2">
+                <div class="wf-box wf-input" data-label="Regime">
+                  <div class="damdfe-label">Regime Tributário</div>
+                  <div class="wf-input-mock"><span>Lucro Real (Geral)</span></div>
+                </div>
+                <div class="wf-box wf-input" data-label="CNPJ">
+                  <div class="damdfe-label">CNPJ do Emitente</div>
+                  <div class="wf-input-mock"><span>11.222.333/0001-44</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== FROTA ==================== -->
+        <div id="page-fleet" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Frota)">
+            <div class="wf-title wf-text"><i data-lucide="truck"></i> GESTÃO DE VEÍCULOS (FROTA)</div>
+            <table class="wf-table wf-data">
+              <thead>
+                <tr><th>Placa</th><th>Modelo</th><th>Capacidade</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="monospace" style="font-weight: 700;">ABC-1D23</td>
+                  <td>Mercedes-Benz Accelo 1016</td>
+                  <td>8.300 KG</td>
+                  <td><span class="wf-chip wf-decoration">Disponível</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== FUNCIONÁRIOS ==================== -->
+        <div id="page-hr" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Funcionários)">
+            <div class="wf-title wf-text"><i data-lucide="user-check"></i> EQUIPE E COLABORADORES</div>
+            
+            <div class="grid-2-1">
+              <!-- Left Side: Employee List -->
+              <div class="wf-box wf-data" data-label="Grid de Funcionários">
+                <div class="grid-2">
+                  <div class="wf-box wf-container" data-label="Card Funcionário 1" onclick="selectEmployee('Manoel Santos', 'Operador de Prensa CNC', 'Produção', '123.456.789-00', 'manoel.santos@railfactory.com.br')" style="cursor: pointer; padding: 10px;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                      <!-- Avatar placeholder X -->
+                      <div class="topbar-avatar wf-placeholder-x" style="width: 36px; height: 36px; border-radius: 50%; font-size: 0;" data-label="Avatar (X)"></div>
+                      <div>
+                        <strong style="font-size: 12px;">Manoel Santos</strong>
+                        <div style="font-size: 9px; color: var(--text-secondary)">Operador de Prensa CNC</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Side: Employee Detail Panel Drawer -->
+              <div class="wf-box wf-container" id="employee-drawer" data-label="Painel de Detalhes do Colaborador (Drawer)">
+                <span class="wf-subtitle wf-text">DETALHES DO COLABORADOR</span>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 12px 0; padding-bottom: 12px; border-bottom: 1px dashed var(--border-color-default);">
+                  <!-- Photo placeholder with diagonal cross -->
+                  <div class="wf-image-mock wf-placeholder-x" style="width: 80px; height: 80px; border-radius: 50%;" data-label="Photo Placeholder (X)">
+                    <span style="background: var(--bg-card); font-size: 8px; padding: 1px 4px; border: 1px solid var(--border-color-default);">FOTO</span>
+                  </div>
+                  <strong style="font-size: 14px;" id="emp-name">Manoel Santos</strong>
+                  <span style="font-size: 10px; color: var(--text-secondary);" id="emp-role">Operador de Prensa CNC</span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div class="wf-item wf-data" data-label="Campo CPF">
+                    <div class="damdfe-label">CPF</div>
+                    <strong class="monospace" id="emp-cpf">123.456.789-00</strong>
+                  </div>
+                  <div class="wf-item wf-data" data-label="Campo Email">
+                    <div class="damdfe-label">Email Corporativo</div>
+                    <span class="monospace" id="emp-email">manoel.santos@railfactory.com.br</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== USUÁRIOS ==================== -->
+        <div id="page-users" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Usuários)">
+            <div class="wf-title wf-text" data-label="Título da Página"><i data-lucide="users"></i> GERENCIAMENTO DE USUÁRIOS</div>
+            <table class="wf-table wf-data">
+              <thead>
+                <tr><th>Nome Completo</th><th>Email</th><th>Perfil</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Marcos Santos</strong></td>
+                  <td class="monospace">marcos.santos@kami-note.com</td>
+                  <td><span class="wf-chip">Administrador</span></td>
+                  <td><span class="wf-chip wf-decoration">Ativo</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== NÍVEIS DE ACESSO ==================== -->
+        <div id="page-roles" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Níveis de Acesso)">
+            <div class="wf-title wf-text"><i data-lucide="shield-check"></i> NÍVEIS DE ACESSO</div>
+            <div class="grid-1-2">
+              <div class="wf-box wf-data">
+                <span class="wf-subtitle">Cargos</span>
+                <div class="wf-item" style="border: 2px solid var(--border-container);">Administrador</div>
+              </div>
+              <div class="wf-box wf-container">
+                <span class="wf-subtitle">Permissões</span>
+                <div class="wf-item"><i data-lucide="check-square" size="14"></i> <span class="monospace">inventory.admin</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== AUDITORIA ==================== -->
+        <div id="page-audit" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Auditoria)">
+            <div class="wf-title wf-text"><i data-lucide="scroll-text"></i> LOGS DE AUDITORIA</div>
+            <table class="wf-table wf-data">
+              <thead>
+                <tr><th>Data / Hora</th><th>Módulo</th><th>Operador</th><th>Ação</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="monospace">10/06/2026 11:20:15</td>
+                  <td><span class="wf-chip">Inventory</span></td>
+                  <td>marcos.santos@kami-note.com</td>
+                  <td><strong>Bloqueio de Lote</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== INTEGRAÇÕES ==================== -->
+        <div id="page-integrations" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Integrações)">
+            <div class="wf-title wf-text"><i data-lucide="plug"></i> SERVIÇOS E INTEGRAÇÕES</div>
+            <div class="grid-3">
+              <div class="wf-box wf-container" data-label="Asaas">
+                <span class="wf-subtitle">Asaas Payments</span>
+                <div class="wf-button-mock wf-action" onclick="openIntegrationModal('Asaas')" style="margin-top: 12px;">Configurar</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="integration-dialog" class="wf-modal-overlay" style="display: none;">
+            <div class="wf-modal wf-container" data-label="Modal: Configuração">
+              <div class="wf-modal-header wf-text">
+                <span id="modal-integration-title">Configurar Integração</span>
+                <i data-lucide="x" size="16" onclick="closeIntegrationModal()" style="cursor: pointer;"></i>
+              </div>
+              <div class="wf-modal-body">
+                <div class="wf-box wf-input" data-label="Token">
+                  <div class="damdfe-label">Token de Acesso (API Key)</div>
+                  <div class="wf-input-mock"><span>$live_token_***********************</span></div>
+                </div>
+              </div>
+              <div class="wf-modal-footer"><div class="wf-button-mock" onclick="closeIntegrationModal()">Fechar</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== EMPRESAS (TENANTS) ==================== -->
+        <div id="page-tenants" class="page-content">
+          <div class="wf-box wf-container" data-label="Área de Conteúdo (Empresas)">
+            <div class="wf-title wf-text" data-label="Título da Página"><i data-lucide="building-2"></i> GESTÃO DE EMPRESAS (TENANTS)</div>
+            <table class="wf-table wf-data">
+              <thead>
+                <tr><th>Nome da Organização</th><th>Código Tenant</th><th>CNPJ</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>KAMI-NOTE METALURGICA LTDA</strong></td>
+                  <td class="monospace" style="color: var(--border-container);">kami-note</td>
+                  <td class="monospace">11.222.333/0001-44</td>
+                  <td><span class="wf-chip wf-decoration">Ativa</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Set up interactive image upload rendering for mocks
+    function setupImageUploads() {
+      const imageContainers = document.querySelectorAll('.wf-image-mock');
+      
+      imageContainers.forEach((container, index) => {
+        // Create matching hidden file input
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.style.display = 'none';
+        input.id = 'wf-img-input-' + index;
+        
+        container.parentNode.insertBefore(input, container.nextSibling);
+        
+        container.style.cursor = 'pointer';
+        container.title = 'Clique para renderizar uma imagem real';
+        
+        container.addEventListener('click', () => {
+          input.click();
+        });
+        
+        input.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              container.style.backgroundImage = `url('${event.target.result}')`;
+              container.style.backgroundSize = 'cover';
+              container.style.backgroundPosition = 'center';
+              container.style.filter = 'grayscale(100%) contrast(120%)';
+              
+              container.classList.remove('wf-placeholder-x');
+              const span = container.querySelector('span');
+              if (span) span.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      });
+    }
+
+    // Initialize image upload behaviors
+    setupImageUploads();
+
+    // INTERACTIVE FUNCTIONS
+    function changeTheme(themeName) {
+      if (themeName === 'classic') {
+        document.documentElement.removeAttribute('data-theme');
+        changeBorderMode('mono');
+      } else {
+        document.documentElement.setAttribute('data-theme', themeName);
+        if (themeName === 'multicolor') {
+          changeBorderMode('multicolor');
+        } else {
+          changeBorderMode('mono');
+        }
+      }
+    }
+
+    function changeBorderMode(mode) {
+      const elements = document.querySelectorAll('.wf-box, .wf-item, .wf-table th, .wf-table td, .topbar, .sidebar');
+      const borderModeSelect = document.getElementById('borderMode');
+      
+      if (mode === 'mono') {
+        elements.forEach(el => {
+          el.style.borderColor = 'var(--border-color-default)';
+        });
+        borderModeSelect.value = 'mono';
+      } else {
+        elements.forEach(el => {
+          el.style.borderColor = '';
+        });
+        borderModeSelect.value = 'multicolor';
+      }
+    }
+
+    function changeLineStyle(style) {
+      document.documentElement.style.setProperty('--border-style-default', style);
+    }
+
+    function changeThickness(thickness) {
+      document.documentElement.style.setProperty('--border-width-default', thickness);
+    }
+
+    function toggleLabels() {
+      const body = document.body;
+      const btn = document.getElementById('toggleLabelsBtn');
+      if (body.classList.contains('show-labels')) {
+        body.classList.remove('show-labels');
+        btn.textContent = 'Mostrar Labels';
+        btn.classList.remove('active');
+      } else {
+        body.classList.add('show-labels');
+        btn.textContent = 'Ocultar Labels';
+        btn.classList.add('active');
+      }
+    }
+
+    function switchPage(pageId, navElement) {
+      document.querySelectorAll('.page-content').forEach(page => {
+        page.classList.remove('active');
+      });
+      const target = document.getElementById('page-' + pageId);
+      if (target) target.classList.add('active');
+
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      if (navElement) navElement.classList.add('active');
+    }
+
+    // MODAL DIALOGS CONTROL
+    function openCostRollup() {
+      document.getElementById('cost-rollup-dialog').style.display = 'flex';
+    }
+    
+    function closeCostRollup() {
+      document.getElementById('cost-rollup-dialog').style.display = 'none';
+    }
+
+    function openIntegrationModal(name) {
+      document.getElementById('modal-integration-title').innerHTML = `Configurar Integração - ${name}`;
+      document.getElementById('integration-dialog').style.display = 'flex';
+    }
+
+    document.getElementById('integration-dialog').onclick = function(e) {
+      if (e.target === this) closeIntegrationModal();
+    }
+
+    function closeIntegrationModal() {
+      document.getElementById('integration-dialog').style.display = 'none';
+    }
+
+    function viewDamdfe() {
+      const panel = document.getElementById('damdfe-view-panel');
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>

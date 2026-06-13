@@ -1,0 +1,39 @@
+@startuml
+title Caso de Uso - End-to-End (TO-BE) (v2)
+left to right direction
+skinparam linetype ortho
+
+actor "Admin" as Admin
+actor "Almoxarifado" as WH
+actor "Planejamento" as Planner
+actor "Operador" as Operator
+actor "Qualidade" as QA
+actor "Expedicao" as Shipping
+actor "Cliente" as Customer
+
+rectangle "RAIL Factory" {
+  usecase "Gerir tenants e acessos" as UC_IAM
+  usecase "Receber NF-e e conferir\n(conferencia cega)" as UC_IN
+  usecase "Planejar e liberar OP" as UC_OP
+  usecase "Executar OP e apontar\n(scrap/paradas)" as UC_EXEC
+  usecase "Inspecionar qualidade" as UC_QA
+  usecase "Separar e despachar" as UC_OUT
+  usecase "Acompanhar entrega" as UC_TRACK
+  usecase "Gerar dashboards e relatorios" as UC_BI
+}
+
+Admin --> UC_IAM
+WH --> UC_IN
+Planner --> UC_OP
+Operator --> UC_EXEC
+QA --> UC_QA
+Shipping --> UC_OUT
+Customer --> UC_TRACK
+Admin --> UC_BI
+
+UC_OP .> UC_EXEC : <<include>>
+UC_EXEC .> UC_QA : <<include>>
+UC_OUT .> UC_TRACK : <<include>>
+
+@enduml
+

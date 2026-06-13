@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual do Usuário - Plataforma Rail Factory - Cópia</title>
+  <style>
+    body {
+      font-family: 'Arial', 'Calibri', sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      color: #333333;
+    }
+    h1, h2, h3, h4 {
+      color: #0078d4;
+      margin-top: 1.8em;
+      margin-bottom: 0.6em;
+      font-weight: bold;
+    }
+    h1 {
+      border-bottom: 2px solid #0078d4;
+      padding-bottom: 8px;
+      font-size: 28px;
+    }
+    h2 {
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 6px;
+      font-size: 22px;
+    }
+    h3 {
+      font-size: 18px;
+    }
+    p, li {
+      font-size: 15px;
+      margin-bottom: 12px;
+      text-align: justify;
+    }
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 20px;
+    }
+    code {
+      font-family: 'Consolas', 'Courier New', monospace;
+      background-color: #f4f4f4;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 14px;
+    }
+    pre {
+      background-color: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      border-left: 4px solid #0078d4;
+      margin-bottom: 20px;
+    }
+    pre code {
+      padding: 0;
+      background-color: transparent;
+      border-radius: 0;
+    }
+    a {
+      color: #0078d4;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    hr {
+      border: 0;
+      border-top: 1px solid #e0e0e0;
+      margin: 30px 0;
+    }
+    .instruction-banner {
+      background-color: #f0f4f8;
+      border-left: 4px solid #0078d4;
+      padding: 20px;
+      margin-bottom: 40px;
+      border-radius: 4px;
+      font-size: 15px;
+    }
+    .figure-container {
+      margin: 40px 0;
+      page-break-inside: avoid;
+      text-align: center;
+    }
+    .figure-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-align: center;
+      color: #333333;
+    }
+    .figure-image {
+      max-width: 90%;
+      border: 1px solid #c0c0c0;
+      display: block;
+      margin: 8px auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    }
+    .figure-caption {
+      font-size: 14px;
+      color: #555555;
+      margin-top: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="instruction-banner">
+    <strong>📋 Como copiar o Manual do Usuário Completo para o Word / Google Docs:</strong><br/>
+    1. Abra esta página no seu navegador web.<br/>
+    2. Pressione <strong>Ctrl + A</strong> para selecionar todo o manual (texto formatado, títulos e listas).<br/>
+    3. Pressione <strong>Ctrl + C</strong> para copiar para a área de transferência.<br/>
+    4. Abra o seu editor (Microsoft Word ou Google Docs) e pressione <strong>Ctrl + V</strong>.<br/>
+    <em>Todo o texto formatado, cabeçalhos, marcadores e estrutura do documento serão importados mantendo o estilo original!</em>
+  </div>
+
+  <h1 id="6-manual-do-usuário">6. MANUAL DO USUÁRIO</h1>
+<p>Este documento constitui o manual de operação oficial da plataforma <strong>Rail Factory</strong>, fornecendo diretrizes detalhadas para a execução de processos de manufatura, suprimentos, controle de estoques, logística, faturamento fiscal e administração de segurança e acessos (IAM/RBAC).</p>
+<p>Os procedimentos descritos neste guia destinam-se a operadores de almoxarifado, planejadores de produção, faturistas, engenheiros de processo e administradores do sistema. A operação dos módulos deve seguir estritamente as regras de negócio e validações documentadas.</p>
+<p>Para documentação técnica complementar, arquitetura de sistemas e contratos de rotas REST, consultar o <a href="file:///home/levi/Projects/Rail-Factory-Fork/docs/FLUXOS<em>DE</em>TRABALHO.md">Mapeamento de Fluxos de Trabalho</a>.</p>
+<hr/>
+<h2 id="🧭-índice-dos-procedimentos-operacionais">🧭 Índice dos Procedimentos Operacionais</h2>
+<ul>
+<li><a href="#61-como-configurar-a-base-de-dados-organizações-e-acessar-o-sistema">6.1. Como Configurar a Base de Dados, Organizações e Acessar o Sistema</a></li>
+<li><a href="#62-como-gerenciar-recebimentos-de-notas-fiscais-e-mapear-skus">6.2. Como Gerenciar Recebimentos de Notas Fiscais e Mapear SKUs</a></li>
+<li><a href="#63-como-efetuar-a-conferência-física-cega-e-consultar-saldos-em-estoque">6.3. Como Efetuar a Conferência Física Cega e Consultar Saldos em Estoque</a></li>
+<li><a href="#64-como-cadastrar-recursos-de-fábrica-fichas-técnicas-bom-e-estimar-custos">6.4. Como Cadastrar Recursos de Fábrica, Fichas Técnicas (BOM) e Estimar Custos</a></li>
+<li><a href="#65-como-planejar-executar-e-apontar-ordens-de-produção-chão-de-fábrica">6.5. Como Planejar, Executar e Apontar Ordens de Produção (Chão de Fábrica)</a></li>
+<li><a href="#66-como-cadastrar-transportadoras-iniciar-ordens-de-expedição-e-despachar-embarques">6.6. Como Cadastrar Transportadoras, Iniciar Ordens de Expedição e Despachar Embarques</a></li>
+<li><a href="#67-como-fiscalizar-emissões-de-documentos-gerenciar-frota-rh-e-administrar-perfis-iam">6.7. Como Fiscalizar Emissões de Documentos, Gerenciar Frota, RH e Administrar Perfis (IAM)</a></li>
+<li><a href="#-faq-resolução-de-problemas-gerais">📋 FAQ — Resolução de Problemas Gerais</a></li>
+</ul>
+<hr/>
+<h2 id="61-como-configurar-a-base-de-dados-organizações-e-acessar-o-sistema">6.1. Como Configurar a Base de Dados, Organizações e Acessar o Sistema</h2>
+<p>Este fluxo compreende as etapas de inicialização estrutural da base de dados, a configuração de novas instâncias de organizações (<em>tenants</em>) e os procedimentos de login seguro.</p>
+<h3 id="611-como-inicializar-o-banco-de-dados-rota-/setup">6.1.1. Como Inicializar o Banco de Dados ( rota <code>/setup</code> )</h3>
+<p>A inicialização do banco de dados prepara a base de dados relacional para uso. O objetivo deste procedimento é executar as migrações estruturais da base de dados e carregar os dados cadastrais padrões (<em>seeds</em>) do sistema. Por se tratar de um assistente inicial de sistema, o acesso à tela é feito diretamente digitando a rota <code>/setup</code> na barra de endereço do navegador. Não há uma opção correspondente no menu lateral, uma vez que esta operação é restrita às etapas de implantação do sistema. A interface dispõe de um botão central rotulado como <strong>Initialize Database</strong>, encarregado de disparar a rotina de criação de tabelas e cargas preliminares no backend. Para realizar esta operação, siga o seguinte procedimento:</p>
+<ol>
+<li>Digitar o endereço <code>/setup</code> na barra de navegação do navegador e pressionar Enter.</li>
+<li>Clicar no botão <strong>"Initialize Database"</strong> localizado no painel central da tela.</li>
+<li>Acompanhar a barra de progresso e aguardar o processamento completo exibido na tela. O sistema redirecionará o usuário à página de login automaticamente após o término.</li>
+</ol>
+<p>Em caso de indisponibilidade ou falha de credenciais do servidor PostgreSQL, a operação será interrompida e uma mensagem de erro com o diagnóstico técnico correspondente será apresentada na tela.</p>
+<hr/>
+<h3 id="612-como-cadastrar-e-configurar-organizações-multitenancy-rota-/app/settings/tenants">6.1.2. Como Cadastrar e Configurar Organizações (Multitenancy) ( rota <code>/app/settings/tenants</code> )</h3>
+<p>O cadastro de organizações permite registrar novas filiais ou parceiras corporativas na base de dados para garantir o isolamento lógico dos dados. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>CONFIGURAÇÕES</strong> no menu lateral esquerdo e clicar na opção <strong>EMPRESAS</strong>. A interface possui uma tabela de listagem geral de organizações e o botão rotulado como <strong>Novo Tenant</strong>, que abre a gaveta lateral direita contendo o formulário de cadastro. Esse formulário exige o preenchimento do <strong>Nome da Organização</strong> (representando a razão social da filial), o <strong>Código da Organização</strong> (um identificador curto, alfanumérico e exclusivo usado para a resolução de rotas, como <code>dev</code> ou <code>acme</code>) e a <strong>String de Conexão</strong> (dados adicionais de credenciais e host de banco de dados específico, caso necessário). O salvamento e teste de conectividade são ativados pelo botão <strong>Salvar</strong>. Para realizar este cadastro, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>CONFIGURAÇÕES</strong> na barra lateral esquerda e clicar na opção <strong>EMPRESAS</strong> (ou navegar até a rota <code>/app/settings/tenants</code>).</li>
+<li>Clicar no botão <strong>"Novo Tenant"</strong> localizado no canto superior direito da tela.</li>
+<li>Preencher o campo <strong>Nome da Organização</strong> com a razão social da filial, o campo <strong>Código da Organização</strong> com o código de acesso curto e o campo <strong>String de Conexão</strong> nos respectivos campos da gaveta lateral.</li>
+<li>Clicar no botão <strong>"Salvar"</strong> para registrar a organização no banco de dados corporativo.</li>
+</ol>
+<p>O código da organização fornecido deve ser único em relação aos demais tenants ativos, digitado obrigatoriamente em letras minúsculas e sem espaços ou caracteres especiais.</p>
+<hr/>
+<h3 id="613-como-realizar-o-login-e-autenticação-rota-/">6.1.3. Como Realizar o Login e Autenticação ( rota <code>/</code> )</h3>
+<p>O login do usuário permite selecionar a organização de trabalho e autenticar o operador via protocolo OAuth. O acesso à tela ocorre digitando o endereço eletrônico principal do sistema (rota <code>/</code>). A interface apresenta o campo <strong>Código da Organização</strong> para informar o código da filial cadastrada e o botão <strong>Entrar com Google</strong> que redireciona a autenticação para os servidores do Google. Para realizar o acesso seguro, siga o seguinte procedimento:</p>
+<ol>
+<li>Acessar a rota <code>/</code> no navegador.</li>
+<li>Digitar o código de acesso da organização correspondente no campo <strong>Código da Organização</strong>.</li>
+<li>Clicar no botão <strong>"Entrar com Google"</strong> para ser redirecionado à página de verificação de conta do Google.</li>
+<li>Concluir a validação com as credenciais do Google para gerar o token JWT e retornar à tela inicial do painel logado do sistema.</li>
+</ol>
+<p>O código de organização informado no formulário deve corresponder a um tenant ativo e inicializado previamente no banco de dados corporativo.</p>
+<hr/>
+<h2 id="62-como-gerenciar-recebimentos-de-notas-fiscais-e-mapear-skus">6.2. Como Gerenciar Recebimentos de Notas Fiscais e Mapear SKUs</h2>
+<p>Este fluxo descreve como importar arquivos XML faturados por fornecedores e configurar associações de códigos de materiais para alinhar com o catálogo interno da fábrica.</p>
+<h3 id="621-como-monitorar-indicadores-no-painel-geral-dashboard-rota-/app">6.2.1. Como Monitorar Indicadores no Painel Geral (Dashboard) ( rota <code>/app</code> )</h3>
+<p>O painel de monitoramento operacional centraliza o andamento dos centros de trabalho e fornece indicadores visuais de saldos pendentes nas docas. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>GERAL</strong> no menu lateral esquerdo e clicar na opção <strong>INÍCIO</strong>. O painel exibe cards estatísticos contendo a contagem total de itens em doca, eficiência geral da fábrica e ordens ativas. Para monitorar as informações, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>GERAL</strong> na barra lateral esquerda e clicar em <strong>"INÍCIO"</strong> (ou navegar até a rota <code>/app</code>).</li>
+<li>Avaliar os gráficos de produtividade em tempo real e a barra de status de estoques pendentes de conferência.</li>
+<li>Clicar nas métricas específicas para acessar o detalhamento do módulo correspondente.</li>
+</ol>
+<p>Os dados exibidos na tela são atualizados de forma automática baseados nas transações de recebimentos e apontamentos de ordens efetuadas pelos operadores.</p>
+<hr/>
+<h3 id="622-como-acessar-a-fila-de-recebimento-de-notas-fiscais-nf-e-rota-/app/receipts">6.2.2. Como Acessar a Fila de Recebimento de Notas Fiscais (NF-e) ( rota <code>/app/receipts</code> )</h3>
+<p>A fila de recebimento de notas fiscais lista todos os documentos importados dos fornecedores. Para acessar este painel sem a URL direta, deve-se expandir a seção <strong>SUPRIMENTOS</strong> na barra lateral esquerda e selecionar a opção <strong>RECEBIMENTOS</strong>. A interface exibe uma tabela de registros contendo colunas como Número da NF-e, Nome do Emitente, Valor Total e o Status do Recebimento. Além disso, disponibiliza o botão <strong>IMPORTAR XML</strong> no topo direito. Para acessar as notas, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"SUPRIMENTOS"</strong> na barra lateral esquerda e clicar em <strong>"RECEBIMENTOS"</strong> (ou acessar a rota <code>/app/receipts</code>).</li>
+<li>Analisar o status operacional das notas na listagem (como Pendente, Em Conferência ou Aprovado).</li>
+<li>Utilizar o campo de busca no topo da tabela para filtrar notas específicas por número ou CNPJ do emitente.</li>
+</ol>
+<hr/>
+<h3 id="623-como-realizar-a-importação-de-arquivos-xml-de-nf-e-rota-/app/import-xml-ou-/app/receipts-gaveta-xml">6.2.3. Como Realizar a Importação de Arquivos XML de NF-e ( rota <code>/app/import-xml</code> ou <code>/app/receipts</code> - Gaveta XML )</h3>
+<p>A gaveta lateral de importação realiza a carga e validação da Nota Fiscal Eletrônica (NF-e) emitida pelo fornecedor. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>SUPRIMENTOS</strong> no menu lateral, clicar em <strong>RECEBIMENTOS</strong> e clicar no botão <strong>IMPORTAR XML</strong> (ou digitar diretamente a rota <code>/app/import-xml</code> no navegador). Ela possui a <strong>Área de Upload</strong> (região pontilhada destinada a receber o arrasto do arquivo <code>.xml</code>), o botão <strong>Confirmar e Importar</strong> que envia o arquivo para processamento no backend, e o botão <strong>Cancelar</strong> que fecha a gaveta sem realizar alterações. Para realizar a importação de um novo XML, siga o seguinte procedimento:</p>
+<ol>
+<li>Na fila de recebimentos de notas fiscais (acessada em <strong>SUPRIMENTOS</strong> -> <strong>RECEBIMENTOS</strong>), clicar no botão <strong>"IMPORTAR XML"</strong> localizado no canto superior direito.</li>
+<li>Arrastar o arquivo XML da nota fiscal correspondente e soltar sobre a área de upload delimitada (ou clicar na área para selecionar o arquivo localmente).</li>
+<li>Clicar no botão <strong>"Confirmar e Importar"</strong> para processar a nota fiscal.</li>
+</ol>
+<p>O arquivo XML da nota fiscal é validado pelo sistema. XMLs que não possuam assinatura digital válida ou cujo CNPJ destinatário seja diferente da organização de trabalho activa serão rejeitados na importação.</p>
+<hr/>
+<h3 id="624-como-associar-skus-de-fornecedores-ao-catálogo-de-materiais-internos-rota-/app/supply-chain/association">6.2.4. Como Associar SKUs de Fornecedores ao Catálogo de Materiais Internos ( rota <code>/app/supply-chain/association</code> )</h3>
+<p>O workbench de associação vincula os SKUs declarados nas notas de fornecedores aos itens catalogados no inventário da empresa e configura o fator de conversão de unidades de medida. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>SUPRIMENTOS</strong> na barra lateral esquerda e clicar na opção <strong>ASSOCIAÇÃO DE SKUs</strong>, ou clicar no link vermelho <strong>"Associar SKU"</strong> ao lado da nota fiscal correspondente na fila de recebimentos de notas fiscais. A interface disponibiliza o campo de seleção <strong>Material Interno</strong> (dropdown para escolher o item do catálogo), o campo <strong>Fator de Conversão</strong> (campo numérico decimal que multiplica a unidade da nota fiscal, como 12 para caixas com 12 peças), o botão <strong>Confirmar Associação</strong> que grava o mapeamento, e o botão <strong>Cadastrar Material</strong> para incluir insumos novos. Para realizar o mapeamento do item, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>SUPRIMENTOS</strong> na barra lateral esquerda e clicar em <strong>"ASSOCIAÇÃO DE SKUs"</strong> (ou clicar no link vermelho <strong>"Associar SKU"</strong> localizado na linha de uma nota pendente na fila de <strong>RECEBIMENTOS</strong>).</li>
+<li>Selecionar o item do fornecedor não mapeado na listagem disposta à esquerda da interface.</li>
+<li>Escolher o insumo correspondente no seletor <strong>Material Interno</strong> e digitar o fator de conversão de unidades no campo <strong>Fator de Conversão</strong>.</li>
+<li>Clicar no botão <strong>"Confirmar Associação"</strong> para gravar as definições do item.</li>
+</ol>
+<p>O fator de conversão de unidades informado deve conter obrigatoriamente um valor decimal estritamente positivo (maior que zero).</p>
+<hr/>
+<h2 id="63-como-efetuar-a-conferência-física-cega-e-consultar-saldos-em-estoque">6.3. Como Efetuar a Conferência Física Cega e Consultar Saldos em Estoque</h2>
+<p>Este fluxo descreve como realizar a conferência cega (física) das mercadorias descarregadas nas docas e consultar os saldos no inventário.</p>
+<h3 id="631-como-processar-a-contagem-blindada-conferência-cega-rota-/app/receipts-fila">6.3.1. Como Processar a Contagem Blindada (Conferência Cega) ( rota <code>/app/receipts</code> - Fila )</h3>
+<p>A fila de recebimentos de notas fiscais permite iniciar e validar a conferência física cega dos insumos. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>SUPRIMENTOS</strong> no menu lateral esquerdo e clicar em <strong>RECEBIMENTOS</strong>. O botão <strong>Iniciar Conferência</strong> altera o status da nota para <code>InConference</code> e bloqueia o documento para contagem do operador. No formulário de conferência, o campo <strong>Quantidade Contada</strong> recebe a quantidade contada nas docas (com valores originais do XML omitidos para garantir a neutralidade), e o botão <strong>Concluir Conferência</strong> finaliza a contagem. Para realizar a contagem física, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"SUPRIMENTOS"</strong> no menu lateral esquerdo, clicar em <strong>"RECEBIMENTOS"</strong>, localizar a nota fiscal da carga nas docas e clicar no botão <strong>"Iniciar Conferência"</strong> na linha correspondente.</li>
+<li>Efetuar a contagem física das mercadorias no armazém e digitar a quantidade contada no respectivo campo do formulário de conferência.</li>
+<li>Clicar no botão <strong>"Concluir Conferência"</strong> para realizar o processamento de validação automática.</li>
+</ol>
+<p>Se as quantidades contadas baterem com as informadas no XML original, o status da nota muda para <code>Approved</code> e as quantidades entram no estoque como disponíveis (<code>Available</code>). Se houver divergências, o status da nota passa a ser <code>Divergent</code> e os insumos entram no estoque retidos na quarentena sob o status de lote bloqueado (<code>Blocked</code>).</p>
+<hr/>
+<h3 id="632-como-consultar-lotes-e-trilha-cronológica-de-saldos-de-estoque-rota-/app/inventory">6.3.2. Como Consultar Lotes e Trilha Cronológica de Saldos de Estoque ( rota <code>/app/inventory</code> )</h3>
+<p>A página de estoques permite consultar saldos físicos, lotes em quarentena e rastrear o histórico de movimentações. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>SUPRIMENTOS</strong> no menu lateral esquerdo e clicar na opção <strong>ESTOQUE</strong>. A interface apresenta o campo <strong>Barra de Busca</strong> (pesquisa de lotes por insumo, fabricante, nota fiscal ou fornecedor), o filtro <strong>Ocultar estoques zerados</strong> (esconde registros sem saldo físico), o <strong>Seletor de Layout</strong> (alterna entre tabela e cards de materiais), o botão de <strong>Histórico</strong> (ícone de relógio para ver o histórico cronológico de movimentação do lote) e o botão <strong>Liberar Lote</strong> (ação de liberação rápida para supervisores). Clicar no código do material redireciona o usuário para a rota de detalhamento <code>/app/inventory/materials/{código<em>do</em>material}</code>. Para gerenciar os lotes de estoque, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"SUPRIMENTOS"</strong> na barra lateral esquerda e clicar em <strong>"ESTOQUE"</strong> (ou acessar a rota <code>/app/inventory</code>).</li>
+<li>Informar os dados de busca na barra de filtros e aplicar os parâmetros de exibição desejados.</li>
+<li>Clicar no ícone de relógio (<strong>"Histórico"</strong>) na linha do lote para visualizar a trilha de movimentações do material, ou no código do material para acessar os detalhes em <code>/app/inventory/materials/{código<em>do</em>material}</code>.</li>
+<li>Clicar no botão <strong>"Liberar Lote"</strong> caso possua perfil de supervisor e precise autorizar o uso de um lote bloqueado.</li>
+</ol>
+<p>A liberação de lotes bloqueados na quarentena só é permitida a usuários com cargo de supervisor ou superior cadastrados no IAM.</p>
+<hr/>
+<h2 id="64-como-cadastrar-recursos-de-fábrica-fichas-técnicas-bom-e-estimar-custos">6.4. Como Cadastrar Recursos de Fábrica, Fichas Técnicas (BOM) e Estimar Custos</h2>
+<p>Este fluxo engloba as definições de Centros de Trabalho e fichas técnicas (BOM), com suporte a estimativa de custos teóricos de fabricação.</p>
+<h3 id="641-como-cadastrar-centros-de-trabalho-e-suas-capacidades-rota-/app/production/work-centers">6.4.1. Como Cadastrar Centros de Trabalho e Suas Capacidades ( rota <code>/app/production/work-centers</code> )</h3>
+<p>O cadastro de centros de trabalho registra as linhas de produção da fábrica. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>PRODUÇÃO</strong> na barra lateral esquerda e clicar em <strong>CENTROS DE TRABALHO</strong>. O botão <strong>Novo Centro</strong> abre a gaveta de cadastro contendo os campos <strong>Nome do Centro</strong> (código de identificação do recurso, como <code>WC-COR-01</code>), <strong>Capacidade Horária</strong> (volume nominal processado por hora de máquina), <strong>Custo por Hora</strong> (valor de operação do recurso) e <strong>Eficiência Nominal</strong> (rendimento de linha planejado, como 95%). O botão <strong>Salvar</strong> grava e valida o recurso. Para cadastrar um recurso, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"PRODUÇÃO"</strong> na barra lateral esquerda, clicar em <strong>"CENTROS DE TRABALHO"</strong> e depois no botão <strong>"Novo Centro"</strong>.</li>
+<li>Preencher o código do centro, a capacidade por hora, o custo direto por hora e a eficiência nominal da linha nos respectivos campos do formulário.</li>
+<li>Clicar no botão <strong>"Salvar"</strong> para registrar o recurso de fábrica.</li>
+</ol>
+<p>Os campos numéricos de custo operacional, eficiência e capacidade do recurso de fábrica não podem possuir valores nulos ou negativos.</p>
+<hr/>
+<h3 id="642-como-criar-uma-nova-ficha-técnica-bom-rota-/app/production/boms-modal">6.4.2. Como Criar uma Nova Ficha Técnica (BOM) ( rota <code>/app/production/boms</code> - Modal )</h3>
+<p>A criação da ficha técnica (BOM) define a estrutura principal de insumos de um produto acabado e seu lote padrão de processo. Para abrir a interface de cadastro sem a URL direta, deve-se expandir a seção <strong>PRODUÇÃO</strong> na barra lateral esquerda, clicar em <strong>ESTRUTURA DE PRODUTOS</strong> e acionar o botão <strong>Nova BOM</strong> no canto superior direito. O modal requer a seleção do <strong>Produto</strong> (campo autocomplete que busca insumos cadastrados na categoria de Produto Acabado/FinishedGood) e a definição do <strong>Lote Padrão (Batch Size)</strong> (campo numérico decimal, com valor padrão de <code>1.0</code>, que representa a base quantitativa de rendimento da receita). Para criar a estrutura, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"PRODUÇÃO"</strong> na barra lateral esquerda, clicar em <strong>"ESTRUTURA DE PRODUTOS"</strong> e clicar em <strong>"Nova BOM"</strong>.</li>
+<li>Digitar o código ou nome do produto acabado no campo <strong>Produto</strong> e selecionar a sugestão exibida pelo autocomplete.</li>
+<li>Informar o volume correspondente no campo <strong>Lote Padrão (Batch Size)</strong> (caso seja diferente de 1.0).</li>
+<li>Clicar no botão <strong>"Criar BOM"</strong> para gravar o cabeçalho e disponibilizar a inserção de componentes.</li>
+</ol>
+<hr/>
+<h3 id="6421-como-adicionar-componentes-à-ficha-técnica-bom-rota-/app/production/boms-componentes">6.4.2.1. Como Adicionar Componentes à Ficha Técnica (BOM) ( rota <code>/app/production/boms</code> - Componentes )</h3>
+<p>Após criar a ficha técnica, deve-se vincular as matérias-primas e dosagens necessárias. Na listagem de estruturas de produtos, clicar sobre o card da receita para expandir seu conteúdo e disponibilizar o painel de cadastro de componentes. A interface oferece os campos <strong>Código do material</strong> (autocomplete restrito a itens de matéria-prima/RawMaterial), <strong>Qtd</strong> (quantidade consumida para o lote padrão) e <strong>Perda (%)</strong> (fator de perda técnica esperada, limitado ao intervalo de 0% a 99.99%). O campo de unidade de medida (UM) é preenchido automaticamente com base no cadastro do catálogo. Para adicionar componentes, siga o seguinte procedimento:</p>
+<ol>
+<li>Na tela de estruturas de produtos, expandir a BOM correspondente e acessar a área de adição de itens.</li>
+<li>Informar o insumo no campo <strong>Código do material</strong> e selecionar a sugestão correspondente.</li>
+<li>Digitar a quantidade líquida requerida no campo <strong>Qtd</strong> e a perda no campo <strong>Perda (%)</strong>.</li>
+<li>Clicar no botão <strong>"Salvar"</strong> (ou pressionar Enter) para registrar o componente na estrutura da receita.</li>
+<li>Após concluir a inserção de todos os itens, clicar no botão <strong>"Ativar"</strong> no card da receita para homologar a versão e liberá-la para as ordens de produção.</li>
+</ol>
+<hr/>
+<h3 id="643-como-estruturar-e-clonar-versões-de-fichas-técnicas-rota-/app/production/boms-tabela">6.4.3. Como Estruturar e Clonar Versões de Fichas Técnicas ( rota <code>/app/production/boms</code> - Tabela )</h3>
+<p>O painel de receitas lista as estruturas ativas de produto acabado. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>PRODUÇÃO</strong> na barra lateral esquerda e clicar em <strong>ESTRUTURA DE PRODUTOS</strong>. A interface disponibiliza uma listagem geral de estruturas e o botão <strong>Clonar</strong> localizado na linha de cada card. Esse botão duplica toda a estrutura de insumos e parâmetros de uma receita ativa para uma nova versão em status de rascunho. Para clonar a receita, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"PRODUÇÃO"</strong> na barra lateral esquerda e clicar em <strong>"ESTRUTURA DE PRODUTOS"</strong>.</li>
+<li>Localizar a receita correspondente do produto acabado na listagem geral.</li>
+<li>Clicar no botão <strong>"Clonar"</strong> localizado no painel da receita ativa.</li>
+<li>Acessar a nova versão gerada como rascunho na listagem para realizar as adequações necessárias.</li>
+</ol>
+<hr/>
+<h3 id="644-como-simular-custos-de-insumos-via-cost-rollup-rota-/app/production/boms-cost-rollup">6.4.4. Como Simular Custos de Insumos via Cost Rollup ( rota <code>/app/production/boms</code> - Cost Rollup )</h3>
+<p>A simulação de custos (Cost Rollup) estima o custo financeiro unitário do produto acabado com base nas notas fiscais faturadas. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>PRODUÇÃO</strong> no menu lateral esquerdo, selecionar <strong>ESTRUTURA DE PRODUTOS</strong> e clicar no botão <strong>Custo</strong> (representado por um ícone de cifrão) no card da receita correspondente. O modal exibe a listagem de componentes, as quantidades reajustadas pela perda técnica, os valores unitários do último recebimento fiscal e o valor total acumulado do lote padrão. Para realizar a simulação, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"PRODUÇÃO"</strong> na barra lateral esquerda, clicar em <strong>"ESTRUTURA DE PRODUTOS"</strong> e selecionar o produto acabado.</li>
+<li>Clicar no botão <strong>"Custo"</strong> (ícone de cifrão) localizado no card do produto.</li>
+<li>Analisar o detalhamento dos custos individuais e consolidados exibidos no modal.</li>
+</ol>
+<hr/>
+<h2 id="65-como-planejar-executar-e-apontar-ordens-de-produção-chão-de-fábrica">6.5. Como Planejar, Executar e Apontar Ordens de Produção (Chão de Fábrica)</h2>
+<p>Este fluxo gerencia o ciclo de vida das Ordens de Produção (OP), o consumo de materiais e a inspeção de qualidade de peças finais.</p>
+<h3 id="651-como-planejar-e-registrar-uma-nova-ordem-de-produção-op-rota-/app/production/orders-modal">6.5.1. Como Planejar e Registrar uma Nova Ordem de Produção (OP) ( rota <code>/app/production/orders</code> - Modal )</h3>
+<p>A fila de ordens gerencia o planejamento e execução no chão de fábrica. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>PRODUÇÃO</strong> na barra lateral esquerda e selecionar <strong>ORDENS DE PRODUÇÃO</strong>. O botão <strong>Nova Ordem</strong> abre o modal com os campos <strong>BOM</strong> (dropdown contendo as fichas técnicas em status ativo), <strong>Centro de Trabalho</strong> (dropdown com linhas produtivas disponíveis em status ativo) e <strong>Qtd Planejada</strong> (volume da tiragem, com valor mínimo de 1). Ao selecionar a BOM, o modal exibe um resumo contendo a lista de matérias-primas e proporções planejadas no rodapé. Para planejar uma nova OP, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"PRODUÇÃO"</strong> na barra lateral esquerda e clicar em <strong>"ORDENS DE PRODUÇÃO"</strong> (ou acessar a rota <code>/app/production/orders</code>).</li>
+<li>Clicar no botão <strong>"Nova Ordem"</strong> no canto superior direito para abrir o modal de cadastro.</li>
+<li>Escolher a ficha técnica no seletor <strong>BOM</strong>, a linha de manufatura no seletor <strong>Centro de Trabalho</strong> e informar a tiragem no campo <strong>Qtd Planejada</strong>.</li>
+<li>Clicar em <strong>"Criar Ordem"</strong> para registrar a nova ordem no status <code>Created</code>.</li>
+</ol>
+<hr/>
+<h3 id="6511-como-alocar-estoque-e-liberar-ordem-de-produção-rota-/app/production/orders-detalhes-da-op">6.5.1.1. Como Alocar Estoque e Liberar Ordem de Produção ( rota <code>/app/production/orders</code> - Detalhes da OP )</h3>
+<p>A liberação de uma OP criada realiza o empenho e reserva física dos insumos e componentes estruturados na BOM para garantir o suprimento da linha. Para realizar esta operação, o planejador deve acessar a fila de ordens e clicar sobre o registro desejado para abrir o painel de detalhes da ordem de produção. A interface disponibiliza as ações de ciclo de vida e um fluxo indicador de etapas de status da ordem. Para liberar a ordem, siga o seguinte procedimento:</p>
+<ol>
+<li>Na fila de ordens de produção, clicar sobre a linha da OP correspondente que se encontre em status de rascunho (<code>Created</code>).</li>
+<li>No painel de detalhes, clicar no botão <strong>"Liberar"</strong> (o status da OP passará para <code>Released</code> se houver saldo suficiente no estoque).</li>
+</ol>
+<p>A liberação da Ordem de Produção falhará se o estoque de insumos e matérias-primas disponíveis (<code>Available</code>) no almoxarifado for menor do que as demandas obrigatórias da receita.</p>
+<hr/>
+<h3 id="6512-como-iniciar-a-execução-da-ordem-de-produção-rota-/app/production/orders-detalhes-da-op">6.5.1.2. Como Iniciar a Execução da Ordem de Produção ( rota <code>/app/production/orders</code> - Detalhes da OP )</h3>
+<p>O início de execução indica que os insumos reservados foram fisicamente retirados do estoque e a máquina/linha de montagem iniciou o processamento das peças. A operação é realizada no mesmo painel de detalhes da ordem e é permitida apenas para documentos que se encontrem em status de liberação ativa (<code>Released</code>). Para iniciar o processo, siga o seguinte procedimento:</p>
+<ol>
+<li>Acessar o painel de detalhes da ordem de produção liberada na fila.</li>
+<li>Clicar no botão <strong>"Iniciar"</strong> (o status da OP passará para <code>InExecution</code>, desbloqueando as ferramentas de apontamento e consumo de materiais).</li>
+</ol>
+<hr/>
+<h3 id="6513-como-apontar-consumo-e-scrap-de-materiais-rota-/app/production/orders-aba-ajustes">6.5.1.3. Como Apontar Consumo e Scrap de Materiais ( rota <code>/app/production/orders</code> - Aba Ajustes )</h3>
+<p>Durante a execução da OP, o operador pode apontar consumos reais e perdas por refugo/descarte (scrap). Esta operação é realizada no painel de detalhes da OP ativa, navegando até a aba <strong>Ajustes</strong>. A interface oferece <strong>chips de preenchimento rápido</strong> contendo os códigos das matérias-primas cadastradas na BOM da ordem, além de campos para <strong>Código do material</strong>, <strong>Quantidade</strong> e, no caso de scrap, um campo multiline para <strong>Motivo do scrap</strong>. O consumo apontado manualmente substitui a baixa automática (<em>backflush</em>) do material correspondente no fechamento da ordem. Para realizar os apontamentos, siga o seguinte procedimento:</p>
+<h4 id="para-registrar-consumo-de-material">Para registrar consumo de material:</h4>
+<ol>
+<li>No painel de detalhes da ordem em execução, acessar a aba <strong>"Ajustes"</strong> e localizar a seção <strong>Consumo Manual</strong>.</li>
+<li>Clicar em um dos chips de matérias-primas da BOM para preencher os dados automaticamente (ou digitar no campo de busca de material).</li>
+<li>Confirmar a quantidade real consumida no campo <strong>Quantidade</strong> e clicar no botão <strong>"Registrar Consumo"</strong>.</li>
+</ol>
+<h4 id="para-registrar-descarte-scrap-de-material">Para registrar descarte (scrap) de material:</h4>
+<ol>
+<li>No painel de detalhes da ordem em execução, acessar a aba <strong>"Ajustes"</strong> e localizar a seção <strong>Registrar Scrap</strong>.</li>
+<li>Selecionar o material utilizando os chips rápidos ou o campo de busca.</li>
+<li>Informar o volume no campo <strong>Quantidade</strong> e preencher o motivo do refugo no campo <strong>Motivo do scrap</strong>.</li>
+<li>Clicar no botão <strong>"Registrar Scrap"</strong> para computar o desperdício técnico no sistema.</li>
+</ol>
+<hr/>
+<h3 id="6514-como-realizar-inspeção-de-qualidade-e-concluir-a-ordem-rota-/app/production/orders-aba-concluir">6.5.1.4. Como Realizar Inspeção de Qualidade e Concluir a Ordem ( rota <code>/app/production/orders</code> - Aba Concluir )</h3>
+<p>A conclusão de uma ordem exige o apontamento de qualidade e consolida a entrada do produto acabado no estoque. No painel de detalhes da OP, acessar a aba <strong>Aprovar & Concluir</strong>. A interface exibe a tabela de materiais que serão baixados automaticamente por <em>backflush</em> (excluindo os materiais que receberam apontamento de consumo manual na aba Ajustes). Apresenta os botões <strong>Aprovado</strong> e <strong>Reprovado</strong> para a inspeção de qualidade, o campo de texto de <strong>Observações</strong> e o botão <strong>Aprovar e Concluir Ordem</strong> ou <strong>Registrar Reprovação</strong>. O nome do usuário autenticado no sistema é registrado automaticamente no campo <strong>Inspecionado por</strong>. Para realizar a operação, siga o seguinte procedimento:</p>
+<ol>
+<li>No painel de detalhes da ordem em execução, acessar a aba <strong>"Aprovar & Concluir"</strong>.</li>
+<li>Analisar a tabela de materiais que sofrerão baixa automática por backflush.</li>
+<li>Selecionar o resultado da inspeção clicando no botão <strong>"Aprovado"</strong> ou <strong>"Reprovado"</strong>.</li>
+<li>Digitar os detalhes do lote ou defeitos encontrados no campo <strong>Observações</strong>.</li>
+<li>Clicar no botão <strong>"Aprovar e Concluir Ordem"</strong> (se aprovado, finalizando a OP e registrando a entrada física no estoque) ou no botão <strong>"Registrar Reprovação"</strong> (se reprovado, registrando a perda da produção).</li>
+</ol>
+<hr/>
+<h2 id="66-como-cadastrar-transportadoras-iniciar-ordens-de-expedição-e-despachar-embarques">6.6. Como Cadastrar Transportadoras, Iniciar Ordens de Expedição e Despachar Embarques</h2>
+<p>Este fluxo engloba o credenciamento de parceiros logísticos, expedição de vendas faturadas e embarque rodoviário de cargas.</p>
+<h3 id="661-como-registrar-e-visualizar-transportadoras-credenciadas-rota-/app/logistics/carriers">6.6.1. Como Registrar e Visualizar Transportadoras Credenciadas ( rota <code>/app/logistics/carriers</code> )</h3>
+<p>A fila logística lista as transportadoras homologadas na empresa. Para acessar esta listagem sem a URL direta, deve-se expandir a seção <strong>LOGÍSTICA</strong> na barra lateral esquerda e selecionar a opção <strong>TRANSPORTADORAS</strong>. A interface apresenta uma listagem geral de parceiros com colunas de Razão Social e CNPJ e o botão <strong>Nova Transportadora</strong>, encarregado de abrir a gaveta lateral de cadastro de parceiro logístico. Para gerenciar as transportadoras, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"LOGÍSTICA"</strong> na barra lateral esquerda e clicar em <strong>"TRANSPORTADORAS"</strong> (ou acessar a rota <code>/app/logistics/carriers</code>).</li>
+<li>Analisar os registros das transportadoras habilitadas para atendimento.</li>
+<li>Clicar no botão <strong>"Nova Transportadora"</strong> no canto superior direito para abrir o formulário de cadastro.</li>
+</ol>
+<hr/>
+<h3 id="662-como-efetuar-o-cadastro-rápido-de-novas-transportadoras-rota-/app/logistics/carriers-modal">6.6.2. Como Efetuar o Cadastro Rápido de Novas Transportadoras ( rota <code>/app/logistics/carriers</code> - Modal )</h3>
+<p>O formulário de credenciamento registra os dados corporativos da nova transportadora. Ele é acessado clicando no botão <strong>Nova Transportadora</strong> na fila de transportadoras. O formulário exige o preenchimento dos campos <strong>Razão Social</strong> (nome comercial), <strong>CNPJ</strong> (cadastro nacional, digitando apenas números), <strong>Endereço</strong> (localização física da sede) e <strong>Webhook URL</strong> (endereço de callback para sincronização de tracking de entrega). O botão <strong>Salvar</strong> grava os dados informados. Para realizar o cadastro da transportadora, siga o seguinte procedimento:</p>
+<ol>
+<li>Na tela de transportadoras (acessada em <strong>LOGÍSTICA</strong> -> <strong>TRANSPORTADORAS</strong>), clicar no botão <strong>"Nova Transportadora"</strong> no canto superior direito para abrir a gaveta lateral.</li>
+<li>Informar a razão social no campo <strong>Razão Social</strong>, CNPJ numérico limpo (apenas os 14 dígitos) no campo <strong>CNPJ</strong>, endereço completo no campo <strong>Endereço</strong> e a URL de webhook no campo <strong>Webhook URL</strong>.</li>
+<li>Clicar no botão <strong>"Salvar"</strong> para confirmar a gravação dos dados.</li>
+</ol>
+<p>O CNPJ inserido passa por limpeza e validação matemática de dígitos verificadores. Formatos com tamanho de string incorreto ou dígitos inválidos bloquearão a gravação.</p>
+<hr/>
+<h3 id="663-como-cadastrar-nova-ordem-de-expedição-rota-/app/logistics/shipment-orders-modal">6.6.3. Como Cadastrar Nova Ordem de Expedição ( rota <code>/app/logistics/shipment-orders</code> - Modal )</h3>
+<p>A criação de ordens de expedição registra os pedidos de venda que demandam despacho físico e faturamento fiscal. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>LOGÍSTICA</strong> no menu lateral esquerdo, clicar em <strong>EXPEDIÇÃO</strong> e acionar o botão <strong>Nova Ordem</strong> no canto superior direito. O processo de criação é dividido em duas fases distintas no modal:</p>
+<h4 id="fase-1-informações-de-cabeçalho-e-destinatário">Fase 1: Informações de Cabeçalho e Destinatário</h4>
+<p>A primeira fase do formulário exige o preenchimento dos seguintes dados cadastrais e fiscais do destinatário da carga:</p>
+<ul>
+<li><strong>Destinatário:</strong> Nome completo ou Razão Social do cliente no campo <strong>Nome</strong> e o cadastro correspondente no campo <strong>CPF / CNPJ</strong> (validado quanto à integridade matemática de dígitos).</li>
+<li><strong>Contato:</strong> E-mail de notificação de rastreamento no campo <strong>E-mail</strong> (validado no formato correspondente) e a identificação estadual opcional no campo <strong>Inscrição Estadual</strong>.</li>
+<li><strong>Endereço:</strong> Campos obrigatórios para <strong>Rua</strong>, <strong>Número</strong>, <strong>Bairro</strong>, <strong>Cidade</strong>, <strong>Estado</strong> (seletor alfanumérico restrito a 2 caracteres da UF correspondente) e <strong>CEP</strong> (limpo de formatação).</li>
+<li><strong>Regras Fiscais:</strong> Campo <strong>Natureza da Operação</strong> (default "Venda de mercadoria") e o seletor <strong>Modalidade do Frete</strong> (opções numéricas correspondentes aos códigos oficiais).</li>
+</ul>
+<h4 id="fase-2-inserção-de-itens-da-ordem">Fase 2: Inserção de Itens da Ordem</h4>
+<p>Após salvar o cabeçalho, a tela habilita a inserção de produtos no pedido:</p>
+<ul>
+<li><strong>Dados do Produto:</strong> Campo de pesquisa de produto (busca autocomplete de materiais do catálogo) e o campo <strong>Quantidade</strong> (unidade de medida derivada automaticamente).</li>
+<li><strong>Parâmetros de Carga:</strong> Definição física de <strong>Peso (Kg)</strong> e <strong>Volume (m³)</strong> unitário do item.</li>
+<li><strong>Tributação Fiscal:</strong> Campos para <strong>CFOP</strong>, <strong>NCM</strong>, <strong>Valor Unitário</strong>, <strong>Base ICMS</strong>, <strong>Alíquota ICMS (%)</strong>, <strong>Origem ICMS</strong>, <strong>CST ICMS</strong>, <strong>CST PIS</strong>, <strong>CST COFINS</strong>, <strong>Alíquota IPI (%)</strong> e <strong>CST IPI</strong>.</li>
+</ul>
+<p>Para realizar este cadastro de duas fases, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"LOGÍSTICA"</strong> na barra lateral esquerda, clicar na opção <strong>"EXPEDIÇÃO"</strong> e clicar em <strong>"Nova Ordem"</strong>.</li>
+<li>Preencher todos os dados cadastrais, de endereço e regras fiscais do destinatário no formulário da Fase 1 e clicar em <strong>"Salvar Ordem"</strong> para liberar a Fase 2.</li>
+<li>No formulário de inserção de itens, selecionar o material acabado e preencher os dados de pesos, volumes e tributação do item.</li>
+<li>Clicar no botão <strong>"Salvar Item"</strong> (ou <strong>"Adicionar"</strong>) para anexar o produto na tabela inferior da ordem. Repetir para outros produtos se necessário.</li>
+<li>Clicar no botão <strong>"Concluir Ordem"</strong> para salvar o documento em status de Rascunho (<code>Draft</code>).</li>
+</ol>
+<hr/>
+<h3 id="6631-como-gerenciar-a-separação-embalagem-e-liberação-de-ordens-de-expedição-rota-/app/logistics/shipment-orders">6.6.3.1. Como Gerenciar a Separação, Embalagem e Liberação de Ordens de Expedição ( rota <code>/app/logistics/shipment-orders</code> )</h3>
+<p>As ordens de expedição cadastradas seguem um fluxo estruturado de separação física no estoque antes da liberação final para transporte. Para acessar a fila, deve-se expandir a seção <strong>LOGÍSTICA</strong> na barra lateral esquerda e selecionar a opção <strong>EXPEDIÇÃO</strong>. Ao clicar sobre um pedido, a gaveta lateral de detalhes é aberta, exibindo os dados fiscais e as ações de transição de status disponíveis. O documento percorre a seguinte máquina de estados:</p>
+<ul>
+<li><code>Draft</code> (Rascunho): Pedido recém-cadastrado. Ação <strong>"Iniciar Separação"</strong> altera o status para <code>Picking</code>.</li>
+<li><code>Picking</code> (Separação): Insumos estão sendo recolhidos. Ação <strong>"Iniciar Embalagem"</strong> altera o status para <code>Packing</code>.</li>
+<li><code>Packing</code> (Embalagem): Produtos são paletizados. Ação <strong>"Marcar Pronto"</strong> altera o status para <code>ReadyToShip</code>.</li>
+<li><code>ReadyToShip</code> (Pronto para Despacho): Disponibiliza o pedido para carregamento e consolidação logísticos na fila de despachos.</li>
+</ul>
+<p>Para transitar o status das ordens de expedição, siga o seguinte procedimento:</p>
+<ol>
+<li>Na tela de <strong>EXPEDIÇÃO</strong>, localizar o pedido correspondente e clicar sobre sua linha para abrir o painel de detalhes.</li>
+<li>No painel, acionar a respectiva ação de transição de status de acordo com a etapa de preparação do material (ex: <strong>"Iniciar Separação"</strong>).</li>
+<li>Confirmar a operação na caixa de diálogo de segurança exibida na tela.</li>
+<li>Caso necessite cancelar a expedição, clicar no botão <strong>"Cancelar Ordem"</strong> (ação permitida apenas antes do envio definitivo).</li>
+</ol>
+<hr/>
+<h3 id="664-como-liberar-e-faturar-ordens-de-expedição-da-fila-rota-/app/logistics/shipment-orders">6.6.4. Como Liberar e Faturar Ordens de Expedição da Fila ( rota <code>/app/logistics/shipment-orders</code> )</h3>
+<p>A consolidação de cargas permite unificar múltiplos pedidos de expedição prontos em uma mesma viagem logísticas. Para acessar esta fila sem a URL direta, deve-se expandir a seção <strong>LOGÍSTICA</strong> na barra lateral esquerda e selecionar a opção <strong>EXPEDIÇÃO</strong>. A tabela de pedidos disponibiliza checkboxes de seleção rápida na coluna esquerda dos registros em status <code>ReadyToShip</code>. Para selecionar os embarques, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"LOGÍSTICA"</strong> na barra lateral esquerda e clicar em <strong>"EXPEDIÇÃO"</strong> (ou acessar a rota <code>/app/logistics/shipment-orders</code>).</li>
+<li>Filtrar e localizar os pedidos prontos para expedição na listagem geral.</li>
+<li>Marcar os checkboxes correspondentes localizados na coluna esquerda da tabela para agrupar as ordens destinadas à mesma viagem de entrega.</li>
+<li>Clicar no botão <strong>"Novo Despacho"</strong> no topo esquerdo da tabela para iniciar a consolidação dos dados de trânsito.</li>
+</ol>
+<hr/>
+<h3 id="665-como-emitir-despachos-logísticos-e-visualizar-o-damdfe-rota-/app/logistics/dispatches">6.6.5. Como Emitir Despachos Logísticos e Visualizar o DAMDFE ( rota <code>/app/logistics/dispatches</code> )</h3>
+<p>O painel de despachos gerencia a consolidação física e fiscal de saídas. Para acessar este painel sem a URL direta, deve-se expandir a seção <strong>LOGÍSTICA</strong> na barra lateral esquerda e selecionar a opção <strong>DESPACHOS</strong>. O botão <strong>Novo Despacho</strong> abre o modal de alocação de recursos rodoviários. O botão <strong>Expedir</strong> altera o status do despacho para enviado (<code>Shipped</code>), realizando a baixa no inventário, enviando a NF-e à SEFAZ e disparando callbacks de webhooks. O botão <strong>Imprimir DAMDFE</strong> abre o manifesto de trânsito A4 na tela. Para processar o despacho, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"LOGÍSTICA"</strong> na barra lateral esquerda e clicar em <strong>"DESPACHOS"</strong> (ou acessar a rota <code>/app/logistics/dispatches</code>).</li>
+<li>Clicar no botão <strong>"Novo Despacho"</strong> no topo direito para abrir o modal de alocação de frota e criar a viagem.</li>
+<li>Localizar o manifesto criado na fila e clicar no botão <strong>"Expedir"</strong> na linha correspondente para realizar a baixa no estoque de acabados.</li>
+<li>Clicar no botão <strong>"Imprimir DAMDFE"</strong> na linha correspondente para obter a guia de trânsito física para transporte.</li>
+</ol>
+<hr/>
+<h3 id="666-como-consolidar-dados-de-viagem-carga-veículo-e-motorista-rota-/app/logistics/dispatches-modal">6.6.6. Como Consolidar Dados de Viagem (Carga, Veículo e Motorista) ( rota <code>/app/logistics/dispatches</code> - Modal )</h3>
+<p>O modal de consolidação vincula os recursos físicos e terceiros ao despacho de entrega. Ele abre automaticamente ao clicar no botão <strong>Novo Despacho</strong> na tela de despachos. Requer a seleção da <strong>Transportadora</strong> (dropdown de parceiros credenciados), o <strong>Veículo</strong> (dropdown contendo a placa do caminhão alocado) e o <strong>Motorista</strong> (dropdown com o condutor selecionado no RH). O botão <strong>Salvar</strong> consolida as informações. Para realizar a alocação do frete, siga o seguinte procedimento:</p>
+<ol>
+<li>Na tela de despachos (acessada em <strong>LOGÍSTICA</strong> -> <strong>DESPACHOS</strong>), clicar no botão <strong>"Novo Despacho"</strong> para abrir o modal central.</li>
+<li>Selecionar a transportadora credenciada no dropdown <strong>Transportadora</strong>.</li>
+<li>Alocar o veículo correspondente no dropdown <strong>Veículo</strong> e o motorista habilitado correspondente no dropdown <strong>Motorista</strong>.</li>
+<li>Clicar no botão <strong>"Salvar"</strong> para consolidar o despacho logístico.</li>
+</ol>
+<hr/>
+<h2 id="67-como-fiscalizar-emissões-de-documentos-gerenciar-frota-rh-e-administrar-perfis-iam">6.7. Como Fiscalizar Emissões de Documentos, Gerenciar Frota, RH e Administrar Perfis (IAM)</h2>
+<p>Este fluxo descreve como monitorar pendências fiscais da SEFAZ, gerenciar a frota operacional própria, o RH e controlar acessos de segurança (IAM).</p>
+<h3 id="671-como-transmitir-e-fiscalizar-notas-fiscais-eletrônicas-junto-à-sefaz-rota-/app/logistics/nfe-monitor">6.7.1. Como Transmitir e Fiscalizar Notas Fiscais Eletrônicas junto à SEFAZ ( rota <code>/app/logistics/nfe-monitor</code> )</h3>
+<p>O monitor fiscal rastreia a transmissão das notas fiscais eletrônicas de venda enviadas à receita federal. Para acessar a tela sem a URL direta, deve-se expandir a seção <strong>LOGÍSTICA</strong> na barra lateral esquerda e selecionar a opção <strong>MONITOR NF-e</strong>. A interface disponibiliza o status de aprovação de cada documento e conta com o botão <strong>Reenviar</strong>, que realiza a retransmissão de notas fiscais que falharam por quedas de comunicação. Para processar a retransmissão, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"LOGÍSTICA"</strong> na barra lateral esquerda, clicar em <strong>"MONITOR NF-e"</strong> (ou acessar a rota <code>/app/logistics/nfe-monitor</code>) e localizar a nota com falha na listagem.</li>
+<li>Clicar no botão <strong>"Reenviar"</strong> localizado no final da linha do registro correspondente para restabelecer a comunicação com o servidor da SEFAZ.</li>
+<li>Aguardar a resposta da receita federal e certificar a mudança do status da NF-e para autorizado na tabela.</li>
+</ol>
+<hr/>
+<h3 id="672-como-definir-perfis-tributários-e-cfops-da-organização-rota-/app/logistics/fiscal-settings">6.7.2. Como Definir Perfis Tributários e CFOPs da Organização ( rota <code>/app/logistics/fiscal-settings</code> )</h3>
+<p>A parametrização fiscal define as regras tributárias globais do tenant. Para acessar a tela sem a URL direta, deve-se expandir a seção <strong>LOGÍSTICA</strong> na barra lateral esquerda e selecionar a opção <strong>CONFIG. FISCAL</strong>. Ela requer o preenchimento dos campos <strong>CFOP Vendas</strong> (código fiscal de operação padrão para saídas da fábrica) e <strong>Alíquota ICMS (%)</strong> (percentual padrão de cobrança do imposto). O botão <strong>Salvar</strong> atualiza as regras fiscais. Para configurar as regras, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"LOGÍSTICA"</strong> na barra lateral esquerda e clicar em <strong>"CONFIG. FISCAL"</strong> (ou acessar a rota <code>/app/logistics/fiscal-settings</code>).</li>
+<li>Digitar o CFOP padrão de saídas industriais no campo <strong>CFOP Vendas</strong> e o percentual correspondente no campo <strong>Alíquota ICMS (%)</strong>.</li>
+<li>Clicar no botão <strong>"Salvar"</strong> para salvar as parametrizações fiscais.</li>
+</ol>
+<hr/>
+<h3 id="673-como-cadastrar-veículos-próprios-e-gerenciar-registros-rntrc-rota-/app/fleet">6.7.3. Como Cadastrar Veículos Próprios e Gerenciar Registros RNTRC ( rota <code>/app/fleet</code> )</h3>
+<p>O gerenciamento de frota cadastra os veículos próprios da empresa. Para acessar a tela sem a URL direta, deve-se expandir a seção <strong>FROTA</strong> na barra lateral esquerda e selecionar a opção <strong>FROTA</strong>. A interface apresenta uma tabela listando os veículos com colunas de Placa, Tipo, Status, RNTRC, Carga Máxima (kg), Volume Máximo (m³) e Vencimento do CRLV. O botão <strong>Novo Veículo</strong> abre a gaveta lateral de cadastro de veículo. Esse formulário exige o preenchimento dos seguintes campos:</p>
+<ul>
+<li><strong>Placa:</strong> Identificação alfanumérica do veículo (deve conter a máscara de formatação padrão <code>ABC-1234</code> ou <code>ABC1D23</code> para o padrão Mercosul).</li>
+<li><strong>Tipo:</strong> Dropdown para selecionar a categoria do veículo (opções: Carro, Caminhão, Van ou Moto).</li>
+<li><strong>Dados Técnicos:</strong> Valores numéricos obrigatórios para os limites de <strong>Carga Máxima (kg)</strong> e <strong>Volume Máximo (m³)</strong>.</li>
+<li><strong>Documentação Legal:</strong> Número de registro ANTT no campo <strong>RNTRC</strong> (deve conter exatamente 8 dígitos numéricos), cadastro no campo <strong>RENAVAM</strong> (deve possuir de 9 a 11 dígitos numéricos), identificação de <strong>Chassi</strong> (exatamente 17 caracteres alfanuméricos em maiúsculas) e a data de vencimento da licença no campo <strong>Vencimento CRLV</strong>.</li>
+</ul>
+<p>Para cadastrar o veículo, siga o procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"FROTA"</strong> na barra lateral esquerda, clicar em <strong>"FROTA"</strong> (ou acessar a rota <code>/app/fleet</code>) e clicar no botão <strong>"Novo Veículo"</strong> no canto superior direito.</li>
+<li>Inserir a placa, selecionar a categoria de tipo de veículo e preencher o código RENAVAM correspondente nos respectivos campos.</li>
+<li>Inserir a identificação do chassi (17 caracteres), o código ANTT (8 dígitos) e os valores de carga útil e cubagem máxima da carroceria.</li>
+<li>Selecionar a data de expiração da licença anual e clicar no botão <strong>"Salvar"</strong> para confirmar a gravação do veículo.</li>
+<li>Caso necessite inativar ou ativar o veículo posteriormente, localizar o registro na tabela de listagem geral e clicar no ícone de inativação (botão laranja <strong>"Inativar"</strong>) ou ativação (botão verde <strong>"Ativar"</strong>).</li>
+</ol>
+<hr/>
+<h3 id="6731-como-alocar-motoristas-ao-veículo-rota-/app/fleet-detalhes-do-veículo">6.7.3.1. Como Alocar Motoristas ao Veículo ( rota <code>/app/fleet</code> - Detalhes do Veículo )</h3>
+<p>O vínculo de motoristas aloca um profissional cadastrado no RH a um caminhão ou veículo de frota ativo. Ao clicar sobre um veículo na listagem geral da frota, abre-se a gaveta lateral de detalhes exibindo a aba <strong>Motorista</strong>. A tela exibe o motorista ativo associado à placa e o histórico de alocações cronológicas. O formulário de alocação de motoristas exige o preenchimento do <strong>Motorista</strong> (dropdown listando profissionais cadastrados com o cargo de Motorista), a <strong>Data de Início da alocação</strong> (data de retirada da chave), o campo opcional <strong>Fim da alocação</strong> (data prevista para devolução) e as <strong>Observações</strong>. Para alocar o profissional, siga o seguinte procedimento:</p>
+<ol>
+<li>Na listagem de veículos da frota, clicar sobre o registro desejado para abrir a gaveta lateral de detalhes.</li>
+<li>Acessar a aba <strong>"Motorista"</strong> e clicar no botão <strong>"Nova Alocação"</strong>.</li>
+<li>Selecionar o condutor habilitado no seletor <strong>Motorista</strong> e informar a data de retirada no campo <strong>Início da alocação</strong>.</li>
+<li>Se houver data de devolução definida, preencher o campo <strong>Fim da alocação (opcional)</strong> e adicionar notas de controle.</li>
+<li>Clicar no botão <strong>"Alocar"</strong> para confirmar o vínculo do condutor com o veículo.</li>
+</ol>
+<hr/>
+<h3 id="6732-como-agendar-e-concluir-manutenções-de-veículos-rota-/app/fleet-aba-manutenção">6.7.3.2. Como Agendar e Concluir Manutenções de Veículos ( rota <code>/app/fleet</code> - Aba Manutenção )</h3>
+<p>A programação de manutenções planeja revisões e reparos técnicos na frota. Na tela principal de gerenciamento de frota, deve-se navegar até a aba geral <strong>Manutenção</strong>. A interface disponibiliza uma barra de filtros por veículo, status (Agendada, Concluída, Cancelada) e tipo (Preventiva, Corretiva) e exibe a tabela de registros cadastrados. O formulário de agendamento exige os campos <strong>Veículo</strong> (dropdown de seleção, obrigatório apenas em modo frota geral), <strong>Tipo</strong> (Preventiva ou Corretiva), <strong>Data</strong> (data agendada para parada), <strong>Descrição</strong> e o campo opcional <strong>Observações</strong>. Para realizar o agendamento e o controle da manutenção, siga o seguinte procedimento:</p>
+<h4 id="para-agendar-manutenção-preventiva-ou-corretiva">Para agendar manutenção preventiva ou corretiva:</h4>
+<ol>
+<li>Na tela de frota, acessar a aba <strong>"Manutenção"</strong> e clicar no botão <strong>"Agendar"</strong> (ou <strong>"Agendar Manutenção"</strong> caso esteja com a gaveta de detalhes do veículo aberta).</li>
+<li>Selecionar a placa correspondente no seletor <strong>Veículo</strong> e definir a categoria do reparo no seletor <strong>Tipo</strong>.</li>
+<li>Escolher o dia da parada no campo <strong>Data</strong>, descrever o escopo do serviço no campo <strong>Descrição</strong> e preencher as anotações no campo <strong>Observações</strong>.</li>
+<li>Clicar no botão <strong>"Agendar"</strong> (ou <strong>"Confirmar"</strong>) para salvar a programação.</li>
+</ol>
+<h4 id="para-concluir-ou-cancelar-uma-manutenção">Para concluir ou cancelar uma manutenção:</h4>
+<ol>
+<li>Localizar o registro em status agendado na tabela de manutenções.</li>
+<li>Para registrar a execução física do serviço, clicar no botão de conclusão (ícone de marca de seleção verde <strong>"Concluir"</strong>), confirmando a gravação com a data de conclusão atual.</li>
+<li>Para anular o agendamento por motivos operacionais, clicar no botão de cancelamento (ícone de exclusão vermelho <strong>"Cancelar"</strong>).</li>
+</ol>
+<hr/>
+<h3 id="6733-como-registrar-abastecimentos-de-combustível-rota-/app/fleet-aba-abastecimento">6.7.3.3. Como Registrar Abastecimentos de Combustível ( rota <code>/app/fleet</code> - Aba Abastecimento )</h3>
+<p>O registro de abastecimentos controla o consumo de combustíveis, as despesas diretas de trânsito e o consumo médio por veículo. Na tela principal de gerenciamento de frota, deve-se navegar até a aba geral <strong>Abastecimento</strong>. A interface exibe indicadores do total de litros fornecidos, o custo em reais acumulado para o período e a listagem geral de transações. O formulário de registro requer os dados de <strong>Veículo</strong>, <strong>Data</strong>, <strong>Litros</strong> (volume decimal fornecido), <strong>Preço por Litro</strong> (valor unitário cobrado na bomba), <strong>Odômetro</strong> (número do hodômetro no momento da parada) e <strong>Fornecedor</strong> (nome ou rede do posto). Para registrá-lo, siga o seguinte procedimento:</p>
+<ol>
+<li>Na tela de frota, acessar a aba <strong>"Abastecimento"</strong> e clicar no botão <strong>"Registrar"</strong> (ou <strong>"Registrar Abastecimento"</strong> caso esteja com a gaveta de detalhes do veículo aberta).</li>
+<li>Selecionar a placa no seletor <strong>Veículo</strong> e definir o dia do abastecimento no campo <strong>Data</strong>.</li>
+<li>Informar o volume no campo <strong>Litros</strong>, o valor cobrado na bomba no campo <strong>Preço por Litro</strong>, a quilometragem no campo <strong>Odômetro</strong> e o nome comercial da parada no campo <strong>Fornecedor</strong>.</li>
+<li>Clicar no botão <strong>"Registrar"</strong> para confirmar a gravação. O sistema computará o valor total pago automaticamente.</li>
+</ol>
+<hr/>
+<h3 id="6734-como-emitir-relatórios-e-consultar-kpis-da-frota-rota-/app/fleet-aba-relatórios">6.7.3.4. Como Emitir Relatórios e Consultar KPIs da Frota ( rota <code>/app/fleet</code> - Aba Relatórios )</h3>
+<p>A consolidação de dados de frota exibe relatórios integrados para monitorar despesas, planejamentos e motoristas da empresa. Na tela principal de frota, deve-se navegar até a aba geral <strong>Relatórios</strong>. O painel de visualização é dividido em três categorias principais de relatórios selecionados na barra de tabs interna:</p>
+<ul>
+<li><strong>Consumo:</strong> Exibe os KPIs de "Total Litros", "Custo Total" e total de "Abastecimentos" do período. A tabela detalha o número de registros, total de litros, despesa em BRL e o preço médio pago por litro para cada placa de veículo.</li>
+<li><strong>Manutenção:</strong> Exibe os KPIs de manutenções "Agendadas", "Concluídas" e "Canceladas". A tabela detalha a contagem total de serviços programados, concluídos, cancelados e a divisão do reparo (Preventiva ou Corretiva) por veículo.</li>
+<li><strong>Motoristas:</strong> Rastreia o histórico completo de alocação de condutores por veículo, indicando a placa do veículo ativa associada ao condutor e o período de trânsito.</li>
+</ul>
+<p>Para consultar as métricas, siga o seguinte procedimento:</p>
+<ol>
+<li>Na tela de frota, acessar a aba geral <strong>"Relatórios"</strong>.</li>
+<li>Clicar na aba correspondente ao relatório desejado (<strong>Consumo</strong>, <strong>Manutenção</strong> ou <strong>Motoristas</strong>).</li>
+<li>Analisar os cards estatísticos de cabeçalho e as tabelas com os dados consolidados.</li>
+</ol>
+<hr/>
+<h3 id="674-como-efetuar-o-cadastro-de-funcionários-e-vincular-cnh-de-motoristas-rota-/app/hr/people">6.7.4. Como Efetuar o Cadastro de Funcionários e Vincular CNH de Motoristas ( rota <code>/app/hr/people</code> )</h3>
+<p>O cadastro de recursos humanos gerencia colaboradores e motoristas. Para acessar a tela, expanda o menu <strong>Recursos Humanos</strong> na barra lateral esquerda e selecione <strong>Funcionários</strong>. Contém os campos <strong>Nome Completo</strong> (nome civil do profissional), <strong>CPF</strong> (registro de pessoa física limpo), <strong>Cargo</strong> (dropdown de funções entre Operador, Supervisor e Motorista), <strong>CNH</strong> (número da habilitação para cargos de motorista) e <strong>Categoria CNH</strong> (dropdown para categorias C, D ou E). O botão <strong>Novo Funcionário</strong> abre a gaveta e <strong>Salvar</strong> confirma os dados. Para cadastrar o profissional, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"EQUIPE"</strong> na barra lateral esquerda, clicar em <strong>"FUNCIONÁRIOS"</strong> (ou acessar a rota <code>/app/hr/people</code>) e depois no botão <strong>"Novo Funcionário"</strong> no canto superior direito.</li>
+<li>Preencher o nome civil no campo <strong>Nome Completo</strong>, o CPF numérico limpo (sem pontos ou traço) no campo <strong>CPF</strong> e definir o cargo correspondente do colaborador no dropdown <strong>Cargo</strong>.</li>
+<li>Se o cargo selecionado for motorista, informar os dados obrigatórios no campo <strong>CNH</strong> e selecionar a classe de condução correspondente no dropdown <strong>Categoria CNH</strong>.</li>
+<li>Clicar no botão <strong>"Salvar"</strong> para registrar o profissional no banco de RH.</li>
+</ol>
+<p>O CPF inserido passa pela verificação do dígito verificador. CPFs inválidos bloquearão o salvamento do formulário de RH.</p>
+<hr/>
+<h3 id="6741-como-registrar-apontamentos-de-horas-trabalhadas-rota-/app/hr/people-detalhes-da-pessoa">6.7.4.1. Como Registrar Apontamentos de Horas Trabalhadas ( rota <code>/app/hr/people</code> - Detalhes da Pessoa )</h3>
+<p>O controle de horas trabalhadas registra a presença diária e horas acumuladas para controle de ponto e custos industriais. Ao clicar sobre um profissional cadastrado na listagem geral do RH, abre-se a gaveta lateral de detalhes exibindo a aba <strong>Horas</strong>. O formulário exige o preenchimento da <strong>Data</strong> do expediente, a quantidade de <strong>Horas trabalhadas</strong> (campo numérico decimal que aceita valores de <code>0.5</code> a <code>24.0</code>, com intervalo de meio em meio ponto, como <code>8.5</code> para 8 horas e 30 minutos) e o campo opcional <strong>Descrição</strong>. Para apontar as horas, siga o seguinte procedimento:</p>
+<ol>
+<li>Na listagem de funcionários da equipe, clicar sobre a linha do colaborador para abrir a gaveta lateral de detalhes.</li>
+<li>Acessar a aba <strong>"Horas"</strong> e localizar a seção <strong>Registrar Horas</strong>.</li>
+<li>Preencher a data correspondente, informar as horas cumpridas e registrar uma descrição do serviço.</li>
+<li>Clicar no botão <strong>"Registrar"</strong> para gravar o apontamento e atualizar a listagem e o totalizador de horas do operador.</li>
+</ol>
+<hr/>
+<h3 id="6742-como-gerenciar-competências-e-habilidades-rota-/app/hr/people-detalhes-da-pessoa">6.7.4.2. Como Gerenciar Competências e Habilidades ( rota <code>/app/hr/people</code> - Detalhes da Pessoa )</h3>
+<p>A matriz de competências do operador mapeia habilidades técnicas e certificações industriais na fábrica. Na gaveta lateral de detalhes da pessoa selecionada no RH, deve-se navegar até a aba <strong>Competências</strong>. O formulário exige o preenchimento do <strong>Nome da competência</strong> (descrição da habilidade, como Operação de Solda), o <strong>Nível de proficiência</strong> (escala de 1 a 5 estrelas selecionada graficamente), o campo opcional <strong>Certificado em</strong> (data em que obteve o diploma técnico) e as <strong>Observações</strong>. Para cadastrar habilidades, siga o seguinte procedimento:</p>
+<ol>
+<li>Na gaveta lateral de detalhes do funcionário, acessar a aba <strong>"Competências"</strong> e localizar a seção <strong>Adicionar Competência</strong>.</li>
+<li>Digitar o nome da habilidade técnica e definir o nível de domínio clicando sobre a estrela correspondente (1 a 5).</li>
+<li>Caso possua certificado oficial de qualificação, informar o dia de emissão no campo <strong>Certificado em (opcional)</strong> e adicionar notas descritivas.</li>
+<li>Clicar no botão <strong>"Adicionar"</strong> para salvar a competência no prontuário profissional.</li>
+<li>Caso necessite remover uma competência cadastrada, localizar a habilidade correspondente na listagem e clicar no ícone de lixeira (<strong>"Remover"</strong>).</li>
+</ol>
+<hr/>
+<h3 id="6743-como-cadastrar-turnos-de-trabalho-rota-/app/hr/people-detalhes-da-pessoa">6.7.4.3. Como Cadastrar Turnos de Trabalho ( rota <code>/app/hr/people</code> - Detalhes da Pessoa )</h3>
+<p>O cadastro de turnos de trabalho agenda a escala horária de trabalho e a escala produtiva do funcionário. Na gaveta lateral de detalhes da pessoa selecionada no RH, deve-se navegar até a aba <strong>Turnos</strong>. O formulário exige o preenchimento da <strong>Data</strong> planejada de escala, o horário de <strong>Início</strong> (hora no formato de 24h, default <code>08:00</code>), o horário de <strong>Fim</strong> (default <code>17:00</code>) e as <strong>Observações</strong>. Para agendar a escala, siga o seguinte procedimento:</p>
+<ol>
+<li>Na gaveta lateral de detalhes do funcionário, acessar a aba <strong>"Turnos"</strong> e localizar a seção <strong>Adicionar Turno</strong>.</li>
+<li>Definir o dia planejado no campo <strong>Data</strong>.</li>
+<li>Preencher os horários de entrada e saída correspondentes no campo <strong>Início</strong> e <strong>Fim</strong> e adicionar notas de turno.</li>
+<li>Clicar no botão <strong>"Adicionar"</strong> para confirmar a gravação da escala no calendário do colaborador.</li>
+<li>Caso necessite apagar a escala cadastrada, localizar o registro correspondente na listagem e clicar no ícone de lixeira (<strong>"Deletar"</strong>).</li>
+</ol>
+<hr/>
+<h3 id="675-como-cadastrar-usuários-na-plataforma-e-conceder-perfis-rota-/app/iam/users">6.7.5. Como Cadastrar Usuários na Plataforma e Conceder Perfis ( rota <code>/app/iam/users</code> )</h3>
+<p>O controle de usuários IAM gerencia as contas ativas de acesso à plataforma. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>ACESSO E SEGURANÇA</strong> na barra lateral esquerda e clicar em <strong>USUÁRIOS</strong>. A tela possui uma tabela com os usuários e o botão de adicionar novo usuário que abre o modal com os campos <strong>Nome Completo</strong> (nome civil da conta), <strong>E-mail</strong> (e-mail corporativo válido, normalizado para minúsculas) e <strong>Papéis (Roles)</strong> (checkboxes de vinculação de papéis RBAC). O botão <strong>Salvar</strong> cria a conta. Para incluir o colaborador, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"ACESSO E SEGURANÇA"</strong> na barra lateral esquerda, clicar em <strong>"USUÁRIOS"</strong> (ou acessar a rota <code>/app/iam/users</code>) e clicar no botão <strong>"Novo Usuário"</strong> (ou ícone de adição) no topo direito da tela.</li>
+<li>Preencher o nome civil no campo <strong>Nome Completo</strong>, o e-mail corporativo no campo <strong>E-mail</strong> e selecionar os papéis de privilégios RBAC adequados no formulário.</li>
+<li>Clicar no botão <strong>"Salvar"</strong> para concluir o convite de acesso.</li>
+</ol>
+<hr/>
+<h3 id="676-como-mapear-níveis-de-acesso-e-permissões-rbac-rota-/app/iam/roles">6.7.6. Como Mapear Níveis de Acesso e Permissões (RBAC) ( rota <code>/app/iam/roles</code> )</h3>
+<p>A parametrização do RBAC configura a matriz de permissões granulares por papel de usuário. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>ACESSO E SEGURANÇA</strong> na barra lateral esquerda e selecionar a opção <strong>NÍVEIS DE ACESSO</strong>. A listagem exibe as ações por papel funcional, e o botão <strong>Salvar Permissões</strong> grava a nova configuração. Para parametrizar as permissões, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"ACESSO E SEGURANÇA"</strong> na barra lateral esquerda e clicar em <strong>"NÍVEIS DE ACESSO"</strong> (ou acessar a rota <code>/app/iam/roles</code>).</li>
+<li>Escolher o papel funcional que deseja configurar na listagem de papéis na coluna esquerda.</li>
+<li>Marcar ou desmarcar os privilégios de leitura, escrita e execução em cada módulo da tabela.</li>
+<li>Clicar no botão <strong>"Salvar Permissões"</strong> para persistir as definições globais no banco.</li>
+</ol>
+<hr/>
+<h3 id="677-como-rastrear-e-auditar-ações-pelo-log-de-trilha-rota-/app/iam/audit">6.7.7. Como Rastrear e Auditar Ações pelo Log de Trilha ( rota <code>/app/iam/audit</code> )</h3>
+<p>O painel de trilha de auditoria monitora e rastreia mutações na base de dados. Para acessar esta tela sem a URL direta, deve-se expandir a seção <strong>ACESSO E SEGURANÇA</strong> na barra lateral esquerda e selecionar a opção <strong>AUDITORIA</strong>. Apresenta o campo de filtro <strong>CorrelationId</strong> (rastreador hexadecimal de transação único do backend) e <strong>Tipo de Ação</strong> (dropdown de busca contendo tipos como Login, Mutation e RoleAssignment). Para auditar, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"ACESSO E SEGURANÇA"</strong> na barra lateral esquerda e clicar em <strong>"AUDITORIA"</strong> (ou acessar a rota <code>/app/iam/audit</code>).</li>
+<li>Digitar o correlationId da chamada do backend na barra de filtros.</li>
+<li>Selecionar o tipo de ação desejada para refinar a busca no painel.</li>
+<li>Analisar a listagem de registros contendo data, e-mail do operador e a ação mutada no sistema.</li>
+</ol>
+<hr/>
+<h3 id="678-como-parametrizar-chaves-de-api-e-integrações-rota-/app/settings/integrations">6.7.8. Como Parametrizar Chaves de API e Integrações ( rota <code>/app/settings/integrations</code> )</h3>
+<p>A tela de integrações externas gerencia os tokens de integração ERP. Para acessar a tela sem a URL direta, deve-se expandir a seção <strong>CONFIGURAÇÕES</strong> na barra lateral esquerda e selecionar a opção <strong>INTEGRAÇÕES</strong>. A tela apresenta a lista de integrações e o campo <strong>Descrição da Chave</strong> (texto descritivo da integração) e o botão <strong>Gerar Nova Chave</strong> que emite a hash secreta de autenticação. Para gerar a chave, siga o seguinte procedimento:</p>
+<ol>
+<li>Expandir a seção <strong>"CONFIGURAÇÕES"</strong> na barra lateral esquerda, clicar em <strong>"INTEGRAÇÕES"</strong> (ou acessar a rota <code>/app/settings/integrations</code>) e selecionar o serviço correspondente na lista.</li>
+<li>Digitar uma descrição clara para o sistema externo que se conectará à API no campo <strong>Descrição da Chave</strong>.</li>
+<li>Clicar no botão <strong>"Gerar Nova Chave"</strong> para expor o token de autenticação integrado.</li>
+<li>Copiar o token gerado (lembrando que ele é exibido apenas uma única vez na criação).</li>
+</ol>
+<hr/>
+<h2 id="📋-faq-—-resolução-de-problemas-gerais">📋 FAQ — Resolução de Problemas Gerais</h2>
+<h3 id="1-ocorreu-erro-de-saldo-insuficiente-ao-liberar-uma-ordem-de-produção-op">1. Ocorreu erro de "Saldo Insuficiente" ao liberar uma Ordem de Produção (OP).</h3>
+<ul>
+<li><strong>Causa:</strong> A quantidade demandada de matérias-primas pela receita (BOM) para o lote planejado excede o saldo disponível (<code>Available</code>) nas prateleiras do almoxarifado.</li>
+<li><strong>Resolução:</strong></li>
+</ul>
+<ol>
+<li>Vá ao painel de <strong>Estoque</strong> e filtre pelo material pendente.</li>
+<li>Verifique se há lotes retidos em quarentena (<code>Blocked</code>) e mude seu status se a qualidade autorizar.</li>
+<li>Caso contrário, aguarde a chegada de novas compras do fornecedor.</li>
+</ol>
+<h3 id="2-a-conferência-cega-foi-salva-como-divergente-onde-está-o-estoque">2. A conferência cega foi salva como divergente. Onde está o estoque?</h3>
+<ul>
+<li><strong>Causa:</strong> A contagem física digitada pelo almoxarife divergiu das quantidades oficiais declaradas no XML faturado pelo fornecedor.</li>
+<li><strong>Resolução:</strong> O sistema salva o saldo correspondente na área de quarentena com status de lote <code>Blocked</code> (Bloqueado) para evitar que a linha de produção consuma material divergente por acidente. O supervisor de almoxarifado deve avaliar a nota fiscal na fila e liberar os saldos após inspeção manual.</li>
+</ul>
+
+</body>
+</html>

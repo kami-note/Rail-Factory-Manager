@@ -1,0 +1,50 @@
+@startuml arquitetura
+skinparam BackgroundColor #FFFFFF
+skinparam ArrowColor #666666
+skinparam ActorBorderColor #666666
+skinparam DatabaseBorderColor #666666
+
+actor "Navegador\n(Cliente React)" as Browser
+
+rectangle "Servidor Web / Edge" {
+    [BFF .NET 10] as BFF
+}
+
+rectangle "Rede Interna" {
+    [Gateway YARP] as Gateway
+    [Tenancy API] as Tenancy
+    [IAM API] as IAM
+    [Supply Chain API] as SupplyChain
+    [Inventory API] as Inventory
+    [Production API] as Production
+    [Human Resources API] as HR
+    [Fleet API] as Fleet
+    [Logistics API] as Logistics
+    queue "RabbitMQ" as RabbitMQ
+}
+
+database "Redis" as Redis
+database "Catalog DB" as CatalogDB
+database "Inventory DB\n(por Tenant)" as InventoryDB
+
+Browser --> BFF : HTTPS + Cookies + CSRF
+BFF --> Gateway : Injeta Internal JWT + Tenant Code
+Gateway --> Tenancy : HTTP
+Gateway --> IAM : HTTP
+Gateway --> SupplyChain : HTTP
+Gateway --> Inventory : HTTP
+Gateway --> Production : HTTP
+Gateway --> HR : HTTP
+Gateway --> Fleet : HTTP
+Gateway --> Logistics : HTTP
+
+IAM <--> Redis : Cache de Sessão
+Tenancy <--> CatalogDB : Catálogo de Tenants
+Inventory <--> InventoryDB : Dynamic Connection
+
+SupplyChain --> RabbitMQ : Eventos de Recebimento
+Production --> RabbitMQ : Eventos de Ordem/BOM
+Logistics --> RabbitMQ : Eventos de Expedição
+RabbitMQ --> Inventory : Consome Eventos (Ledger/Saldos)
+
+@enduml

@@ -1,0 +1,16 @@
+@startuml HR-Use-Case
+left to right direction
+
+actor "Admin Filial" as AF
+
+rectangle "HR Service\n(Gestão de Recursos Humanos)" {
+  usecase "Cadastro de Pessoas\n(colaborador, motorista...)" as UC_Profile
+  usecase "Matriz de Competências" as UC_Skills
+  usecase "Escalas e Turnos" as UC_Shifts
+}
+
+AF --> UC_Profile
+AF --> UC_Skills
+AF --> UC_Shifts
+
+@enduml

@@ -1,0 +1,29 @@
+@startuml
+title Sequencia - Inbound (Conferencia Cega) (TO-BE) (v2)
+skinparam linetype ortho
+
+actor Conferente
+participant "Supply Chain Service" as SUP
+participant "SEFAZ/NFe" as SEFAZ
+participant "Inventory (boundary)" as INV
+participant "Event Bus" as BUS
+
+SUP -> SEFAZ : Capturar NF-e (manifestacao)
+SEFAZ --> SUP : XML + chave de acesso
+Conferente -> SUP : Iniciar recebimento (blind_mode = true)
+SUP --> Conferente : Exibe itens sem quantidades do XML
+Conferente -> SUP : Registrar contagem
+SUP -> SUP : Comparar contagem x XML (apos fechamento)
+alt Sem divergencia
+  SUP -> INV : Dar entrada no estoque
+  INV --> SUP : Entrada confirmada
+  SUP -> BUS : Publica ReceivingCompleted
+  SUP --> Conferente : Recebimento concluido
+else Com divergencia
+  SUP -> SUP : Criar excecao de divergencia
+  SUP -> BUS : Publica InboundDiscrepancyRaised
+  SUP --> Conferente : Recebimento pendente de decisao
+end
+
+@enduml
+

@@ -2,6 +2,182 @@
 
 This file tracks architectural decisions, session status, and implementation milestones.
 
+## Session Milestone: Entrega 4: Evidências de IAM, Mensageria e Orquestração (2026-06-12)
+
+### Implemented Features
+- **Relatório de Evidências (docs/ENTREGA_4_IAM_MESSAGERIA_ORQUESTRACAO.md):**
+  - Compiled a detailed academic report satisfying the criteria for "Entrega 4".
+  - Documented Authentication and Authorization (IAM) utilizing Google OAuth2, cookie session propagation, and internal JWT verification.
+  - Included logs for successful authorization (200 OK with role-based checks) and failed authorization (401 Unauthorized / 403 Forbidden with permission constraints).
+  - Referenced real UI screenshots (`15_users_iam.png`, `16_roles_permissions.png`, `17_audit_logs.png`) as visual evidence of user setup, permissions grids, and immutable audits.
+  - Documented Messaging integration via RabbitMQ using the Transactional Outbox pattern. Included precise publisher logs (`LogisticsInventoryDispatcher`) and consumer logs (`InventoryIntegrationConsumer`) validating end-to-end asynchronous processing.
+  - Provided container orchestration layouts: a production-ready `docker-compose.yml` with scale replicas and resource constraints, and a Kubernetes deployment manifesto supporting Horizontal Pod Autoscaling (HPA) and health probes.
+  - Verified and linked all referenced screens and diagrams using relative paths.
+
+## Session Milestone: Navigation Flow Diagram & Compilation target (2026-06-12)
+
+### Implemented Features
+- **Navigation Flow Diagrams:**
+  - Created a comprehensive PlantUML state diagram (`docs/diagrams/fluxo_navegacao.puml`) documenting the complete navigation architecture of the frontend application.
+  - Implemented 4 vertical navigation flow diagrams matching the style/layout structure of the telemedicine user template (using legacy PlantUML activity syntax with diamonds and forks):
+    - `docs/diagrams/fluxo_autenticacao.puml`: Authentication entry points, Google OAuth verification, and redirection per user role.
+    - `docs/diagrams/fluxo_producao_vertical.puml`: Vertical path for the Production Operator persona, including OP actions (consumption, scrap, quality check, completion) and BOM details/cloning.
+    - `docs/diagrams/fluxo_logistica_vertical.puml`: Vertical path for the Logistics Operator persona, focusing on receipt XML imports, association workbench, inventory details/ledger, and shipping.
+    - `docs/diagrams/fluxo_admin_vertical.puml`: Vertical path for the System Admin persona, managing users, permissions, tenants, and webhook integrations.
+- **Makefile Compilation Automation:**
+  - Added a `diagrams` target to the `makefile` executing `java -jar docs/plantuml.jar -png docs/diagrams/*.puml` to compile all `.puml` files dynamically to PNG.
+  - Rendered all diagrams in `docs/diagrams/` (`fluxo_navegacao.png`, `fluxo_autenticacao.png`, `fluxo_producao_vertical.png`, `fluxo_logistica_vertical.png`, `fluxo_admin_vertical.png`, `arquitetura.png`, `outbox.png`, `sessao.png`) into lightweight, high-fidelity PNG assets.
+
+## Session Milestone: User Manual Completeness & Route Alignment (2026-06-12)
+
+### Implemented Features
+- **Completed User Manual Operational Instructions:**
+  - Expanded all operational sections of `docs/MANUAL_DO_USUARIO.md` with complete, step-by-step procedures, specifying all input fields, select menus, and action buttons.
+  - Aligned all system routes and sidebar menu navigation instructions with the actual React application (`App.tsx` and `ProtectedDashboardLayout.tsx`).
+  - Added new detailed sections for advanced frontend features:
+    - **Fleet Management (Frota):** detailed vehicle registration fields, driver assignment, scheduling/marking done/canceling maintenance plans, fueling log parameters with total cost calculations, and the three integrated Fleet reports (Consumption, Maintenance, Drivers).
+    - **HR Management (Equipe):** employee registration fields, profile picture uploads, logging work hours (0.5 to 24h), skill matrix configuration (1 to 5 stars) with certificates, and scheduling work shifts.
+    - **BOM Management (Produção):** creating BOM headers (selecting Finished Goods and setting the Batch Size/Lote Padrão) and adding raw materials with scrap factors.
+    - **Production Order Execution (Manufatura):** releasing/starting orders, logging consumption/scrap (with reason) in the Adjustments tab using quick-fill chips, and quality inspection (Passed/Failed) to approve and conclude the order.
+    - **Shipment Orders (Expedição):** creating 2-phase orders (recipient data and then fiscal items insertion) and managing the picking/packing/ready state machine transitions.
+  - Corrected discrepancies where the manual referred to non-existent sidebar menus (e.g., "Fiscal" menu, "Recursos Humanos" menu, or wrong URLs).
+  - Formatted all URL routes as inline code blocks (e.g. `` `/setup` ``).
+  - Maintained the strict Portuguese (Brazil) operator-facing localization mandate, and kept the manual completely image-free.
+- **HTML Compilation:**
+  - Re-compiled `docs/actual_screenshots/copiar_manual_usuario.html` containing the updated, fully detailed manual text.
+
+
+## Session Milestone: User Manual Generation (2026-06-11)
+
+### Implemented Features
+- **Comprehensive User Manual (`docs/MANUAL_DO_USUARIO.md`):**
+  - Generated a complete, highly detailed user manual in Portuguese (Brazil) structured by **7 Core Procedures** (aligning with operational tasks rather than isolated software modules), where the main header is `# 6. MANUAL DO USUÁRIO` and each task is numbered as `## 6.X. Como...`.
+  - Standardized the entire manual to a strictly formal, objective, and detailed tone, employing third-person passive and impersonal constructions (e.g. "Acessar", "Deve-se selecionar") instead of direct imperatives.
+  - Formatted all form fields, parameters, buttons, and objectives as cohesive **explanatory prose (paragraphs)** instead of bullet lists to ensure a clean, book-like reading flow.
+  - Reserved list formatting (ordered/numbered lists) **strictly for sequential operational steps** (step-by-step procedures).
+  - Removed all images, figure caption blocks, and visual reference items to provide a clean, lightweight, **image-free** layout suitable for direct printing or text-only document integration.
+  - Included relative paths and clickable links using the `file://` scheme to other documentation assets like `FLUXOS_DE_TRABALHO.md`.
+  - Added troubleshooting guides and copy/paste instructions for operators.
+- **Copy-Paste Manual Compiler (`docs/actual_screenshots/copiar_manual_usuario.html`):**
+  - Programmed and ran `scripts/compile_manual_html.js` to parse the Markdown User Manual (including all lists and formatting) into an offline-ready, single-page HTML document.
+  - Enriched the compiler to generate automatic `id` attributes for headings (`h1`, `h2`, `h3`, `h4`) using a slugification algorithm. This makes the offline index links fully functional and clickable inside the compiled HTML.
+  - Updated the copy-paste instructions to reflect that the manual contains no images, allowing the operator to copy the entire formatted text, lists, and headings using **Ctrl+A** and **Ctrl+C**.
+
+## Session Milestone: Technical Documentation Generation (2026-06-11)
+
+### Implemented Features
+- **Technical Documentation (`docs/DOCUMENTACAO_TECNICA.md`):**
+  - Generated comprehensive, highly detailed technical documentation in Portuguese matching the exact structure requested by the user.
+  - Refined the entire document's tone to be strictly formal, academic, and impersonal (avoiding colloquialisms, direct questions, and Q&A subheadings like "Como é usado" or "Por que foi adotado").
+  - Removed all code reference file paths (e.g. specific source code directories and file extensions) and AI-agent internal concepts (like Leaf Nodes and attention windows) from the text, making the document completely neutral and ready for physical/printed publication.
+  - Verified and corrected technical details for 100% truthfulness: corrected the Redis cache routing mechanism (BFF makes HTTP calls to IAM which queries Redis, instead of BFF calling Redis directly), detailed the Outbox pattern pessimistic concurrency locking (`FOR UPDATE SKIP LOCKED`) used by background workers to prevent double-despatch race conditions, expanded the microservices diagram to list all 8 active APIs, and detailed the 4-step checkout sequence in the Melhor Envio adapter.
+  - Specified the microservices layout, the hexagonal architecture boundaries (Domain, Application, Infrastructure, Api), the database-per-tenant isolation strategy, and the BFF/Gateway edge design.
+  - Documented technical stacks: React (TypeScript, Vite, Material UI, Vitest, Playwright) for the frontend, and C# (.NET 10, Minimal APIs, EF Core 10) for the backend.
+  - Documented third-party integrations: Google OAuth, PlugNotas, FocusNFe, Asaas, Melhor Envio, and MinIO.
+  - Detailed the project's repository structure, command-line build/test invocations, and core code conventions (Early Returns, Outbox Pattern, Value Objects, guards, etc.).
+- **Artifact Export (`technical_documentation.md`):**
+  - Created a markdown artifact in the conversation's brain folder.
+
+## Session Milestone: Live System Screenshot Capture (2026-06-11)
+
+### Implemented Features
+- **Bypass Auth Screenshot Automation:**
+  - Programmed and executed a Playwright script `capture_all.spec.ts` using the dev authentication bypass header (`X-Dev-User`) and automatic `localStorage` tenancy injection (`rail_factory_tenant_code: dev`).
+  - Successfully logged into the running platform and visited 21 routes sequentially.
+  - Handled page-specific dynamic rendering and animation/data settling using smart timeouts and progressbar check exclusions for the metrics dashboard.
+  - Generated and saved 21 high-fidelity widescreen screenshots (1280x800) in both the workspace directory (`docs/actual_screenshots/`) and the session artifact folder.
+- **Report & Workspace Cleanup:**
+  - Generated a clean markdown report artifact `screenshot_capture_report.md` embedding all 21 screens.
+  - Developed and ran a Node.js compiler to generate `docs/actual_screenshots/copiar_documento.html` containing all 21 actual screenshots encoded in Base64.
+  - Configured formatting according to academic standards: centered titles above each image starting at **Figura 82**, and centered captions below each image containing **"Fonte: Produzido pelo autor."**.
+  - Performed an orphan sweep to remove the temporary test and generator files.
+
+## Session Milestone: Production-Like Development Seeding (2026-06-11)
+
+
+### Implemented Features
+- **Independent, Idempotent Development Seeding:**
+  - Implemented rich, production-like seed data generation across all microservices inside their respective `SchemaInitializer` classes (triggered on startup after migrations).
+  - Enforced environmental isolation (only seeds when `IHostEnvironment.IsDevelopment()` is true).
+  - Ensured absolute idempotency via preliminary existence checks (e.g. `AnyAsync()` or `CountAsync()`) before writing database records.
+- **Value Object Rigidity & Decoupling:**
+  - Used domain Value Objects (`MaterialCode`, `FiscalId`, `EmailAddress`) to enforce uppercase sanitization and validation on seeded data.
+  - Aligned driver and vehicle records between microservices (`HumanResources.Api` and `Fleet.Api`) using deterministic Guids (e.g., Marcos Oliveira driver ID `33333333-3333-3333-3333-333333333333` mapped consistently).
+  - Added an optional `Guid? id` parameter to the `Person.Create` domain factory method to enable deterministic IDs in seed configurations.
+- **Microservice Seeds Mapped:**
+  - **Tenancy.Api**: Automatically registers connection strings for local tenants `dev` and `acme`.
+  - **Iam.Api**: Seeds default users and assigns system roles.
+  - **SupplyChain.Api**: Seeds suppliers (ACME, Global Parafusos), material mappings, and invoices (approved receipt `NFE-00012345` with item `MAT-ACO-2MM` 500KG, and pending receipt `NFE-00012346` with item `MAT-PAR-M8` 2000UN).
+  - **Inventory.Api**: Seeds "Almoxarifado Central" stock location, catalog materials (`MAT-ACO-2MM`, `MAT-PAR-M8`, `PRO-TR-100`), and initial confirmed available balances (1200KG for Aço, 5000UN for Parafuso, and 25UN for TR-100).
+  - **Production.Api**: Seeds work centers (`WC-COR-01`, `WC-SOL-02`, `WC-MON-03`), BOM version 1 recipe for `PRO-TR-100` (15.5KG Aço + 8UN Parafuso), and production orders in various states: completed `OP-2026-0001` (with quality inspection, consumption records, and scrap records), released `OP-2026-0002`, and draft `OP-2026-0003`.
+  - **HumanResources.Api**: Seeds standard people records (Carlos Silva and Ana Souza as employees, Marcos Oliveira as driver).
+  - **Fleet.Api**: Seeds vehicle fleet (truck `BRA2S19`, van `XYZ8765`) and assigns Marcos Oliveira as driver to `BRA2S19`.
+  - **Logistics.Api**: Seeds carriers (TransRápido, Logística Brasil), shipment order `EXP-20260610-001` in Shipped state, and tracking dispatch `RF-TRJ1001` in Delivered state containing all fiscal details.
+- **SQLite Test Isolation & Database Provider Check:**
+  - Implemented provider guard checks in all Schema Initializers to prevent PostgreSQL-specific migration scripts (like schema history alignments or tablespace functions) from running when in-memory SQLite providers are used during testing.
+- **Race Condition Prevention in Tests:**
+  - Designed and configured robust polling loops in integration tests (e.g. `ProductionSchemaInitializerTests`, `LogisticsSchemaInitializerTests`, `HrSchemaInitializerTests`, `FleetSchemaInitializerTests`) checking for minimum expected counts rather than mere existence to ensure database transactions fully complete before tests terminate or tokens cancel. Added `try-catch` blocks inside test polling loops to tolerate transient SQLite connection locks (SQLite Error 5) during concurrent background seeds.
+
+### Verification & Tests
+- Added and configured new integration test projects: `RailFactory.HumanResources.Api.Tests`, `RailFactory.Fleet.Api.Tests`, and `RailFactory.Logistics.Api.Tests`.
+- Added all five remaining test projects (`Iam.Api.Tests`, `Inventory.Api.Tests`, `HumanResources.Api.Tests`, `Fleet.Api.Tests`, `Logistics.Api.Tests`) to the main solution [RailFactory.Fork.sln](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Fork.sln).
+- Added new integration tests validating correct seeding and idempotency across all microservice projects:
+  - `TenantCatalogSchemaInitializerTests.cs` (Passed)
+  - `IamLocalUsersSchemaInitializerTests.cs` (Passed - resolved race condition in test helper by polling `UserRoles` instead of `Roles`)
+  - `SupplyChainSchemaInitializerTests.cs` (Passed)
+  - `InventorySchemaInitializerTests.cs` (Passed)
+  - `ProductionSchemaInitializerTests.cs` (Passed)
+  - `HrSchemaInitializerTests.cs` (Passed)
+  - `FleetSchemaInitializerTests.cs` (Passed)
+  - `LogisticsSchemaInitializerTests.cs` (Passed)
+- Solution compiles, builds, and runs cleanly with all tests passing (0 C# warnings/errors).
+
+## Session Milestone: Interactive Wireframe Layout Simulator (2026-06-10)
+
+### Implemented Features
+- **Interactive Wireframe Simulator (`wireframes.html`):**
+  - Designed an independent, offline-capable HTML/CSS dashboard that maps and simulates all core page layouts of the Rail Factory platform.
+  - Rendered components in wireframe view using dashed/solid configurable borders and labels to denote UI structures (Sidebar, Topbar, KPI stat cards, tables, forms, modals).
+  - Implemented an interactive control panel at the top to dynamically adjust:
+    - **Themes:** Classic Wireframe (default grey/white/black sketch layouts), Multicolor Categorized, Blueprint Blue (classic engineering style), and Graphite Dark.
+    - **Diagonal Cross placeholders ("X"):** Implemented a pure CSS gradient-based diagonal cross (`.wf-placeholder-x`) to automatically render standard visual wireframe X marks inside avatar templates and material catalog images.
+    - **Interactive Image Upload Preview:** Configured JavaScript bindings on all placeholder slots. Clicking a placeholder allows the user to upload any local image file, rendering it dynamically with an automatic `grayscale` + high-contrast filter to align with the wireframe document aesthetic.
+    - **Border Styles:** Monochrome (grey/black layout outlines) and Multicolor (categorized element colors: blue for containers, green for data, orange for inputs, red for buttons, purple for text).
+    - **Line Properties:** Border thickness (1px/2px) and style (dashed/solid).
+    - **Visibility Toggles:** Toggle structural descriptive tags (Labels) on and off.
+  - Mapped 100% of all interactive pages reachable via the sidebar navigation:
+    - *Dashboard:* KPI metrics strip, active production orders, scrap tables, and stock accuracy progress bars.
+    - *Receipts:* Advanced filter configurations, pagination, and NF-e reception table.
+    - *SKU Association:* A split workbench dashboard comparing invoice elements against catalog items and measure conversion factors.
+    - *Inventory:* KPI cards, balance searches, sorting options, and material catalog grid cards.
+    - *Work Centers:* List of industrial work centers with capacity and status.
+    - *BOM & Costing:* Product structure cards with an interactive costing detailed roll-up modal.
+    - *Production Orders:* Interactive production queue table with status indicators and operations.
+    - *Carriers:* Integrated fleet carriers management table and settings.
+    - *Shipment Orders:* Shipment dispatch queue table showing items, weights, and invoicing.
+    - *Logistics & DAMDFE:* Operational shipment orders and a printable, high-fidelity mock of the Brazilian DAMDFE fiscal manifest document (A4 format).
+    - *NF-e Monitor:* Real-time SEFAZ invoice emission status tracking table.
+    - *Fiscal Settings:* Organizational fiscal parameters input form (CFOP, tax rates).
+    - *Fleet:* Vehicle fleet list (Plates, brand, capacity, RNTRC).
+    - *HR & Employees:* Grid of employee cards with circular avatars and a dynamic side drawer displaying detail panel information on selection.
+    - *Users:* System user management grid.
+    - *Roles:* Granular permission assignment grid.
+    - *Audit:* Timeline of system actions logged by operator and module.
+    - *Integrations:* Services configuration grid with an interactive modal simulating dynamic form grids (Access Token, webhook tokens, base URLs).
+    - *Tenants:* Multitenant organization catalogs management table.
+- **Automated Screenshot Capture Engine (`capture.spec.ts`):**
+  - Programmed a Playwright automation script in `e2e/capture.spec.ts` that launches a headless browser, resolves URL paths, and navigates the platform's sidebar options.
+  - Handles UI actions programmatically (clicks tabs, launches modals like BOM Cost Rollup and Integration settings, and toggles layout panels like the DAMDFE document).
+  - Automatically captures high-fidelity widescreen (1920x1080 scaled to 1366x768 layout frame) screenshots of each view (excluding control panels) and saves them as 22 clean PNG files in `/docs/wireframes/` at the repository root and in the active session's artifact workspace.
+- **Base64 Rich Text Copier (`generate_copiar_documento.js`):**
+  - Implemented a node utility script to compile the copy-paste report helper.
+  - Converts all generated PNG screenshots to inline Base64 data strings (supporting copy-paste transfers directly into web editors like Google Docs, Notion, or Confluence).
+  - Configured the numbering layout to start sequentially from **Figure 35** through **Figure 56**, appending the requested *"Fonte: feito pelo autor."* label to each figure.
+
+### Verification & Tests
+- Created unit test [wireframes.test.ts](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/shared/lib/__tests__/wireframes.test.ts) to verify the template file existence, HTML validation, and required container IDs.
+- Ran all 39 frontend unit tests successfully using Vitest (`npm run test`).
+
 ## Session Milestone: BOM Evolution - Phase 2: Technical Scrap & Costing Roll-up (2026-06-09)
 
 ### Implemented Features
@@ -244,3 +420,18 @@ This file tracks architectural decisions, session status, and implementation mil
   - Fixed compilation errors in backend unit tests [ListInventoryBalancesTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Inventory.Api.Tests/ListInventoryBalancesTests.cs) (aligned parameters order for `Material.Create` and expected prefix `catalog-init`).
   - Added frontend unit test to [InventoryStocksPage.test.tsx](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Frontend/App/src/features/inventory/__tests__/InventoryStocksPage.test.tsx) verifying that synthetic zero-stock items disable the stock history button correctly.
   - Successfully executed and verified all C# and TypeScript tests, and successfully completed the production build.
+
+## Session Milestone: Chapter 5 Technical Documentation & Offline PlantUML Compilations (2026-06-11)
+
+### Implemented Features
+- **Technical Documentation Chapter 5 (`docs/DOCUMENTACAO_TECNICA.md`):**
+  - Generated a comprehensive, formal academic technical documentation section in third-person Brazilian Portuguese suitable for physical printing.
+  - Divided content into three key sections: Architecture (5.1), Technologies (5.2), and Repository Structure (5.3).
+  - Clarified why each technology was selected and how it functions (such as dynamic PostgreSQL connection string resolution, Redis session caching, Outbox skipped-locked polling, and Melhor Envio integration steps).
+  - Excluded absolute markdown links, AI-native terminology, or Q&A formatting to maintain academic tone.
+- **Offline PlantUML Diagram Renderings (Opção 3):**
+  - Defined system architecture, secure session check sequence, and Outbox transactional message dispatch flow using PlantUML files (`arquitetura.puml`, `sessao.puml`, `outbox.puml`) in `docs/diagrams/`.
+  - Compiled the `.puml` definitions locally using `plantuml.jar` into high-quality static PNG files in `docs/imagens/` (`arquitetura.png`, `sessao.png`, `outbox.png`).
+  - Embedded the compiled PNG files directly into the Markdown document to ensure seamless offline rendering and high-quality physical output.
+- **Artifact Synchronization:**
+  - Updated the conversation artifact `technical_documentation.md` to match the document and embedded the PNG diagrams with absolute paths.

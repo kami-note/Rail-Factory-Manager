@@ -1,0 +1,24 @@
+@startuml Fleet-Use-Case
+left to right direction
+
+actor "Admin Filial" as AF
+actor "Operador (Motorista)" as OP
+actor "Sistema" as SYS
+
+rectangle "Fleet Service" {
+  usecase "Prontuário do Veículo" as UC_Vehicle
+  usecase "Plano de Manutenção" as UC_Maint
+  usecase "Controle de Abastecimento" as UC_Fuel
+  usecase "Alocação de Motoristas" as UC_Driver
+  usecase "Roteirização" as UC_Route
+  usecase "Telemetria" as UC_Telemetry
+}
+
+AF --> UC_Vehicle
+AF --> UC_Maint
+AF --> UC_Driver
+OP --> UC_Fuel
+OP --> UC_Route
+SYS --> UC_Telemetry
+
+@enduml

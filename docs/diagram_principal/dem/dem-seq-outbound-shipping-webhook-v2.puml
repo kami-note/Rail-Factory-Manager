@@ -1,0 +1,22 @@
+@startuml
+title Sequencia - Outbound (Despacho + Webhook) (TO-BE) (v2)
+skinparam linetype ortho
+
+actor Expedicao
+participant "Logistics Service" as LOG
+participant "Carrier API" as CAR
+participant "Notification/Webhook" as WH
+participant "Event Bus" as BUS
+
+Expedicao -> LOG : Criar despacho + volumes
+LOG -> LOG : Conferencia de embarque
+LOG -> CAR : Solicitar coleta/etiquetas
+CAR --> LOG : Codigo de rastreio
+LOG -> BUS : Publica ShipmentDispatched
+LOG -> WH : Enviar webhook (status=DISPATCHED)
+WH --> LOG : 2xx OK
+CAR -> LOG : Atualizacoes de tracking (webhook/poll)
+LOG -> WH : Enviar webhook (status update)
+
+@enduml
+

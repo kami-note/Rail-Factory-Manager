@@ -1,0 +1,58 @@
+@startuml
+title ORM - IAM (AS-IS) (v2)
+skinparam linetype ortho
+hide circle
+
+class User <<entity>> {
+  id : uuid
+  email : string
+  externalId : string
+  status : string
+}
+
+class Role <<entity>> {
+  id : uuid
+  name : string
+}
+
+class Permission <<entity>> {
+  id : uuid
+  code : string
+}
+
+class UserRole <<entity>> {
+  id : uuid
+  userId : uuid
+  roleId : uuid
+  tenantId : uuid?
+}
+
+class RolePermission <<entity>> {
+  roleId : uuid
+  permissionId : uuid
+}
+
+class users <<table>>
+class roles <<table>>
+class permissions <<table>>
+class user_roles <<table>>
+class role_permissions <<table>>
+
+User "1" -- "many" UserRole
+Role "1" -- "many" UserRole
+Role "1" -- "many" RolePermission
+Permission "1" -- "many" RolePermission
+
+User ..> users : maps_to
+Role ..> roles : maps_to
+Permission ..> permissions : maps_to
+UserRole ..> user_roles : maps_to
+RolePermission ..> role_permissions : maps_to
+
+note right of user_roles
+  tenantId:
+  - nulo = role global
+  - preenchido = reservado para roles por tenant
+end note
+
+@enduml

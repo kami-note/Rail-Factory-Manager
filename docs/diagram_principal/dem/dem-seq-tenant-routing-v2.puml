@@ -1,0 +1,33 @@
+@startuml
+title Sequencia - Tenant Routing (TO-BE) (v2)
+skinparam linetype ortho
+
+actor Usuario
+participant "Gateway" as GW
+participant "Production API" as PRD
+participant "TenantResolver" as TR
+database "Tenant Registry" as TREG
+database "PostgreSQL Tenant DB" as TDB
+
+Usuario -> GW : Requisicao (X-Tenant-Code + tenantCode)
+GW -> PRD : Forward request
+PRD -> TR : ResolveTenant(requestContext)
+TR -> TREG : Buscar mapping tenant -> db
+alt Tenant ausente ou invalido
+  TR --> PRD : erro tenant invalido
+  PRD --> GW : HTTP 400 Bad Request
+  GW --> Usuario : 400 tenant invalido/ausente
+else Tenant bloqueado/sem acesso
+  TR --> PRD : tenant resolvido sem permissao
+  PRD --> GW : HTTP 403 Forbidden
+  GW --> Usuario : 403 acesso ao tenant negado
+else Tenant valido
+  TREG --> TR : connection metadata
+  TR --> PRD : TenantConnection
+  PRD -> TDB : Executar query no banco do tenant
+  TDB --> PRD : resultado
+  PRD --> GW : response
+  GW --> Usuario : response
+end
+
+@enduml

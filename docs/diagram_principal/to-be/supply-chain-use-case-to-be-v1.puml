@@ -1,0 +1,19 @@
+@startuml Supply-Chain-Use-Case-TOBE
+left to right direction
+
+actor "Admin Filial" as AF
+actor "Operador" as OP
+actor "Sistema SEFAZ" as SEFAZ
+
+rectangle "Dominio Supply Chain (TO-BE)" {
+  usecase "Monitorar XML SEFAZ" as UC_SEFAZ
+  usecase "Conferência Cega" as UC_Blind
+  usecase "Gestão de Devoluções" as UC_Return
+}
+
+SEFAZ ..> UC_SEFAZ : <<trigger>>
+AF --> UC_Return
+OP --> UC_Blind
+OP --> UC_Return
+
+@enduml
