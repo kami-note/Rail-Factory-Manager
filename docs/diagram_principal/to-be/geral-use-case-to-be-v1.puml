@@ -1,0 +1,123 @@
+@startuml RAIL-Factory-General-Use-Case-TOBE
+left to right direction
+skinparam packageStyle rectangle
+skinparam useCase {
+  BackgroundColor<<iam>> LightBlue
+  BackgroundColor<<prd>> LightGreen
+  BackgroundColor<<sup>> LightYellow
+  BackgroundColor<<log>> Orange
+  BackgroundColor<<fle>> Pink
+  BackgroundColor<<hr>> Lavender
+  BackgroundColor<<dsh>> Wheat
+}
+
+actor "Admin Matriz" as AM
+actor "Admin Filial" as AF
+actor "Operador" as OP
+actor "Sistema SEFAZ" as SEFAZ
+actor "Sistema Cliente (B2B)" as B2B
+
+rectangle "RAIL Factory (TO-BE)" {
+  rectangle "Dominio IAM" <<iam>> {
+    usecase "Login (SSO Google)" as UC_IAM_Login
+    usecase "Provisionar Tenants" as UC_IAM_Tenant
+    usecase "Gerenciar RBAC" as UC_IAM_RBAC
+    usecase "Gerenciar Sessões" as UC_IAM_Session
+    usecase "Consultar Auditoria" as UC_IAM_Audit
+    usecase "Gerenciar API Keys" as UC_IAM_ApiKey
+    usecase "Recuperação de Conta / MFA" as UC_IAM_Recovery
+  }
+  rectangle "Dominio Production (Manufatura)" <<prd>> {
+    usecase "Gerenciar BOM (versionado)" as UC_PRD_BOM
+    usecase "Gerenciar Work Centers" as UC_PRD_WC
+    usecase "Ciclo de Vida da OP" as UC_PRD_OP
+    usecase "Reserva de Materiais" as UC_PRD_Reserve
+    usecase "Registrar Refugo" as UC_PRD_Scrap
+    usecase "Apontar Parada" as UC_PRD_Downtime
+    usecase "Controle de Qualidade" as UC_PRD_QC
+    usecase "Lote e Rastreabilidade" as UC_PRD_Lot
+  }
+  rectangle "Dominio Supply Chain (Inbound)" <<sup>> {
+    usecase "Monitorar XML SEFAZ" as UC_SUP_SEFAZ
+    usecase "Conferência Cega" as UC_SUP_Blind
+    usecase "Gestão de Devoluções" as UC_SUP_Return
+  }
+  rectangle "Dominio Logistics (Outbound)" <<log>> {
+    usecase "Picking & Packing" as UC_LOG_Pick
+    usecase "Gestão Transportadoras" as UC_LOG_Carrier
+    usecase "Rastreio de Entrega" as UC_LOG_Track
+    usecase "Webhooks de Status" as UC_LOG_Webhook
+    usecase "Conferência de Embarque" as UC_LOG_Ship
+    usecase "Cálculo de Frete" as UC_LOG_Freight
+  }
+  rectangle "Dominio Fleet" <<fle>> {
+    usecase "Prontuário do Veículo" as UC_FLE_Vehicle
+    usecase "Plano de Manutenção" as UC_FLE_Maint
+    usecase "Controle de Abastecimento" as UC_FLE_Fuel
+    usecase "Alocação de Motoristas" as UC_FLE_Driver
+    usecase "Roteirização" as UC_FLE_Route
+    usecase "Telemetria" as UC_FLE_Telemetry
+  }
+  rectangle "Dominio HR (Cadastro de Pessoas)" <<hr>> {
+    usecase "Cadastro de Pessoas (colaborador, motorista...)" as UC_HR_Profile
+    usecase "Matriz de Competências" as UC_HR_Skills
+    usecase "Escalas e Turnos" as UC_HR_Shifts
+  }
+  rectangle "Dominio Dashboard & Reporting" <<dsh>> {
+    usecase "OEE" as UC_DSH_OEE
+    usecase "Mapas de Calor de Entrega" as UC_DSH_Map
+    usecase "Alertas em Tempo Real" as UC_DSH_Alerts
+    usecase "Exportação (PDF/Excel/CSV)" as UC_DSH_Export
+    usecase "Dashboard de Custos" as UC_DSH_Costs
+  }
+}
+
+AM --> UC_IAM_Login
+AM --> UC_IAM_Tenant
+AM --> UC_IAM_RBAC
+AM --> UC_IAM_Session
+AM --> UC_IAM_Audit
+AM --> UC_IAM_ApiKey
+AM --> UC_IAM_Recovery
+AM --> UC_DSH_OEE
+AM --> UC_DSH_Map
+AM --> UC_DSH_Alerts
+AM --> UC_DSH_Export
+AM --> UC_DSH_Costs
+
+AF --> UC_IAM_Login
+AF --> UC_SUP_Return
+AF --> UC_LOG_Carrier
+AF --> UC_LOG_Freight
+AF --> UC_FLE_Vehicle
+AF --> UC_FLE_Maint
+AF --> UC_FLE_Driver
+AF --> UC_FLE_Telemetry
+AF --> UC_HR_Profile
+AF --> UC_HR_Skills
+AF --> UC_HR_Shifts
+AF --> UC_DSH_OEE
+AF --> UC_DSH_Alerts
+AF --> UC_DSH_Export
+AF --> UC_DSH_Costs
+
+OP --> UC_IAM_Login
+OP --> UC_PRD_BOM
+OP --> UC_PRD_WC
+OP --> UC_PRD_OP
+OP --> UC_PRD_Reserve
+OP --> UC_PRD_Scrap
+OP --> UC_PRD_Downtime
+OP --> UC_PRD_QC
+OP --> UC_PRD_Lot
+OP --> UC_SUP_Blind
+OP --> UC_LOG_Pick
+OP --> UC_LOG_Ship
+OP --> UC_FLE_Fuel
+OP --> UC_FLE_Route
+
+SEFAZ --> UC_SUP_SEFAZ
+B2B --> UC_LOG_Webhook
+B2B --> UC_LOG_Track
+
+@enduml

@@ -1,0 +1,30 @@
+@startuml IAM-Use-Case
+left to right direction
+
+actor "Admin Matriz" as AM
+actor "Admin Filial" as AF
+actor "Operador" as OP
+
+rectangle "IAM Service" {
+  usecase "Login (SSO Google)" as UC_Login
+  usecase "Provisionar Tenants" as UC_Tenant
+  usecase "Gerenciar RBAC" as UC_RBAC
+  usecase "Gerenciar Sessões" as UC_Session
+  usecase "Consultar Auditoria" as UC_Audit
+  usecase "Gerenciar API Keys" as UC_ApiKey
+  usecase "Recuperação de Conta / MFA" as UC_Recovery
+}
+
+AM --> UC_Login
+AM --> UC_Tenant
+AM --> UC_RBAC
+AM --> UC_Session
+AM --> UC_Audit
+AM --> UC_ApiKey
+AM --> UC_Recovery
+AF --> UC_Login
+AF --> UC_Recovery
+OP --> UC_Login
+OP --> UC_Recovery
+
+@enduml

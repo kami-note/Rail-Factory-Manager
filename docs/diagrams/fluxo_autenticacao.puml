@@ -1,0 +1,33 @@
+@startuml fluxo_autenticacao
+title Fluxo de Autenticação e Direcionamento por Perfil
+
+(*) --> "/ (Início)"
+--> "Informar Código da Organização\n(TenantSelector)"
+--> "Entrar com Google"
+if "Autenticado?" then
+  -->[não] "/ (Início)"
+else
+  -->[sim] "/app\n(redireciona por permissões)"
+endif
+
+if "Perfil de Acesso?" then
+  -->[Administrador] "MÓDULO: ADMINISTRAÇÃO\n/app/iam/users"
+  --> "Gestão de Usuários, Roles,\nTenants e Integrações"
+  --> "Navegação Lateral"
+else
+  -->[Operador de Produção] "MÓDULO: PRODUÇÃO\n/app/production/orders"
+  --> "Gestão de Ordens de Produção,\nBOMs e Centros de Trabalho"
+  --> "Navegação Lateral"
+else
+  -->[Operador de Logística] "MÓDULO: LOGÍSTICA\n/app/receipts"
+  --> "Gestão de Recebimentos, Estoque,\nExpedição e Despachos"
+  --> "Navegação Lateral"
+else
+  -->[Supervisor de RH e Frota] "MÓDULO: RH E FROTA\n/app/fleet"
+  --> "Gestão de Veículos, Abastecimento,\nFuncionários e Horas"
+  --> "Navegação Lateral"
+endif
+
+--> "Logout"
+--> (*)
+@enduml

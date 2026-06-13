@@ -1,0 +1,21 @@
+@startuml
+title Estados - Shipment/Entrega (TO-BE) (v2)
+skinparam linetype ortho
+
+[*] --> Criado
+Criado --> EmSeparacao : iniciar picking
+EmSeparacao --> Embalado : packing
+Embalado --> EmConferencia : conferencia embarque
+EmConferencia --> Despachado : liberar saida
+Despachado --> EmTransito : primeira atualizacao carrier
+EmTransito --> Entregue : confirmacao entrega
+Criado --> Cancelado : cancelar
+EmSeparacao --> Cancelado : cancelar
+Embalado --> Cancelado : cancelar
+Despachado --> Devolvido : retorno
+Entregue --> [*]
+Cancelado --> [*]
+Devolvido --> [*]
+
+@enduml
+

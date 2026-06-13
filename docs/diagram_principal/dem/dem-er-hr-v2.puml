@@ -1,0 +1,68 @@
+@startuml
+title ER - HR (TO-BE) (v2)
+left to right direction
+skinparam linetype ortho
+
+entity "Tenant" as Tenant {
+  * id : uuid
+  --
+  name : string
+}
+
+entity "Person" as Person {
+  * id : uuid
+  --
+  tenant_id : uuid
+  name : string
+  document : string?
+  email : string?
+  phone : string?
+  type : string  <<employee/driver/third_party>>
+  active : bool
+}
+
+entity "Skill" as Skill {
+  * id : uuid
+  --
+  tenant_id : uuid
+  code : string
+  description : string
+}
+
+entity "PersonSkill" as PersonSkill {
+  * person_id : uuid
+  * skill_id : uuid
+  --
+  level : int?
+  acquired_at_utc : datetime?
+}
+
+entity "Shift" as Shift {
+  * id : uuid
+  --
+  tenant_id : uuid
+  name : string
+  start_time : time
+  end_time : time
+}
+
+entity "Schedule" as Schedule {
+  * id : uuid
+  --
+  tenant_id : uuid
+  person_id : uuid
+  shift_id : uuid
+  starts_on : date
+  ends_on : date?
+}
+
+Person ||--o{ PersonSkill
+Tenant ||--o{ Person
+Tenant ||--o{ Skill
+Tenant ||--o{ Shift
+Tenant ||--o{ Schedule
+Skill ||--o{ PersonSkill
+Person ||--o{ Schedule
+Shift ||--o{ Schedule
+
+@enduml

@@ -1,0 +1,113 @@
+@startuml
+title ER - IAM (TO-BE) (v2)
+left to right direction
+skinparam linetype ortho
+
+entity "Tenant" as Tenant {
+  * id : uuid
+  --
+  cnpj : string
+  name : string
+  timezone : string
+  locale : string
+  status : string
+}
+
+entity "TenantDatabaseBinding" as TenantDB {
+  * tenant_id : uuid
+  --
+  db_host : string
+  db_port : int
+  db_name : string
+  db_username : string
+  db_secret_ref : string
+  active : bool
+}
+
+entity "User" as User {
+  * id : uuid
+  --
+  email : string
+  display_name : string?
+  picture_url : string?
+  external_id : string  <<Google subject>>
+  status : string
+  created_at_utc : datetime
+  updated_at_utc : datetime?
+}
+
+entity "Role" as Role {
+  * id : uuid
+  --
+  tenant_id : uuid?  <<null = global>>
+  name : string
+  description : string?
+}
+
+entity "Permission" as Permission {
+  * id : uuid
+  --
+  code : string  <<ex: production.write>>
+  description : string?
+}
+
+entity "UserRole" as UserRole {
+  * id : uuid
+  --
+  user_id : uuid
+  role_id : uuid
+  tenant_id : uuid?  <<optional scoping>>
+}
+
+entity "RolePermission" as RolePermission {
+  * role_id : uuid
+  * permission_id : uuid
+}
+
+entity "Session" as Session {
+  * id : uuid
+  --
+  user_id : uuid
+  issued_at_utc : datetime
+  expires_at_utc : datetime
+  revoked_at_utc : datetime?
+  ip : string
+  user_agent : string?
+}
+
+entity "ApiKey" as ApiKey {
+  * id : uuid
+  --
+  tenant_id : uuid
+  name : string
+  hashed_secret : string
+  revoked_at_utc : datetime?
+  created_at_utc : datetime
+}
+
+entity "AuditLog" as AuditLog {
+  * id : uuid
+  --
+  tenant_id : uuid
+  actor_user_id : uuid?
+  at_utc : datetime
+  ip : string
+  service : string
+  action : string
+  resource : string
+  resource_id : string?
+  trace_id : string?
+}
+
+Tenant ||--|| TenantDB : binds_to
+Tenant ||--o{ Role : defines
+Tenant ||--o{ ApiKey : issues
+Tenant ||--o{ AuditLog : logs
+User ||--o{ Session : has
+User ||--o{ UserRole
+Role ||--o{ UserRole
+Role ||--o{ RolePermission
+Permission ||--o{ RolePermission
+User ||--o{ AuditLog : acts_as
+
+@enduml

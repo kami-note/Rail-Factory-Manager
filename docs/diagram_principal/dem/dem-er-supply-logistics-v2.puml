@@ -1,0 +1,161 @@
+@startuml
+title ER - Supply Chain + Logistics (TO-BE) (v2)
+left to right direction
+skinparam linetype ortho
+
+entity "Tenant" as Tenant {
+  * id : uuid
+  --
+  name : string
+}
+
+entity "NFe" as NFe {
+  * id : uuid
+  --
+  tenant_id : uuid
+  access_key : string
+  issuer_cnpj : string
+  issuer_name : string
+  issued_at : datetime
+  xml_uri : string
+  status : string
+}
+
+entity "Receiving" as Receiving {
+  * id : uuid
+  --
+  tenant_id : uuid
+  nfe_id : uuid
+  started_at : datetime
+  finished_at : datetime?
+  blind_mode : bool
+}
+
+entity "ReceivingLine" as RecLine {
+  * id : uuid
+  --
+  tenant_id : uuid
+  receiving_id : uuid
+  sku : string
+  counted_qty : decimal
+  uom : string
+}
+
+entity "InboundDiscrepancy" as Discrepancy {
+  * id : uuid
+  --
+  tenant_id : uuid
+  receiving_id : uuid
+  status : string
+  decision : string?
+  decided_by_user_id : uuid?
+  decided_at_utc : datetime?
+}
+
+entity "ReturnRequest" as ReturnReq {
+  * id : uuid
+  --
+  tenant_id : uuid
+  receiving_id : uuid
+  reason : string
+  status : string
+  created_at_utc : datetime
+}
+
+entity "ReturnLine" as ReturnLine {
+  * id : uuid
+  --
+  tenant_id : uuid
+  return_request_id : uuid
+  sku : string
+  qty : decimal
+  uom : string
+}
+
+entity "Carrier" as Carrier {
+  * id : uuid
+  --
+  tenant_id : uuid
+  name : string
+}
+
+entity "Shipment" as Shipment {
+  * id : uuid
+  --
+  tenant_id : uuid
+  carrier_id : uuid
+  status : string
+  freight_value : decimal?
+  tracking_code : string?
+}
+
+entity "ShipmentItem" as ShipItem {
+  * id : uuid
+  --
+  tenant_id : uuid
+  shipment_id : uuid
+  sku : string
+  qty : decimal
+  uom : string
+}
+
+entity "ShipmentPackage" as Package {
+  * id : uuid
+  --
+  tenant_id : uuid
+  shipment_id : uuid
+  label : string
+  weight : decimal
+  volume : decimal
+}
+
+entity "TrackingEvent" as Tracking {
+  * id : uuid
+  --
+  tenant_id : uuid
+  shipment_id : uuid
+  at : datetime
+  status : string
+  detail : string?
+}
+
+entity "WebhookSubscription" as WebhookSub {
+  * id : uuid
+  --
+  tenant_id : uuid
+  target_system : string
+  url : string
+  secret : string?
+  active : bool
+}
+
+entity "WebhookDelivery" as WebhookDelivery {
+  * id : uuid
+  --
+  tenant_id : uuid
+  subscription_id : uuid
+  event_type : string
+  payload : text
+  status : string
+  attempts : int
+  last_attempt_at_utc : datetime?
+}
+
+NFe ||--o{ Receiving : matched
+Tenant ||--o{ NFe
+Tenant ||--o{ Receiving
+Tenant ||--o{ ReturnReq
+Tenant ||--o{ Carrier
+Tenant ||--o{ Shipment
+Tenant ||--o{ WebhookSub
+Receiving ||--o{ RecLine : counts
+Receiving ||--o{ Discrepancy : creates
+Receiving ||--o{ ReturnReq : requests
+ReturnReq ||--o{ ReturnLine : contains
+Carrier ||--o{ Shipment : delivers
+Shipment ||--o{ ShipItem : items
+Shipment ||--o{ Package : packages
+Shipment ||--o{ Tracking : emits
+WebhookSub ||--o{ WebhookDelivery : delivers
+
+@enduml

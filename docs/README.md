@@ -30,6 +30,16 @@ Esta pasta centraliza toda a documentação do projeto. Organizada para **busca 
 |---|---|
 | **[REQUISITOS.md](./REQUISITOS.md)** | Requisitos canônicos do PDF (RF/NF/RN) + requisitos derivados (RD). |
 | **[ANALISE_REQUISITOS_E_PASSADAS.md](./ANALISE_REQUISITOS_E_PASSADAS.md)** | Matriz de mapeamento: qual requisito entra em qual passada e por quê. |
+| **[FLUXOS_DE_TRABALHO.md](./FLUXOS_DE_TRABALHO.md)** | Mapeamento dos principais fluxos de trabalho (Recebimento, Conferência, Produção, Expedição, Webhooks, Auditoria). |
+
+---
+
+## 📖 Manuais e Guias de Operação
+
+| Documento | O que responde |
+|---|---|
+| **[MANUAL_DO_USUARIO.md](./MANUAL_DO_USUARIO.md)** | Guia operacional completo de ponta a ponta com capturas de tela reais formatadas. |
+| **[copiar_manual_usuario.html](./actual_screenshots/copiar_manual_usuario.html)** | Página HTML compilada com imagens em Base64 para cópia direta e formatação automática no Word/Docs. |
 
 ---
 
@@ -73,3 +83,5 @@ Esta pasta centraliza toda a documentação do projeto. Organizada para **busca 
 | Estrutura de pastas do frontend? | `src/RailFactory.Frontend/GEMINI.md` |
 | Como adicionar um tenant? | `TENANT_ONBOARDING_STRATEGY.md` |
 | Há algum bug conhecido? | `ISSUES_CONHECIDOS.md` |
+| Como funciona o fluxo de trabalho de X? | `FLUXOS_DE_TRABALHO.md` |
+| Como operar o sistema ou ver capturas de tela? | `MANUAL_DO_USUARIO.md` |

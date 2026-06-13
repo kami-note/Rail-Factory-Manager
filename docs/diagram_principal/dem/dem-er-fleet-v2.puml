@@ -1,0 +1,99 @@
+@startuml
+title ER - Fleet (TO-BE) (v2)
+left to right direction
+skinparam linetype ortho
+
+entity "Tenant" as Tenant {
+  * id : uuid
+  --
+  name : string
+}
+
+entity "Vehicle" as Vehicle {
+  * id : uuid
+  --
+  tenant_id : uuid
+  plate : string
+  chassis : string
+  renavam : string
+  status : string
+  capacity_kg : decimal?
+}
+
+entity "Driver" as Driver {
+  * id : uuid
+  --
+  tenant_id : uuid
+  person_id : uuid  <<from HR>>
+  status : string
+}
+
+entity "DriverAllocation" as Allocation {
+  * id : uuid
+  --
+  tenant_id : uuid
+  driver_id : uuid
+  vehicle_id : uuid
+  starts_at_utc : datetime
+  ends_at_utc : datetime?
+}
+
+entity "FuelLog" as Fuel {
+  * id : uuid
+  --
+  tenant_id : uuid
+  driver_id : uuid
+  vehicle_id : uuid
+  at_utc : datetime
+  liters : decimal
+  amount : decimal
+}
+
+entity "MaintenancePlan" as Plan {
+  * id : uuid
+  --
+  tenant_id : uuid
+  vehicle_id : uuid
+  by : string  <<km/time>>
+  interval_value : int
+}
+
+entity "MaintenanceWorkOrder" as MWO {
+  * id : uuid
+  --
+  tenant_id : uuid
+  vehicle_id : uuid
+  due_at_utc : datetime?
+  due_km : int?
+  status : string
+  completed_at_utc : datetime?
+}
+
+entity "TelemetryEvent" as Telemetry {
+  * id : uuid
+  --
+  tenant_id : uuid
+  driver_id : uuid?
+  vehicle_id : uuid
+  at_utc : datetime
+  type : string
+  details : string?
+}
+
+Vehicle ||--o{ Allocation
+Tenant ||--o{ Vehicle
+Tenant ||--o{ Driver
+Tenant ||--o{ Allocation
+Tenant ||--o{ Fuel
+Tenant ||--o{ Plan
+Tenant ||--o{ MWO
+Tenant ||--o{ Telemetry
+Driver ||--o{ Allocation
+Vehicle ||--o{ Fuel
+Driver ||--o{ Fuel
+Vehicle ||--o{ Plan
+Vehicle ||--o{ MWO
+Vehicle ||--o{ Telemetry
+Driver ||--o{ Telemetry
+
+@enduml

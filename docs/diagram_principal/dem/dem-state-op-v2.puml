@@ -1,0 +1,21 @@
+@startuml
+title Estados - Ordem de Producao (OP) (TO-BE) (v2)
+skinparam linetype ortho
+
+[*] --> Rascunho
+Rascunho --> Planejada : planejar
+Planejada --> Liberada : liberar
+Liberada --> EmExecucao : iniciar
+EmExecucao --> Pausada : pausar
+Pausada --> EmExecucao : retomar
+EmExecucao --> Finalizada : finalizar
+Rascunho --> Cancelada : cancelar
+Planejada --> Cancelada : cancelar
+Liberada --> Cancelada : cancelar
+EmExecucao --> Cancelada : cancelar
+Pausada --> Cancelada : cancelar
+Finalizada --> [*]
+Cancelada --> [*]
+
+@enduml
+

@@ -1,0 +1,143 @@
+@startuml fluxo_navegacao
+title Fluxo de Navegação do Rail-Factory
+
+' Configuração de Estilo Visual (Modern Clean)
+skinparam {
+    BackgroundColor #FFFFFF
+    ArrowColor #4A5568
+    ArrowThickness 1.5
+    
+    StateBackgroundColor #F7FAFC
+    StateBorderColor #CBD5E0
+    StateFontColor #2D3748
+    StateFontName "Segoe UI", "Inter", sans-serif
+    StateFontSize 12
+    StateBorderThickness 1.5
+    
+    StateBackgroundColor<<Main>> #EBF8FF
+    StateBorderColor<<Main>> #3182CE
+    StateFontColor<<Main>> #2B6CB0
+    
+    StateBackgroundColor<<Process>> #EDF2F7
+    StateBorderColor<<Process>> #4A5568
+    StateFontColor<<Process>> #2D3748
+
+    StateBackgroundColor<<Action>> #E6FFFA
+    StateBorderColor<<Action>> #319795
+    StateFontColor<<Action>> #234E52
+    
+    StateBackgroundColor<<Dialog>> #FEFCBF
+    StateBorderColor<<Dialog>> #D69E2E
+    StateFontColor<<Dialog>> #744210
+
+    StateBackgroundColor<<External>> #EDF2F7
+    StateBorderColor<<External>> #718096
+    StateFontColor<<External>> #4A5568
+}
+
+[*] --> LoginOrgSelect
+
+state "Seleção de Org / Login (/)" as LoginOrgSelect <<Main>> {
+    state "Selecionar TenantCode" as SelectTenant
+    state "Autenticar com Google" as GoogleAuthBtn
+    SelectTenant --> GoogleAuthBtn
+}
+
+state "Google Identity Provider" as ExternalGoogle <<External>>
+GoogleAuthBtn --> ExternalGoogle : Redirecionamento OAuth
+ExternalGoogle --> AuthValidation : Callback de Sucesso
+ExternalGoogle --> LoginOrgSelect : Falha / Cancelado
+
+state "Bypass Setup (/setup)" as ConfigSetup <<Action>> {
+    note right: Inicialização do DB\ne Tenants (Dev/Admin)
+}
+LoginOrgSelect --> ConfigSetup : Acesso Direto
+
+state "Validação de Sessão (BFF)" as AuthValidation <<Action>>
+AuthValidation --> AuthenticatedArea : Sessão Válida
+AuthValidation --> LoginOrgSelect : Sessão Expirada / Erro (401)
+
+state "Área Autenticada (/app)" as AuthenticatedArea <<Main>> {
+    state "Painel Geral (/app)" as OverviewPanel <<Process>>
+    
+    note left of OverviewPanel
+        Navegação global disponível
+        pelo menu lateral (Sidebar)
+    end note
+
+    ' --- Módulo: Suprimentos ---
+    state "Módulo: Suprimentos" as GroupSuprimentos {
+        state "Recebimentos (/app/receipts)" as ReceiptsWorkspace <<Process>>
+        state "Importar XML Drawer" as ImportXMLDrawer <<Dialog>>
+        state "Associação de SKUs (/app/supply-chain/association)" as AssociationWorkbench <<Action>>
+        state "Estoque (/app/inventory)" as InventoryStocks <<Process>>
+        state "Detalhes do Material (/app/inventory/materials/:code)" as MaterialDetails <<Process>>
+        
+        ReceiptsWorkspace --> ImportXMLDrawer : Botão "Importar XML"
+        ImportXMLDrawer --> ReceiptsWorkspace : Fechar / Concluir Importação
+        
+        ReceiptsWorkspace --> AssociationWorkbench : Botão "Associar SKUs"
+        AssociationWorkbench --> ReceiptsWorkspace : Concluir Associação / Voltar
+        
+        InventoryStocks --> MaterialDetails : Selecionar Material
+        MaterialDetails --> InventoryStocks : Voltar
+    }
+
+    ' --- Módulo: Produção ---
+    state "Módulo: Produção" as GroupProducao {
+        state "Centros de Trabalho (/app/production/work-centers)" as WorkCenters <<Process>>
+        state "Estrutura de Produtos (/app/production/boms)" as BomsList <<Process>>
+        state "Clonar BOM" as CloneBOMModal <<Dialog>>
+        state "Ordens de Produção (/app/production/orders)" as ProductionOrders <<Process>>
+        
+        BomsList --> CloneBOMModal : Ação "Clonar BOM"
+        CloneBOMModal --> BomsList : Confirmar / Cancelar
+    }
+
+    ' --- Módulo: Logística ---
+    state "Módulo: Logística" as GroupLogistica {
+        state "Transportadoras (/app/logistics/carriers)" as Carriers <<Process>>
+        state "Expedição (/app/logistics/shipment-orders)" as ShipmentOrders <<Process>>
+        state "Despachos (/app/logistics/dispatches)" as Dispatches <<Process>>
+        state "Monitor NF-e (/app/logistics/nfe-monitor)" as NfeMonitor <<Process>>
+        state "Config. Fiscal (/app/logistics/fiscal-settings)" as FiscalSettings <<Process>>
+    }
+
+    ' --- Módulo: Frota ---
+    state "Módulo: Frota" as GroupFrota {
+        state "Frota (/app/fleet)" as Fleet <<Process>>
+    }
+
+    ' --- Módulo: Equipe ---
+    state "Módulo: Equipe" as GroupEquipe {
+        state "Funcionários (/app/hr/people)" as HR <<Process>>
+    }
+
+    ' --- Módulo: Segurança ---
+    state "Módulo: Segurança (IAM)" as GroupSeguranca {
+        state "Usuários (/app/iam/users)" as Users <<Process>>
+        state "Níveis de Acesso (/app/iam/roles)" as Roles <<Process>>
+        state "Auditoria (/app/iam/audit)" as Audit <<Process>>
+    }
+
+    ' --- Módulo: Configurações ---
+    state "Módulo: Configurações" as GroupConfiguracoes {
+        state "Integrações (/app/settings/integrations)" as Integrations <<Process>>
+        state "Empresas (/app/settings/tenants)" as Tenants <<Process>>
+    }
+
+    ' Transições de navegação global
+    OverviewPanel --> ReceiptsWorkspace
+    OverviewPanel --> InventoryStocks
+    OverviewPanel --> WorkCenters
+    OverviewPanel --> BomsList
+    OverviewPanel --> ProductionOrders
+    OverviewPanel --> Carriers
+    OverviewPanel --> Fleet
+    OverviewPanel --> HR
+    OverviewPanel --> Users
+}
+
+AuthenticatedArea --> LoginOrgSelect : Ação de Logout (Sessão Limpa)
+
+@enduml

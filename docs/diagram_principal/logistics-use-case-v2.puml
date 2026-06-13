@@ -1,0 +1,27 @@
+@startuml Logistics-Use-Case
+left to right direction
+
+actor "Admin Filial" as AF
+actor "Operador" as OP
+actor "Sistema Cliente (B2B)" as B2B
+actor "Sistema" as SYS
+
+rectangle "Logistics Service" {
+  usecase "Picking & Packing" as UC_Pick
+  usecase "Gestão Transportadoras" as UC_Carrier
+  usecase "Rastreio de Entrega" as UC_Track
+  usecase "Webhooks de Status" as UC_Webhook
+  usecase "Conferência de Embarque" as UC_Ship
+  usecase "Cálculo de Frete" as UC_Freight
+}
+
+AF --> UC_Carrier
+AF --> UC_Freight
+OP --> UC_Pick
+OP --> UC_Ship
+OP --> UC_Freight
+B2B --> UC_Track
+SYS --> UC_Webhook
+UC_Pick ..> UC_Webhook : <<trigger>>
+
+@enduml

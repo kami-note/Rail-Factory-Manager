@@ -1,0 +1,96 @@
+@startuml
+title Arquitetura - Deploy/Integracoes (TO-BE) (v2)
+skinparam linetype ortho
+
+node "Client Devices" as Clients {
+  artifact "Browser" as Browser
+}
+
+node "Aspire AppHost" as Aspire {
+  artifact "Orchestrator" as AppHost
+}
+
+node "Services" as Services {
+  node "Frontend" as S_UI
+  node "Gateway" as S_GW
+  node "IAM API" as S_IAM
+  node "Production" as S_PRD
+  node "Supply (Inbound)" as S_SUP
+  node "Logistics (Outbound)" as S_LOG
+  node "Fleet" as S_FLE
+  node "HR (People Master Data)" as S_HR
+  node "Dashboard/Reporting" as S_DSH
+  node "TenantResolver" as S_TR
+}
+
+node "Infrastructure" as Infra {
+  database "PostgreSQL - Tenant Registry\n(instancia separada)" as TREG_DB
+  artifact "tenant_registry" as TREG
+  node "PostgreSQL Tenant Instance A" as PG_A {
+    artifact "tenant_acme_db" as TDB1
+  }
+  node "PostgreSQL Tenant Instance B" as PG_B {
+    artifact "tenant_zenith_db" as TDB2
+  }
+  node "PostgreSQL Tenant Instance C" as PG_C {
+    artifact "tenant_aurora_db" as TDB3
+  }
+
+  node "Redis" as REDIS
+  queue "RabbitMQ" as MQ
+  node "pgAdmin" as PGADMIN
+}
+
+cloud "External" as Ext {
+  artifact "Google OAuth2" as ExtGoogle
+  artifact "SEFAZ / NF-e" as ExtSefaz
+  artifact "Carrier APIs" as ExtCarrier
+}
+
+Browser --> S_UI
+S_UI --> S_GW
+
+S_GW --> S_IAM
+S_GW --> S_PRD
+S_GW --> S_SUP
+S_GW --> S_LOG
+S_GW --> S_FLE
+S_GW --> S_HR
+S_GW --> S_DSH
+
+AppHost ..> Services : provisions/runs
+AppHost ..> Infra
+
+TREG_DB --> TREG
+
+S_IAM --> S_TR
+S_PRD --> S_TR
+S_SUP --> S_TR
+S_LOG --> S_TR
+S_FLE --> S_TR
+S_HR --> S_TR
+S_DSH --> S_TR
+S_TR --> TREG : resolve tenant -> db
+S_TR --> PG_A : open connection (tenant routed)
+S_TR --> PG_B : open connection (tenant routed)
+S_TR --> PG_C : open connection (tenant routed)
+
+S_IAM --> REDIS
+S_IAM --> MQ
+S_PRD --> MQ
+S_SUP --> MQ
+S_LOG --> MQ
+S_FLE --> MQ
+S_HR --> MQ
+S_DSH --> MQ
+
+S_IAM --> ExtGoogle
+S_SUP --> ExtSefaz
+S_LOG --> ExtCarrier
+
+PGADMIN --> TREG_DB
+PGADMIN --> PG_A
+PGADMIN --> PG_B
+PGADMIN --> PG_C
+
+@enduml
