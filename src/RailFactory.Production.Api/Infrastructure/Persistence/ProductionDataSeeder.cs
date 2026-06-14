@@ -45,8 +45,6 @@ public static class ProductionDataSeeder
             dbContext.WorkCenters.Add(wcMon);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-
         // 2. Create Bill of Materials (BOM)
         var productCode = MaterialCode.From("PRO-TR-100");
         var bom = await dbContext.Boms.Include(b => b.Items).IgnoreQueryFilters().FirstOrDefaultAsync(x => x.ProductCode == productCode && x.Version == 1, cancellationToken);
@@ -58,7 +56,6 @@ public static class ProductionDataSeeder
             bom.AddItem("MAT-PAR-M8", 8.0m, "UN");
             bom.Activate();
             dbContext.Boms.Add(bom);
-            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         // 3. Create Production Orders
@@ -74,7 +71,6 @@ public static class ProductionDataSeeder
             op1.Complete(inspectionPassed: true);
 
             dbContext.ProductionOrders.Add(op1);
-            await dbContext.SaveChangesAsync(cancellationToken);
 
             // Seed associated records for Completed OP
             // Inspection
@@ -89,8 +85,6 @@ public static class ProductionDataSeeder
             // Scrap
             var scrap = ScrapRecord.Create(op1.Id, "MAT-ACO-2MM", 5.0m, "KG", "Aparas de corte residual na guilhotina.");
             dbContext.ScrapRecords.Add(scrap);
-
-            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         // OP-2026-0002 (Released)
@@ -100,7 +94,6 @@ public static class ProductionDataSeeder
             op2 = ProductionOrder.Create("OP-2026-0002", "PRO-TR-100", bom.Id, wcCor.Id, 25m);
             op2.Release();
             dbContext.ProductionOrders.Add(op2);
-            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         // OP-2026-0003 (Draft)
@@ -109,7 +102,8 @@ public static class ProductionDataSeeder
         {
             op3 = ProductionOrder.Create("OP-2026-0003", "PRO-TR-100", bom.Id, wcCor.Id, 50m);
             dbContext.ProductionOrders.Add(op3);
-            await dbContext.SaveChangesAsync(cancellationToken);
         }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
