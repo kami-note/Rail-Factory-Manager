@@ -107,6 +107,25 @@ A arquitetura de software da plataforma impõe padrões de projeto formais para 
 4.  **State Machine Hardening (Guarda de Estados):**
     Padrão de validação de transição de status implementado diretamente nas entidades de domínio. O sistema proíbe modificações diretas em propriedades de status; todas as transições lógicas (como a aprovação de uma conferência ou o cancelamento de um despacho) exigem chamadas de métodos explícitos protegidos por cláusulas de guarda (*guards*), disparando exceções de negócio caso ocorra tentativa de transição inválida.
 
+5.  **Arquitetura Hexagonal (Ports & Adapters):**
+    Adotado para isolar completamente o núcleo de negócio (Domain/Application) das tecnologias de infraestrutura externa (bancos de dados, APIs de terceiros, gateways de mensageria). O acoplamento ocorre exclusivamente por meio de abstrações (Ports/Interfaces), cujas implementações concretas (Adapters) são injetadas em tempo de execução, garantindo testabilidade e manutenibilidade excepcionais.
+
+6.  **Padrão Result (Result Pattern):**
+    Implementado para gerenciar o fluxo de controle de falhas de negócio e validações de forma explícita e previsível. Em vez de utilizar o lançamento custoso de exceções para cenários de erro esperados (ex: saldo insuficiente, SKU inválido), os casos de uso retornam instâncias estruturadas de `Result` ou `Result<T>` contendo o status de sucesso e os respectivos objetos de erro, alinhando a implementação às melhores práticas de design de software robusto e de alto desempenho.
+
+7.  **Padrões Táticos do Domain-Driven Design (DDD):**
+    O domínio lógico é modelado utilizando blocos de construção táticos formais para assegurar alta coesão e baixo acoplamento:
+    *   *Aggregate Roots (Raízes de Agregação):* Entidades principais que coordenam o comportamento e garantem a consistência transacional e as invariantes das operações internas do seu limite conceitual.
+    *   *Entities:* Objetos com identidade única que sofrem mutações de estado ao longo de seu ciclo de vida.
+    *   *Domain Events (Eventos de Domínio):* Notificações internas disparadas quando mudanças de estado importantes ocorrem, viabilizando o desacoplamento de reações lógicas colaterais dentro do próprio microsserviço.
+    *   *Repositories:* Interfaces que definem a persistência de agregados, desacoplando o domínio do provedor físico de dados (Entity Framework Core).
+
+8.  **Isolamento Dinâmico Multitenant (Database-per-Tenant):**
+    Garante o isolamento físico completo de dados de cada organização por meio do mapeamento e resolução dinâmica em tempo de execução. O middleware de tenancy intercepta a identidade da organização na requisição HTTP e injeta dinamicamente a string de conexão específica para a instância correspondente do Entity Framework Core, impedindo qualquer cruzamento acidental de dados.
+
+9.  **Backend-Driven UI para Statuses (DisplayStatus):**
+    Centraliza a definição cromática, a nomenclatura e a iconografia de status de negócio diretamente nas respostas da API (objeto `DisplayStatus`), fazendo com que o frontend (via componente `StatusChip.tsx`) atue puramente como renderizador visual do contrato recebido. Isso evita regras de apresentação espalhadas e garante consistência visual unificada de forma extremamente flexível.
+
 ---
 
 ## 5.2.6. Boas Práticas e Convenções

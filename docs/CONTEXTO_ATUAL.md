@@ -24,7 +24,10 @@ Este documento é a fonte da verdade sobre o estado real do código. Ele descrev
 | **P10 - Webhooks + Auditoria** | ✅ Concluído | RF-22: Carrier ganha `WebhookUrl`, `LogisticsWebhookDispatcher` notifica por HTTP com retry/dead-letter. RF-05/RN-08: `IamAuditEntry` com IP, CorrelationId; trilha de `role_assigned`, `role_revoked`, `session_created`. Frontend: AuditPage + campo webhook no modal de transportadora. |
 | **P15 - Evolução de BOMs — Fase 1**| ✅ Concluído | Clonagem de BOMs (Clone BOM) e Lote Padrão (Batch Size) no backend, banco de dados e frontend. |
 | **P15 - Evolução de BOMs — Fase 2**| ✅ Concluído | Fator de perda técnica (ScrapFactor) e Costing Roll-up (Custo Teórico da BOM) integrado com API SupplyChain. |
-| **Mód. Seeds** | ✅ Concluído | Extração e modularização da carga de dados mock de SupplyChain de SupplyChainSchemaInitializer para SupplyChainDataSeeder. |
+| **Mód. Seeds** | ✅ Concluído | Extração e modularização da carga de dados mock de todos os microserviços para classes estáticas `DataSeeder` dedicadas. |
+| **Estabilização E2E**| ✅ Concluído | Ajustes no runner de testes Playwright/Vitest com script unificado de consolidação e correção de locadores dinâmicos. |
+| **Expansão de Testes**| ✅ Concluído | Adicionados 165 novos testes unitários C#/xUnit cobrindo os domínios de frotas (`Fleet`), recursos humanos (`HR`), logística (`Logistics`), produção (`Production`), inquilinos (`Tenancy`), cadeia de suprimentos (`SupplyChain`) e `IAM` (totalizando 342 testes no monorepo). |
+
 
 ---
 

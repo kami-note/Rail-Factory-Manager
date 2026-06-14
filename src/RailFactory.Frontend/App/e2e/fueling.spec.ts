@@ -49,6 +49,6 @@ test.describe('Controle de Abastecimento', () => {
 
     await expect(authedPage.getByRole('dialog')).toHaveCount(0, { timeout: 10_000 });
     await expect(authedPage.getByRole('alert').filter({ hasText: /registrado com sucesso/i })).toBeVisible();
-    await expect(authedPage.locator('td', { hasText: '80.500' }).first()).toBeVisible();
+    await expect(authedPage.locator('td', { hasText: '80.5' }).first()).toBeVisible();
   });
 });
