@@ -9,3 +9,9 @@ deadcode-csharp-heuristic:
 
 db-reset:
 	./scripts/db-reset-dev.sh
+
+diagrams:
+	java -jar docs/diagrams/plantuml.jar -png docs/diagrams/*.puml
+
+test-all:
+	./scripts/run-tests.sh

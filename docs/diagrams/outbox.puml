@@ -1,0 +1,39 @@
+@startuml outbox
+skinparam BackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam QueueBorderColor #666666
+skinparam DatabaseBorderColor #666666
+
+participant "Regra de Domínio\n(ex: Production)" as Domain
+database "Banco de Dados\n(PostgreSQL)" as DB
+participant "Despachante\n(BackgroundService)" as Worker
+queue "Barramento\n(RabbitMQ)" as RabbitMQ
+participant "Consumidor\n(ex: Inventory)" as Consumer
+
+== 1. Persistência Atômica ==
+Domain -> DB : Inicia Transação Local
+Domain -> DB : Salva Alteração do Estado da OP
+Domain -> DB : Grava Mensagem Pendente no Outbox
+Domain -> DB : Commita Transação
+note over DB : Estado e Outbox gravados de forma atômica
+
+== 2. Despacho Assíncrono ==
+Worker -> DB : Polls (FOR UPDATE SKIP LOCKED)
+activate Worker
+DB --> Worker : Retorna Linhas Pendentes Exclusivas
+Worker -> RabbitMQ : Publica Evento com Correlation ID
+deactivate Worker
+RabbitMQ --> Worker : Confirmação (Ack)
+activate Worker
+Worker -> DB : Marca como Despachada (DispatchedAt)
+deactivate Worker
+
+== 3. Consumo e Idempotência ==
+RabbitMQ -> Consumer : Entrega Evento
+activate Consumer
+Consumer -> Consumer : Valida ID para Idempotência
+Consumer -> Consumer : Atualiza Saldo / Registra Ledger
+Consumer --> RabbitMQ : Confirmação (Ack)
+deactivate Consumer
+
+@enduml

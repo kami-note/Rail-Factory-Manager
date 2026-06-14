@@ -1,0 +1,33 @@
+@startuml
+title BPMN (simplificado) - Execucao de OP (TO-BE) (v2)
+skinparam linetype ortho
+
+|Planejamento|
+start
+:Criar OP;
+:Planejar;
+:Liberar OP;
+
+|Inventory|
+:Reservar materiais;
+if (Estoque suficiente?) then (sim)
+  |Producao|
+  :Iniciar execucao;
+  :Apontar scrap/paradas (se ocorrer);
+  |Qualidade|
+  :Executar inspecoes obrigatorias;
+  if (Aprovado?) then (sim)
+    |Producao|
+    :Finalizar OP;
+  else (nao)
+    |Producao|
+    :Reprocessar / sucatear / tratar desvio;
+  endif
+else (nao)
+  |Planejamento|
+  :Replanejar / aguardar compra;
+endif
+stop
+
+@enduml
+

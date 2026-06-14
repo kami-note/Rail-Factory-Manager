@@ -89,7 +89,7 @@ export function FuelingContent({ tenantCode, vehicleId: vehicleIdProp, vehicles 
       });
       setRecords(prev => [record, ...prev]);
       setCreateOpen(false); resetForm();
-      setSuccess('Abastecimento registrado.');
+      setSuccess('Abastecimento registrado com sucesso.');
     } catch (err) {
       setMutationError(toUiErrorMessage(err, 'Erro ao registrar abastecimento.'));
     } finally { setSaving(false); }
@@ -110,7 +110,7 @@ export function FuelingContent({ tenantCode, vehicleId: vehicleIdProp, vehicles 
               ))}
             </Select>
           </FormControl>
-          <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => setCreateOpen(true)}>
+          <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => { setFormVehicleId(filterVehicleId); setCreateOpen(true); }}>
             Registrar
           </Button>
         </Stack>

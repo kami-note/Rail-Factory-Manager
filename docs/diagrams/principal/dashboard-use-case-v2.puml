@@ -1,0 +1,28 @@
+@startuml Dashboard-Use-Case
+left to right direction
+
+actor "Admin Matriz" as AM
+actor "Admin Filial" as AF
+actor "Operador" as OP
+
+rectangle "Dashboard & Reporting Service" {
+  usecase "OEE" as UC_OEE
+  usecase "Mapas de Calor de Entrega" as UC_Map
+  usecase "Alertas em Tempo Real" as UC_Alerts
+  usecase "Exportação (PDF/Excel/CSV)" as UC_Export
+  usecase "Dashboard de Custos" as UC_Costs
+}
+
+AM --> UC_OEE
+AM --> UC_Map
+AM --> UC_Alerts
+AM --> UC_Export
+AM --> UC_Costs
+AF --> UC_OEE
+AF --> UC_Map
+AF --> UC_Alerts
+AF --> UC_Export
+AF --> UC_Costs
+OP --> UC_Alerts
+
+@enduml

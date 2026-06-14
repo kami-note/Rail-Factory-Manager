@@ -93,7 +93,7 @@ export function MaintenanceContent({ tenantCode, vehicleId: vehicleIdProp, vehic
       setPlans(prev => [plan, ...prev]);
       setCreateOpen(false);
       setFormDescription(''); setFormDate(''); setFormNotes(''); setFormVehicleId('');
-      setSuccess('Manutenção agendada.');
+      setSuccess('Manutenção agendada com sucesso.');
     } catch (err) {
       setMutationError(toUiErrorMessage(err, 'Erro ao agendar manutenção.'));
     } finally { setSaving(false); }
@@ -131,7 +131,7 @@ export function MaintenanceContent({ tenantCode, vehicleId: vehicleIdProp, vehic
                 ))}
               </Select>
             </FormControl>
-            <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => setCreateOpen(true)}>
+            <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => { setFormVehicleId(filterVehicleId); setCreateOpen(true); }}>
               Agendar
             </Button>
           </Stack>

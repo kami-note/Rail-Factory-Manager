@@ -2,29 +2,21 @@ import { test, expect } from './fixtures';
 
 test.describe('Manutenção de Veículos', () => {
   test.beforeEach(async ({ authedPage }) => {
-    await authedPage.goto('/app/fleet/maintenance');
-    await authedPage.waitForURL('**/app/fleet/maintenance');
+    await authedPage.goto('/app/fleet');
+    await authedPage.waitForURL('**/app/fleet');
     await expect(authedPage.getByRole('progressbar')).toHaveCount(0, { timeout: 10_000 });
+    await authedPage.getByRole('tab', { name: /manutenção/i }).click();
   });
 
-  test('exibe seletor de veículo sem botão de agendar', async ({ authedPage }) => {
+  test('exibe seletor de veículo e botão de agendar', async ({ authedPage }) => {
     await expect(authedPage.getByRole('combobox')).toBeVisible();
-    await expect(authedPage.getByRole('button', { name: /agendar manutenção/i })).toHaveCount(0);
-  });
-
-  test('botão agendar aparece após selecionar veículo', async ({ authedPage }) => {
-    await authedPage.locator('div[role="combobox"]').click();
-    const listbox = authedPage.getByRole('listbox');
-    await expect(listbox).toBeVisible({ timeout: 5_000 });
-    await listbox.getByRole('option').first().click();
-
-    await expect(authedPage.getByRole('button', { name: /agendar manutenção/i })).toBeVisible();
+    await expect(authedPage.getByRole('button', { name: /^agendar$/i })).toBeVisible();
   });
 
   test('modal de agendamento abre e fecha', async ({ authedPage }) => {
     await authedPage.locator('div[role="combobox"]').click();
-    await authedPage.getByRole('listbox').getByRole('option').first().click();
-    await authedPage.getByRole('button', { name: /agendar manutenção/i }).click();
+    await authedPage.getByRole('listbox').getByRole('option').nth(1).click();
+    await authedPage.getByRole('button', { name: /^agendar$/i }).click();
 
     const dialog = authedPage.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -38,16 +30,16 @@ test.describe('Manutenção de Veículos', () => {
 
   test('botão Agendar desabilitado com campos vazios', async ({ authedPage }) => {
     await authedPage.locator('div[role="combobox"]').click();
-    await authedPage.getByRole('listbox').getByRole('option').first().click();
-    await authedPage.getByRole('button', { name: /agendar manutenção/i }).click();
+    await authedPage.getByRole('listbox').getByRole('option').nth(1).click();
+    await authedPage.getByRole('button', { name: /^agendar$/i }).click();
 
     await expect(authedPage.getByRole('dialog').getByRole('button', { name: /^agendar$/i })).toBeDisabled();
   });
 
   test('agenda manutenção preventiva e aparece na tabela', async ({ authedPage }) => {
     await authedPage.locator('div[role="combobox"]').click();
-    await authedPage.getByRole('listbox').getByRole('option').first().click();
-    await authedPage.getByRole('button', { name: /agendar manutenção/i }).click();
+    await authedPage.getByRole('listbox').getByRole('option').nth(1).click();
+    await authedPage.getByRole('button', { name: /^agendar$/i }).click();
 
     const dialog = authedPage.getByRole('dialog');
     await dialog.getByLabel(/descrição/i).fill('Revisão PW teste');
@@ -61,7 +53,7 @@ test.describe('Manutenção de Veículos', () => {
 
   test('botões de concluir e cancelar visíveis em linha Agendada', async ({ authedPage }) => {
     await authedPage.locator('div[role="combobox"]').click();
-    await authedPage.getByRole('listbox').getByRole('option').first().click();
+    await authedPage.getByRole('listbox').getByRole('option').nth(1).click();
 
     const scheduledRow = authedPage.getByRole('row').filter({
       has: authedPage.locator('[data-testid="chip"]').or(authedPage.locator('.MuiChip-root')).filter({ hasText: /agendada/i }),

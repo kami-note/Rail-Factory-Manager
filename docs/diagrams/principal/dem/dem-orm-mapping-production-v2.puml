@@ -1,0 +1,53 @@
+@startuml
+title ORM - Production (TO-BE) (v2)
+skinparam linetype ortho
+hide circle
+
+class ProductionOrder <<entity>> {
+  id : uuid
+  number : string
+  status : string
+  planned_qty : decimal
+}
+
+class MaterialReservation <<entity>> {
+  id : uuid
+  production_order_id : uuid
+  material_sku : string
+  qty : decimal
+}
+
+class Inspection <<entity>> {
+  id : uuid
+  production_order_id : uuid
+  step : string
+  result : string
+}
+
+class production_orders <<table>>
+class material_reservations <<table>>
+class inspections <<table>>
+
+ProductionOrder "1" -- "many" MaterialReservation
+ProductionOrder "1" -- "many" Inspection
+
+ProductionOrder ..> production_orders : maps_to
+MaterialReservation ..> material_reservations : maps_to
+Inspection ..> inspections : maps_to
+
+note right of production_orders
+  PK: id
+  IDX: number (unique por tenant)
+end note
+
+note right of material_reservations
+  PK: id
+  FK: production_order_id -> production_orders.id
+end note
+
+note right of inspections
+  PK: id
+  FK: production_order_id -> production_orders.id
+end note
+
+@enduml

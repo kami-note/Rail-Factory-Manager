@@ -1,0 +1,36 @@
+@startuml sessao
+skinparam BackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam DatabaseBorderColor #666666
+
+actor "Navegador" as Browser
+participant "BFF .NET 10" as BFF
+participant "Gateway YARP" as Gateway
+participant "IAM API" as IAM
+database "Redis Cache" as Redis
+
+Browser -> BFF : Requisição com Cookie de Sessão
+activate BFF
+BFF -> Gateway : Encaminha checagem de sessão
+activate Gateway
+Gateway -> IAM : Proxy para /api/iam/auth/session
+activate IAM
+IAM -> Redis : Consulta dados de sessão por chave (Token)
+activate Redis
+Redis --> IAM : Retorna dados do usuário e permissões
+deactivate Redis
+IAM --> Gateway : Retorna JSON da Sessão (AuthSessionDto)
+deactivate IAM
+Gateway --> BFF : Retorna Sessão
+deactivate Gateway
+
+alt Sessão Válida
+    BFF -> BFF : Gera Internal JWT (Bearer)
+    BFF -> Gateway : Proxy para microsserviço com Internal JWT
+    note right: Cabeçalhos sensíveis do navegador são limpos
+else Sessão Inválida / Expirada
+    BFF --> Browser : Retorna HTTP 401 Unauthorized
+end
+deactivate BFF
+
+@enduml

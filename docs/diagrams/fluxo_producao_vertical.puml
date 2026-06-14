@@ -1,0 +1,36 @@
+@startuml fluxo_producao_vertical
+title Fluxo de Navegação Vertical -- Operador de Produção
+
+(*) --> "/app/production/orders\n(Ordens de Produção)"
+
+if "Ação na Ordem de Produção?" then
+  -->[Criar/Editar] "Formulário de OP"
+  --> "Salvar Rascunho"
+  --> "/app/production/orders\n(Ordens de Produção)"
+else
+  -->[Executar OP] "Tela de Execução da OP"
+  --> "Registrar Consumo de Material"
+  --> "Registrar Scrap / Sucata"
+  --> "Registrar Inspeção de Qualidade"
+  --> "Concluir Ordem de Produção"
+  --> "/app/production/orders\n(Ordens de Produção)"
+else
+  -->[Estrutura de Produtos] "/app/production/boms\n(BOMs / Fórmulas)"
+  --> "Visualizar Receitas de Materiais"
+  if "Clonar BOM?" then
+    -->[sim] "Modal: Clone BOM\n(Clonar Estrutura)"
+    --> "/app/production/boms\n(BOMs / Fórmulas)"
+  else
+    -->[não] "/app/production/boms\n(BOMs / Fórmulas)"
+  endif
+  --> "Navegação Lateral"
+else
+  -->[Centros de Trabalho] "/app/production/work-centers"
+  --> "Visualizar Máquinas e WC"
+  --> "Navegação Lateral"
+endif
+
+--> "Overview Panel / Início\n(/app)"
+--> "Logout"
+--> (*)
+@enduml

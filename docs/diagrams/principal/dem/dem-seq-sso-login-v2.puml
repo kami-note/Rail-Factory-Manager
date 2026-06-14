@@ -1,0 +1,24 @@
+@startuml
+title Sequencia - SSO Google (AS-IS) (v2)
+skinparam linetype ortho
+
+actor Usuario
+participant "Frontend" as UI
+participant "Gateway" as GW
+participant "IAM API" as IAM
+participant "Google OAuth2" as Google
+
+Usuario -> UI : Inicia login
+UI -> GW : Chama endpoint de login
+GW -> IAM : Proxy para iniciar OAuth
+IAM -> Google : Redirect para autorizacao
+Google --> Usuario : Tela de consentimento
+Usuario -> Google : Autoriza
+Google -> IAM : Callback com code
+IAM -> Google : Validar code/token
+Google --> IAM : Claims/identidade
+IAM --> UI : Redireciona para frontend (login OK)
+UI --> Usuario : Usuario autenticado (cookie/session)
+
+@enduml
+

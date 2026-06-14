@@ -1,0 +1,33 @@
+@startuml
+title BPMN (simplificado) - Inbound (TO-BE) (v2)
+skinparam linetype ortho
+
+|SEFAZ|
+start
+:NF-e emitida contra CNPJ;
+:Disponibilizar XML;
+
+|Supply Chain|
+:Capturar XML (manifestacao);
+:Criar recebimento (blind_mode=true);
+
+|Almoxarifado|
+:Conferir itens (sem ver qtde XML);
+:Registrar contagem;
+
+|Supply Chain|
+:Fechar conferencia;
+if (Ha divergencia?) then (sim)
+  :Criar excecao;
+  :Decidir (aceitar parcial / devolver / ajustar);
+  :Registrar decisao e auditoria;
+else (nao)
+  :Aprovar recebimento;
+endif
+
+|Inventory|
+:Dar entrada em estoque;
+stop
+
+@enduml
+

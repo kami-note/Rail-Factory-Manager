@@ -1,0 +1,23 @@
+@startuml
+title Sequencia - Liberacao de OP e Reserva (TO-BE) (v2)
+skinparam linetype ortho
+
+actor Planejador
+participant "Production Service" as PRD
+participant "Inventory (boundary)" as INV
+participant "Event Bus" as BUS
+
+Planejador -> PRD : Liberar OP (status = Released)
+PRD -> PRD : Validar transicao de estado
+PRD -> INV : Reservar materiais (BOM)
+alt Estoque suficiente
+  INV --> PRD : Reserva confirmada
+  PRD -> BUS : Publica OPReleased
+  PRD --> Planejador : OP liberada
+else Estoque insuficiente
+  INV --> PRD : Falha (insuficiente)
+  PRD --> Planejador : Bloqueia liberacao / solicita decisao
+end
+
+@enduml
+

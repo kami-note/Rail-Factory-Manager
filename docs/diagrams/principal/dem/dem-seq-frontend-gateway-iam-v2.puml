@@ -1,0 +1,30 @@
+@startuml
+title Sequencia - Frontend -> Gateway -> IAM (AS-IS) (v2)
+skinparam linetype ortho
+
+actor Usuario
+participant "Frontend (Blazor)" as UI
+participant "Gateway (YARP)" as GW
+participant "IAM API" as IAM
+database "PostgreSQL (iamdb)" as DB
+collections "Redis" as REDIS
+
+Usuario -> UI : Acessa pagina protegida
+UI -> UI : Verifica cookie de autenticacao
+alt Nao autenticado
+  UI --> Usuario : Redireciona para /login
+  Usuario -> UI : Solicita login
+  UI -> GW : GET /iam/... (via http client)
+  GW -> IAM : Proxy para IAM API
+  IAM -> REDIS : Persistir estado OAuth (state/nonce)
+  IAM --> UI : 302 redirect para Google OAuth2
+else Autenticado
+  UI -> GW : GET /iam/me (exemplo)
+  GW -> IAM : Proxy para IAM API
+  IAM -> DB : Consultar usuario/roles/permissoes
+  IAM --> UI : Retorna dados do usuario
+  UI --> Usuario : Renderiza conteudo
+end
+
+@enduml
+

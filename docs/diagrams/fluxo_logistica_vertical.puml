@@ -1,0 +1,32 @@
+@startuml fluxo_logistica_vertical
+title Fluxo de Navegação Vertical -- Operador de Logística e Suprimentos
+
+(*) --> "/app/receipts\n(Recebimentos)"
+
+if "Ação em Recebimentos?" then
+  -->[Importar Nota] "Drawer: Importar XML"
+  --> "Upload de NF-e (.xml)"
+  --> "/app/receipts\n(Recebimentos)"
+else
+  -->[Associar SKUs] "/app/supply-chain/association\n(Workbench de Associação)"
+  --> "Vincular Código do Fornecedor\nao SKU Interno de Inventário"
+  --> "/app/receipts\n(Recebimentos)"
+else
+  -->[Consultar Estoque] "/app/inventory\n(Saldos de Estoque)"
+  --> "Pesquisar e Filtrar Materiais"
+  --> "/app/inventory/materials/:code\n(Detalhes do Material)"
+  --> "Visualizar Histórico do Ledger\ne Detalhes de Lote/Local"
+  --> "/app/inventory\n(Saldos de Estoque)"
+  --> "Navegação Lateral"
+else
+  -->[Expedição] "/app/logistics/shipment-orders\n(Ordens de Expedição)"
+  --> "Gerar Despachos\n(/app/logistics/dispatches)"
+  --> "Acompanhar Monitor NF-e\n(/app/logistics/nfe-monitor)"
+  --> "Configurar Webhooks Carrier\n(/app/logistics/carriers)"
+  --> "Navegação Lateral"
+endif
+
+--> "Overview Panel / Início\n(/app)"
+--> "Logout"
+--> (*)
+@enduml

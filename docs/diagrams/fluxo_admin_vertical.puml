@@ -1,0 +1,30 @@
+@startuml fluxo_admin_vertical
+title Fluxo de Navegação Vertical -- Administrador do Sistema
+
+(*) --> "/app/iam/users\n(Gestão de Usuários)"
+
+if "Ação Administrativa?" then
+  -->[Gerenciar Acesso] "/app/iam/roles\n(Níveis de Acesso - RBAC)"
+  --> "Visualizar e Cadastrar Perfis"
+  --> "Atribuir Permissões e Roles"
+  --> "/app/iam/users\n(Gestão de Usuários)"
+else
+  -->[Consultar Trilha] "/app/iam/audit\n(Trilha de Auditoria)"
+  --> "Buscar Ações de Operadores\n(IP, CorrelationId, Recursos)"
+  --> "Navegação Lateral"
+else
+  -->[Configurar Integrações] "/app/settings/integrations\n(Integrações e Webhooks)"
+  --> "Configurar WebhookUrl Global\ne Monitorar Disparos"
+  --> "Navegação Lateral"
+else
+  -->[Gerenciar Empresas] "/app/settings/tenants\n(Empresas / Organizações)"
+  --> "Criar e Listar Organizações"
+  --> "Provisionar Novos Bancos"
+  --> "Acessar Setup (/setup)"
+  --> "Navegação Lateral"
+endif
+
+--> "Overview Panel / Início\n(/app)"
+--> "Logout"
+--> (*)
+@enduml

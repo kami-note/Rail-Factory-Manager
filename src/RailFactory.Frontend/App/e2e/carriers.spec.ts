@@ -1,5 +1,27 @@
 import { test, expect } from './fixtures';
 
+function generateCNPJ(): string {
+  const base = (Math.floor(10000000 + Math.random() * 90000000).toString().slice(0, 8) + '0001').slice(0, 12);
+  
+  let sum = 0;
+  let weight = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(base[i], 10) * weight[i];
+  }
+  let d1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+
+  sum = 0;
+  weight = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const baseWithD1 = base + d1.toString();
+  for (let i = 0; i < 13; i++) {
+    sum += parseInt(baseWithD1[i], 10) * weight[i];
+  }
+  let d2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+
+  const clean = base + d1.toString() + d2.toString();
+  return `${clean.slice(0, 2)}.${clean.slice(2, 5)}.${clean.slice(5, 8)}/${clean.slice(8, 12)}-${clean.slice(12, 14)}`;
+}
+
 test.describe('Transportadoras', () => {
   test.beforeEach(async ({ authedPage }) => {
     await authedPage.goto('/app/logistics/carriers');
@@ -36,7 +58,7 @@ test.describe('Transportadoras', () => {
 
   test('cria transportadora e aparece na tabela', async ({ authedPage }) => {
     const unique = Date.now().toString().slice(-6);
-    const docNumber = `${unique.slice(0, 2)}.${unique.slice(2, 5)}.${unique.slice(3, 6)}/0001-00`;
+    const docNumber = generateCNPJ();
 
     await authedPage.getByRole('button', { name: /nova transportadora/i }).click();
     const dialog = authedPage.getByRole('dialog');
