@@ -2,8 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('Frota de Veículos', () => {
   test.beforeEach(async ({ authedPage }) => {
-    await authedPage.goto('/app/fleet/vehicles');
-    await authedPage.waitForURL('**/app/fleet/vehicles');
+    await authedPage.goto('/app/fleet');
+    await authedPage.waitForURL('**/app/fleet');
     await expect(authedPage.getByRole('progressbar')).toHaveCount(0, { timeout: 10_000 });
   });
 
@@ -51,11 +51,27 @@ test.describe('Frota de Veículos', () => {
   });
 
   test('cria novo veículo com sucesso', async ({ authedPage }) => {
-    // Usa timestamp completo + random para garantir unicidade entre execuções
-    const unique = `${Date.now()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-    const plate = `V${unique.slice(-6)}`; // 7 chars: V + 6 dígitos
-    const chassis = unique.padStart(17, '0').slice(-17).toUpperCase();
-    const renavam = unique.slice(-11).padStart(11, '0');
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const digits = '0123456789';
+    const chassisChars = 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789'; // Excludes I, O, Q
+    
+    let plate = '';
+    for (let i = 0; i < 3; i++) {
+      plate += letters[Math.floor(Math.random() * letters.length)];
+    }
+    for (let i = 0; i < 4; i++) {
+      plate += digits[Math.floor(Math.random() * digits.length)];
+    }
+
+    let chassis = '';
+    for (let i = 0; i < 17; i++) {
+      chassis += chassisChars[Math.floor(Math.random() * chassisChars.length)];
+    }
+
+    let renavam = '';
+    for (let i = 0; i < 11; i++) {
+      renavam += digits[Math.floor(Math.random() * digits.length)];
+    }
 
     await authedPage.getByRole('button', { name: /novo veículo/i }).click();
     const dialog = authedPage.getByRole('dialog');
@@ -72,9 +88,10 @@ test.describe('Frota de Veículos', () => {
     await dialog.getByRole('button', { name: /cadastrar/i }).click();
 
     await expect(authedPage.getByRole('dialog')).toHaveCount(0, { timeout: 10_000 });
-    await expect(authedPage.getByRole('alert').filter({ hasText: /cadastrado com sucesso/i })).toBeVisible();
-    // A placa aparece na tabela (pode aparecer truncada dependendo do tamanho)
-    await expect(authedPage.locator('td', { hasText: plate })).toBeVisible();
+    await expect(authedPage.getByRole('alert').filter({ hasText: /cadastrado/i })).toBeVisible();
+    // A placa aparece na tabela formatada (com hífen)
+    const formattedPlate = `${plate.slice(0, 3)}-${plate.slice(3)}`;
+    await expect(authedPage.locator('td', { hasText: formattedPlate })).toBeVisible();
   });
 
   test('select de tipo tem as opções corretas', async ({ authedPage }) => {

@@ -36,10 +36,31 @@ test.describe('Pessoas (HR)', () => {
     await expect(authedPage.getByRole('dialog')).toHaveCount(0);
   });
 
+function generateCPF(): string {
+  const base = Math.floor(100000000 + Math.random() * 900000000).toString().slice(0, 9);
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(base[i], 10) * (10 - i);
+  }
+  let d1 = 11 - (sum % 11);
+  if (d1 === 10 || d1 === 11) d1 = 0;
+
+  sum = 0;
+  const baseWithD1 = base + d1.toString();
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(baseWithD1[i], 10) * (11 - i);
+  }
+  let d2 = 11 - (sum % 11);
+  if (d2 === 10 || d2 === 11) d2 = 0;
+
+  return base + d1.toString() + d2.toString();
+}
+
   test('cria nova pessoa com sucesso', async ({ authedPage }) => {
     const ts = Date.now();
     const name = `João Teste ${ts}`;
-    const doc = `${ts}`.slice(-11).padStart(11, '0');
+    const doc = generateCPF();
 
     await authedPage.getByRole('button', { name: /nova pessoa/i }).click();
     const dialog = authedPage.getByRole('dialog');

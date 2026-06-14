@@ -12,3 +12,5 @@ src/.idea/.idea.RailFactory.Fork/.idea/indexLayout.xml
 src/.idea/.idea.RailFactory.Fork/.idea/vcs.xml
 
 .playwright-cli
+src/RailFactory.Frontend/App/playwright-report
+src/RailFactory.Frontend/App/test-results

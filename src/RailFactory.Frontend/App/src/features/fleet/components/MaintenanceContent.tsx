@@ -131,7 +131,7 @@ export function MaintenanceContent({ tenantCode, vehicleId: vehicleIdProp, vehic
                 ))}
               </Select>
             </FormControl>
-            <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => setCreateOpen(true)}>
+            <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => { setFormVehicleId(filterVehicleId); setCreateOpen(true); }}>
               Agendar
             </Button>
           </Stack>
