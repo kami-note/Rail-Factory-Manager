@@ -18,8 +18,13 @@ public class LogisticsSchemaInitializerTests : IDisposable
 
     public LogisticsSchemaInitializerTests()
     {
-        _sqliteConnection = new SqliteConnection("DataSource=:memory:;Busy Timeout=5000");
+        _sqliteConnection = new SqliteConnection("DataSource=:memory:");
         _sqliteConnection.Open();
+        using (var cmd = _sqliteConnection.CreateCommand())
+        {
+            cmd.CommandText = "PRAGMA busy_timeout = 5000;";
+            cmd.ExecuteNonQuery();
+        }
 
         _dbContextOptions = new DbContextOptionsBuilder<LogisticsDbContext>()
             .UseSqlite(_sqliteConnection)

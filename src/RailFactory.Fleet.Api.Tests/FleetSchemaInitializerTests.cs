@@ -18,8 +18,13 @@ public class FleetSchemaInitializerTests : IDisposable
 
     public FleetSchemaInitializerTests()
     {
-        _sqliteConnection = new SqliteConnection("DataSource=:memory:;Busy Timeout=5000");
+        _sqliteConnection = new SqliteConnection("DataSource=:memory:");
         _sqliteConnection.Open();
+        using (var cmd = _sqliteConnection.CreateCommand())
+        {
+            cmd.CommandText = "PRAGMA busy_timeout = 5000;";
+            cmd.ExecuteNonQuery();
+        }
 
         _dbContextOptions = new DbContextOptionsBuilder<FleetDbContext>()
             .UseSqlite(_sqliteConnection)
