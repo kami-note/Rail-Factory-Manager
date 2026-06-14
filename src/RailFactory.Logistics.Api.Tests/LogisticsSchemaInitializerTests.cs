@@ -66,7 +66,7 @@ public class LogisticsSchemaInitializerTests : IDisposable
         hostEnv.EnvironmentName.Returns(Environments.Development);
 
         var serviceProvider = services.BuildServiceProvider();
-        var logger = Substitute.For<ILogger<LogisticsSchemaInitializer>>();
+        var logger = new TestLogger<LogisticsSchemaInitializer>();
 
         var initializer = new LogisticsSchemaInitializer(serviceProvider, hostEnv, logger);
 
@@ -74,22 +74,13 @@ public class LogisticsSchemaInitializerTests : IDisposable
         var cts = new CancellationTokenSource();
         await initializer.StartAsync(cts.Token);
 
-        // Poll the database until dispatches are seeded (up to 3 seconds)
-        for (int i = 0; i < 30; i++)
+        // Wait deterministically for the migration/seeding to complete
+        var waitTask = logger.CompletedTask;
+        var timeoutTask = Task.Delay(15000);
+        var completedTask = await Task.WhenAny(waitTask, timeoutTask);
+        if (completedTask == timeoutTask)
         {
-            try
-            {
-                using var checkContext = new LogisticsDbContext(_dbContextOptions);
-                if (await checkContext.Dispatches.IgnoreQueryFilters().CountAsync() >= 1)
-                {
-                    break;
-                }
-            }
-            catch (Exception)
-            {
-                // Ignore transient SQLite connection lock exceptions during concurrent seeding writes
-            }
-            await Task.Delay(100);
+            throw new TimeoutException("Database migration/seeding did not complete within 15 seconds.");
         }
 
         cts.Cancel(); // Stop the periodic timer loop
@@ -139,5 +130,26 @@ public class LogisticsSchemaInitializerTests : IDisposable
         Assert.Equal("Marcos Oliveira", dispatch.DriverName);
         Assert.Equal("Authorized", dispatch.FiscalStatus);
         Assert.Equal("35260612345678000100550010000010011000010012", dispatch.FiscalAccessKey);
+    }
+
+    private class TestLogger<T> : ILogger<T>
+    {
+        private readonly TaskCompletionSource _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task CompletedTask => _tcs.Task;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            if (message.Contains("migrated", StringComparison.OrdinalIgnoreCase) || 
+                message.Contains("Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                _tcs.TrySetResult();
+            }
+        }
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     }
 }

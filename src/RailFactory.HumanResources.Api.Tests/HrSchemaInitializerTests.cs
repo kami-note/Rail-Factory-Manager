@@ -66,7 +66,7 @@ public class HrSchemaInitializerTests : IDisposable
         hostEnv.EnvironmentName.Returns(Environments.Development);
 
         var serviceProvider = services.BuildServiceProvider();
-        var logger = Substitute.For<ILogger<HrSchemaInitializer>>();
+        var logger = new TestLogger<HrSchemaInitializer>();
 
         var initializer = new HrSchemaInitializer(serviceProvider, hostEnv, logger);
 
@@ -74,22 +74,13 @@ public class HrSchemaInitializerTests : IDisposable
         var cts = new CancellationTokenSource();
         await initializer.StartAsync(cts.Token);
 
-        // Poll the database until people are seeded (up to 3 seconds)
-        for (int i = 0; i < 30; i++)
+        // Wait deterministically for the migration/seeding to complete
+        var waitTask = logger.CompletedTask;
+        var timeoutTask = Task.Delay(15000);
+        var completedTask = await Task.WhenAny(waitTask, timeoutTask);
+        if (completedTask == timeoutTask)
         {
-            try
-            {
-                using var checkContext = new HrDbContext(_dbContextOptions);
-                if (await checkContext.People.IgnoreQueryFilters().CountAsync() >= 3)
-                {
-                    break;
-                }
-            }
-            catch (Exception)
-            {
-                // Ignore transient SQLite connection lock exceptions during concurrent seeding writes
-            }
-            await Task.Delay(100);
+            throw new TimeoutException("Database migration/seeding did not complete within 15 seconds.");
         }
 
         cts.Cancel(); // Stop the periodic timer loop
@@ -129,5 +120,26 @@ public class HrSchemaInitializerTests : IDisposable
         Assert.Equal("Marcos Oliveira", marcos.Name);
         Assert.Equal(PersonType.Driver, marcos.Type);
         Assert.Equal(PersonStatus.Active, marcos.Status);
+    }
+
+    private class TestLogger<T> : ILogger<T>
+    {
+        private readonly TaskCompletionSource _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task CompletedTask => _tcs.Task;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            if (message.Contains("migrated", StringComparison.OrdinalIgnoreCase) || 
+                message.Contains("Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                _tcs.TrySetResult();
+            }
+        }
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     }
 }

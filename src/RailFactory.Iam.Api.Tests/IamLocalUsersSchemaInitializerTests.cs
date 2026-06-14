@@ -67,7 +67,7 @@ public class IamLocalUsersSchemaInitializerTests : IDisposable
         hostEnv.EnvironmentName.Returns(Environments.Development);
 
         var serviceProvider = services.BuildServiceProvider();
-        var logger = Substitute.For<ILogger<IamLocalUsersSchemaInitializer>>();
+        var logger = new TestLogger<IamLocalUsersSchemaInitializer>();
 
         var initializer = new IamLocalUsersSchemaInitializer(serviceProvider, hostEnv, logger);
 
@@ -76,15 +76,13 @@ public class IamLocalUsersSchemaInitializerTests : IDisposable
         var cts = new CancellationTokenSource();
         await initializer.StartAsync(cts.Token);
 
-        // Poll the database until user roles are seeded (up to 3 seconds) using a fresh context
-        for (int i = 0; i < 30; i++)
+        // Wait deterministically for the migration/seeding to complete
+        var waitTask = logger.CompletedTask;
+        var timeoutTask = Task.Delay(15000);
+        var completedTask = await Task.WhenAny(waitTask, timeoutTask);
+        if (completedTask == timeoutTask)
         {
-            using var checkContext = new IamAuthDbContext(_dbContextOptions);
-            if (await checkContext.UserRoles.IgnoreQueryFilters().AnyAsync())
-            {
-                break;
-            }
-            await Task.Delay(100);
+            throw new TimeoutException("Database migration/seeding did not complete within 15 seconds.");
         }
 
         cts.Cancel(); // Stop the periodic timer loop
@@ -117,5 +115,26 @@ public class IamLocalUsersSchemaInitializerTests : IDisposable
         // User roles should have been mapped
         var userRoles = await assertContext.UserRoles.IgnoreQueryFilters().ToListAsync();
         Assert.NotEmpty(userRoles);
+    }
+
+    private class TestLogger<T> : ILogger<T>
+    {
+        private readonly TaskCompletionSource _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task CompletedTask => _tcs.Task;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            if (message.Contains("migrated", StringComparison.OrdinalIgnoreCase) || 
+                message.Contains("Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                _tcs.TrySetResult();
+            }
+        }
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     }
 }

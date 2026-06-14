@@ -65,7 +65,7 @@ public class SupplyChainSchemaInitializerTests : IDisposable
         hostEnv.EnvironmentName.Returns(Environments.Development);
 
         var serviceProvider = services.BuildServiceProvider();
-        var logger = Substitute.For<ILogger<SupplyChainSchemaInitializer>>();
+        var logger = new TestLogger<SupplyChainSchemaInitializer>();
 
         var initializer = new SupplyChainSchemaInitializer(serviceProvider, hostEnv, logger);
 
@@ -73,15 +73,13 @@ public class SupplyChainSchemaInitializerTests : IDisposable
         var cts = new CancellationTokenSource();
         await initializer.StartAsync(cts.Token);
 
-        // Poll the database until receipts are seeded (up to 3 seconds) using a fresh context
-        for (int i = 0; i < 30; i++)
+        // Wait deterministically for the migration/seeding to complete
+        var waitTask = logger.CompletedTask;
+        var timeoutTask = Task.Delay(15000);
+        var completedTask = await Task.WhenAny(waitTask, timeoutTask);
+        if (completedTask == timeoutTask)
         {
-            using var checkContext = new SupplyChainDbContext(_dbContextOptions);
-            if (await checkContext.Receipts.IgnoreQueryFilters().AnyAsync())
-            {
-                break;
-            }
-            await Task.Delay(100);
+            throw new TimeoutException("Database migration/seeding did not complete within 15 seconds.");
         }
 
         cts.Cancel(); // Stop the periodic timer loop
@@ -112,5 +110,26 @@ public class SupplyChainSchemaInitializerTests : IDisposable
         var receipts = await assertContext.Receipts.IgnoreQueryFilters().ToListAsync();
         Assert.NotEmpty(receipts);
         Assert.Contains(receipts, r => r.ReceiptNumber == "NFE-00012345");
+    }
+
+    private class TestLogger<T> : ILogger<T>
+    {
+        private readonly TaskCompletionSource _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task CompletedTask => _tcs.Task;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            if (message.Contains("migrated", StringComparison.OrdinalIgnoreCase) || 
+                message.Contains("Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                _tcs.TrySetResult();
+            }
+        }
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     }
 }
