@@ -19,7 +19,7 @@ public class TenantCatalogSchemaInitializerTests : IDisposable
 
     public TenantCatalogSchemaInitializerTests()
     {
-        _sqliteConnection = new SqliteConnection("DataSource=:memory:");
+        _sqliteConnection = new SqliteConnection("DataSource=:memory:;Busy Timeout=5000");
         _sqliteConnection.Open();
 
         var options = new DbContextOptionsBuilder<TenancyDbContext>()

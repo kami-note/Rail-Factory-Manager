@@ -18,7 +18,7 @@ public class LogisticsSchemaInitializerTests : IDisposable
 
     public LogisticsSchemaInitializerTests()
     {
-        _sqliteConnection = new SqliteConnection("DataSource=:memory:");
+        _sqliteConnection = new SqliteConnection("DataSource=:memory:;Busy Timeout=5000");
         _sqliteConnection.Open();
 
         _dbContextOptions = new DbContextOptionsBuilder<LogisticsDbContext>()

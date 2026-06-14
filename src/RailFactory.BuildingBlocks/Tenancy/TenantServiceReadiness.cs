@@ -15,15 +15,31 @@ public static class TenantServiceReadiness
             await connection.OpenAsync(cancellationToken);
 
         await using var createCmd = connection.CreateCommand();
-        createCmd.CommandText = """
-            CREATE TABLE IF NOT EXISTS _rf_service_ready (
-                id  INT PRIMARY KEY DEFAULT 1,
-                ready_at TIMESTAMPTZ NOT NULL
-            );
-            INSERT INTO _rf_service_ready (id, ready_at)
-            VALUES (1, NOW())
-            ON CONFLICT (id) DO UPDATE SET ready_at = NOW();
-            """;
+        bool isSqlite = connection.GetType().Name.Contains("Sqlite", StringComparison.OrdinalIgnoreCase);
+
+        if (isSqlite)
+        {
+            createCmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS _rf_service_ready (
+                    id  INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ready_at DATETIME NOT NULL
+                );
+                INSERT OR REPLACE INTO _rf_service_ready (id, ready_at)
+                VALUES (1, datetime('now'));
+                """;
+        }
+        else
+        {
+            createCmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS _rf_service_ready (
+                    id  INT PRIMARY KEY DEFAULT 1,
+                    ready_at TIMESTAMPTZ NOT NULL
+                );
+                INSERT INTO _rf_service_ready (id, ready_at)
+                VALUES (1, NOW())
+                ON CONFLICT (id) DO UPDATE SET ready_at = NOW();
+                """;
+        }
         await createCmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -47,7 +63,11 @@ public static class TenantServiceReadiness
                 """;
 
             var result = await cmd.ExecuteScalarAsync(cancellationToken);
-            return result is true;
+            if (result is null || result == DBNull.Value) return false;
+
+            // SQLite returns 1/0 (long/int) for EXISTS, whereas PostgreSQL returns true/false (bool).
+            // Convert.ToInt64 normalizes true -> 1 and 1 -> 1.
+            return Convert.ToInt64(result) == 1;
         }
         catch
         {
