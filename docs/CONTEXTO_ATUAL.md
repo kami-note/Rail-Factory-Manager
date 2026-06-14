@@ -22,7 +22,9 @@ Este documento é a fonte da verdade sobre o estado real do código. Ele descrev
 | **P8 - Expedição + Fleet Ext.** | ✅ Concluído | Fleet: Manutenção de Veículos (RF-26), Controle de Abastecimento (RF-27). Logistics: Transportadoras (RF-20), Ordens de Expedição (RF-19), Despachos + rastreamento B2B público (RF-21/23/24/RD-LOG-01). Novo microserviço `RailFactory.Logistics.Api`. |
 | **P9 - RabbitMQ Logistics** | ✅ Concluído | `logistics.shipment_dispatched` publicado por item via Outbox ao expedir despacho. Inventory Consumer debita saldo `Available` (FIFO, idempotente). Fix `AddShipmentItem` (EF Core 10 + Npgsql bug, raw SQL). |
 | **P10 - Webhooks + Auditoria** | ✅ Concluído | RF-22: Carrier ganha `WebhookUrl`, `LogisticsWebhookDispatcher` notifica por HTTP com retry/dead-letter. RF-05/RN-08: `IamAuditEntry` com IP, CorrelationId; trilha de `role_assigned`, `role_revoked`, `session_created`. Frontend: AuditPage + campo webhook no modal de transportadora. |
-| **P15 - Evolução de BOMs — Fase 1**| 🔄 Em andamento | Clonagem de BOMs (Clone BOM) e Lote Padrão (Batch Size) no backend, banco de dados e frontend. |
+| **P15 - Evolução de BOMs — Fase 1**| ✅ Concluído | Clonagem de BOMs (Clone BOM) e Lote Padrão (Batch Size) no backend, banco de dados e frontend. |
+| **P15 - Evolução de BOMs — Fase 2**| ✅ Concluído | Fator de perda técnica (ScrapFactor) e Costing Roll-up (Custo Teórico da BOM) integrado com API SupplyChain. |
+| **Mód. Seeds** | ✅ Concluído | Extração e modularização da carga de dados mock de SupplyChain de SupplyChainSchemaInitializer para SupplyChainDataSeeder. |
 
 ---
 

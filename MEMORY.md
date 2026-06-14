@@ -2,6 +2,22 @@
 
 This file tracks architectural decisions, session status, and implementation milestones.
 
+## Session Milestone: Modularização de Seeds (2026-06-13)
+
+### Implemented Features
+- **Data Seeder Extraction:**
+  - Extracted database mock seeding from all tenant-aware background services into dedicated static data seeder classes across all microservices:
+    - `SupplyChain`: [SupplyChainDataSeeder.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.SupplyChain.Api/Infrastructure/Persistence/SupplyChainDataSeeder.cs)
+    - `Fleet`: [FleetDataSeeder.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Fleet.Api/Infrastructure/Persistence/FleetDataSeeder.cs)
+    - `HumanResources`: [HrDataSeeder.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api/Infrastructure/Persistence/HrDataSeeder.cs)
+    - `IAM`: [IamLocalUsersDataSeeder.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Iam.Api/Infrastructure/Auth/IamLocalUsersDataSeeder.cs)
+    - `Inventory`: [InventoryDataSeeder.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Inventory.Api/Infrastructure/Persistence/InventoryDataSeeder.cs)
+    - `Logistics`: [LogisticsDataSeeder.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Logistics.Api/Infrastructure/Persistence/LogisticsDataSeeder.cs)
+    - `Production`: [ProductionDataSeeder.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Production.Api/Infrastructure/Persistence/ProductionDataSeeder.cs)
+  - Updated all schema initializers to call their respective seeders.
+  - Verified project compilation using `dotnet build src/RailFactory.Fork.sln` with zero errors/warnings.
+  - Verified all 86 backend tests passed using `dotnet test src/RailFactory.Fork.sln` with zero failures.
+
 ## Session Milestone: Entrega 4: Evidências de IAM, Mensageria e Orquestração (2026-06-12)
 
 ### Implemented Features

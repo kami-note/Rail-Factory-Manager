@@ -30,6 +30,14 @@ test.describe('Ordens de Expedição', () => {
     await dialog.getByLabel(/observações/i).fill('PW teste P8');
     await dialog.getByRole('button', { name: /criar/i }).click();
 
+    // Adicionar item
+    await dialog.getByLabel(/material/i).fill('MAT-ACO-1020');
+    await dialog.getByLabel(/quantidade/i).fill('10');
+    await dialog.getByRole('button', { name: /adicionar/i }).click();
+    await expect(dialog.locator('.MuiChip-root', { hasText: 'MAT-ACO-1020' })).toBeVisible();
+
+    await dialog.getByRole('button', { name: /concluir/i }).click();
+
     await expect(authedPage.getByRole('dialog')).toHaveCount(0, { timeout: 10_000 });
     await expect(authedPage.getByRole('alert').filter({ hasText: /criada com sucesso/i })).toBeVisible();
     await expect(authedPage.locator('td', { hasText: /^EXP-/ }).first()).toBeVisible();
@@ -37,7 +45,16 @@ test.describe('Ordens de Expedição', () => {
 
   test('nova ordem aparece com status Rascunho', async ({ authedPage }) => {
     await authedPage.getByRole('button', { name: /nova ordem/i }).click();
-    await authedPage.getByRole('dialog').getByRole('button', { name: /criar/i }).click();
+    const dialog = authedPage.getByRole('dialog');
+    await dialog.getByRole('button', { name: /criar/i }).click();
+
+    // Adicionar item
+    await dialog.getByLabel(/material/i).fill('MAT-ACO-1020');
+    await dialog.getByLabel(/quantidade/i).fill('10');
+    await dialog.getByRole('button', { name: /adicionar/i }).click();
+    await expect(dialog.locator('.MuiChip-root', { hasText: 'MAT-ACO-1020' })).toBeVisible();
+
+    await dialog.getByRole('button', { name: /concluir/i }).click();
 
     await expect(authedPage.getByRole('dialog')).toHaveCount(0, { timeout: 10_000 });
     const draftRow = authedPage.getByRole('row').filter({
@@ -52,24 +69,31 @@ test.describe('Ordens de Expedição', () => {
     }).first();
 
     if (await draftRow.count() === 0) { test.skip(); return; }
-    // Accessible name comes from Tooltip title, not visible button text
-    await expect(draftRow.getByRole('button', { name: /iniciar separação/i })).toBeVisible();
+    await expect(draftRow.getByRole('button', { name: /separar/i })).toBeVisible();
   });
 
   test('transição Draft → Picking com ConfirmDialog', async ({ authedPage }) => {
     // Criar uma ordem nova para teste
     await authedPage.getByRole('button', { name: /nova ordem/i }).click();
-    await authedPage.getByRole('dialog').getByRole('button', { name: /criar/i }).click();
+    const dialog = authedPage.getByRole('dialog');
+    await dialog.getByRole('button', { name: /criar/i }).click();
+
+    // Adicionar item
+    await dialog.getByLabel(/material/i).fill('MAT-ACO-1020');
+    await dialog.getByLabel(/quantidade/i).fill('10');
+    await dialog.getByRole('button', { name: /adicionar/i }).click();
+    await expect(dialog.locator('.MuiChip-root', { hasText: 'MAT-ACO-1020' })).toBeVisible();
+
+    await dialog.getByRole('button', { name: /concluir/i }).click();
     await expect(authedPage.getByRole('dialog')).toHaveCount(0, { timeout: 10_000 });
 
     // Pegar a primeira linha Draft
     const draftRow = authedPage.getByRole('row').filter({
       has: authedPage.locator('.MuiChip-root').filter({ hasText: /rascunho/i }),
     }).first();
-    await draftRow.getByRole('button', { name: /iniciar separação/i }).click();
+    await draftRow.getByRole('button', { name: /separar/i }).click();
 
     // ConfirmDialog
-    const dialog = authedPage.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('heading', { name: /confirmar/i })).toBeVisible();
     await dialog.getByRole('button', { name: /confirmar/i }).click();
