@@ -235,7 +235,7 @@ ${detElements}
       xNome: 'Eletro Componentes Brasil Ltda',
       items: [
         {
-          cProd: 'CABO-FLEX-4MM',
+          cProd: `CABO-FLEX-4MM-${ts}`,
           xProd: 'Cabo Flexivel 4mm2 750V',
           uCom: 'RL',
           qCom: 10,
@@ -245,7 +245,7 @@ ${detElements}
           gtin: `7891${ts}001`
         },
         {
-          cProd: 'CONECT-RJ45',
+          cProd: `CONECT-RJ45-${ts}`,
           xProd: 'Conector RJ45 Cat6 Blindado Pct50',
           uCom: 'PCT',
           qCom: 4,
@@ -255,7 +255,7 @@ ${detElements}
           gtin: `7891${ts}002`
         },
         {
-          cProd: 'DISJ-63A',
+          cProd: `DISJ-63A-${ts}`,
           xProd: 'Disjuntor Bipolar 63A Curva C',
           uCom: 'UN',
           qCom: 5,
@@ -392,6 +392,7 @@ ${detElements}
     // Phase 6: Inventory Check
     await test.step('Inventory Check', async () => {
       await page.goto('/app/inventory');
+      await page.getByRole('button', { name: /tabela/i }).click();
       await expect(page.locator('table')).toBeVisible();
 
       // Check for available items

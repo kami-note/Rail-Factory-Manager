@@ -13,3 +13,5 @@ db-reset:
 diagrams:
 	java -jar docs/diagrams/plantuml.jar -png docs/diagrams/*.puml
 
+test-all:
+	./scripts/run-tests.sh

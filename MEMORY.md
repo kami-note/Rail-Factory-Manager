@@ -2,6 +2,65 @@
 
 This file tracks architectural decisions, session status, and implementation milestones.
 
+## Session Milestone: Expansão Massiva de Testes Unitários de Domínio (2026-06-14)
+
+### Implemented Features
+- **Novos Testes de Domínio Backend (C# / xUnit):**
+  - Adicionados testes unitários para o domínio de frotas (`Fleet`):
+    - [VehicleTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Fleet.Api.Tests/VehicleTests.cs): cobre validação de placa/chassi, normalização (capitalização), deativação/ativação com guards de estado, e regras para atribuição de motorista.
+    - [VehicleMaintenancePlanTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Fleet.Api.Tests/VehicleMaintenancePlanTests.cs): cobre criação, conclusão e cancelamento com guards de estado.
+    - [FuelingRecordTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Fleet.Api.Tests/FuelingRecordTests.cs): cobre validação de litros abastecidos e preço por litro.
+  - Adicionados testes unitários para o domínio de recursos humanos (`HumanResources`):
+    - [PersonTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api.Tests/PersonTests.cs): cobre validação de nome, e-mail, normalização e controle de status ativo/inativo.
+    - [HourLogTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api.Tests/HourLogTests.cs): cobre limites permitidos para horas trabalhadas (entre 0 e 24).
+    - [PersonSkillTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api.Tests/PersonSkillTests.cs): cobre regras de proficiência de 1 a 5.
+    - [WorkShiftTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.HumanResources.Api.Tests/WorkShiftTests.cs): garante que o horário de término seja posterior ao início.
+  - Adicionados testes unitários para o domínio de logística (`Logistics`):
+    - [CarrierTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Logistics.Api.Tests/CarrierTests.cs): cobre criação, sanitização e transição de status de transportadoras.
+    - [TenantFiscalProfileTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Logistics.Api.Tests/TenantFiscalProfileTests.cs): cobre criação e atualização de perfis fiscais de tenants.
+    - [ShipmentOrderTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Logistics.Api.Tests/ShipmentOrderTests.cs): cobre criação de ordens de expedição, adição de itens, máquina de estados do ciclo de separação e cancelamentos.
+    - [DispatchTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Logistics.Api.Tests/DispatchTests.cs): cobre transições de entrega e retorno, conferência e reinício de emissão fiscal.
+  - Adicionados testes unitários para o domínio de produção (`Production`):
+    - [ProductionOrderTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Production.Api.Tests/ProductionOrderTests.cs): cobre criação, liberação, início, qualidade e cancelamento de ordens de produção.
+    - [WorkCenterTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Production.Api.Tests/WorkCenterTests.cs): cobre criação e alteração de status ativo/inativo.
+    - [ConsumptionRecordTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Production.Api.Tests/ConsumptionRecordTests.cs): cobre validação de consumos na ordem de produção.
+    - [QualityInspectionTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Production.Api.Tests/QualityInspectionTests.cs): cobre inspeção com passed/failed e validação de inspector.
+    - [ScrapRecordTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Production.Api.Tests/ScrapRecordTests.cs): cobre registro de perdas com motivos obrigatórios.
+  - Adicionados testes unitários para o domínio de gerenciamento de inquilinos (`Tenancy`):
+    - [TenantTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Tenancy.Api.Tests/TenantTests.cs): cobre registro de inquilinos, normalização do código e conexões com bancos.
+    - [TenantIntegrationTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Tenancy.Api.Tests/TenantIntegrationTests.cs): cobre habilitação, desabilitação e atualização de credenciais.
+  - Adicionados testes unitários para o domínio de cadeia de suprimentos (`SupplyChain`):
+    - [SupplierTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.SupplyChain.Api.Tests/SupplierTests.cs): verifica a validação de nome e o estado ativo padrão do fornecedor.
+    - [SupplierMaterialMappingTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.SupplyChain.Api.Tests/SupplierMaterialMappingTests.cs): cobre associações, validação de fator de conversão positivo e correções de mapeamentos de SKUs.
+  - Adicionados testes unitários para o domínio de controle de acesso (`IAM`):
+    - [IamApiKeyTests.cs](file:///home/levi/Projects/Rail-Factory-Fork/src/RailFactory.Iam.Api.Tests/IamApiKeyTests.cs): cobre geração segura de tokens M2M com prefixo `rfk_`, validação de hashes SHA-256, expiração e revogação.
+
+### Verification & Tests
+- A suite total de testes de backend cresceu de **86** para **251** testes, e a suite total de testes do projeto (Backend + Frontend + E2E) ultrapassou a marca de **340 testes** (totalizando **342 testes**), todos passando com 100% de sucesso.
+
+
+## Session Milestone: Estabilização de Testes E2E e Tabela Consolidada (2026-06-14)
+
+### Implemented Features
+- **Consolidated Test Runner:**
+  - Implemented [scripts/run-tests.sh](file:///home/levi/Projects/Rail-Factory-Fork/scripts/run-tests.sh) which runs backend, frontend unit, and E2E tests and prints a unified summary table.
+  - Added the `test-all` target to the root [makefile](file:///home/levi/Projects/Rail-Factory-Fork/makefile).
+- **E2E Test Stability & Bugfixes:**
+  - Resolved `fueling.spec.ts` failure by aligning the expected liters cell text selector assertion with the frontend `toFixed(1)` formatting ('80.5' instead of '80.500').
+  - Resolved `nfe-receiving.spec.ts` failures by making the imported supplier product codes (`cProd`) dynamic, preventing SKU association collisions on repeated test runs. Also fixed the view mode check by explicitly toggling the inventory view mode to `'table'` before checking elements.
+  - Verified 100% test success rate across the entire monorepo: 86 backend tests, 38 frontend unit tests, and 52 Playwright E2E tests (176 tests total) all passed cleanly.
+
+## Session Milestone: Expansão de Padrões Arquiteturais no TCC (2026-06-14)
+
+### Implemented Features
+- **Technical Documentation Enhancement:**
+  - Expanded section `5.2.5. Padrões Adotados` in [DOCUMENTACAO_TECNICA.md](file:///home/levi/Projects/Rail-Factory-Fork/docs/technical/DOCUMENTACAO_TECNICA.md) with 5 high-value academic architectural and design patterns:
+    - **Ports & Adapters (Arquitetura Hexagonal):** Describing strict decoupling between business logic and infrastructure.
+    - **Result Pattern:** Documenting explicit error handling and flow control without exception-throwing overhead.
+    - **Tactical Domain-Driven Design (DDD):** Detailing the use of Aggregate Roots, Entities, Domain Events, and Repositories in the core layer.
+    - **Dynamic Multitenant Database Isolation:** Documenting database-per-tenant connection resolution at DbContext lifecycle.
+    - **Backend-Driven UI for Statuses:** Explaining unified state presentation via `DisplayStatus` and `StatusChip.tsx`.
+
 ## Session Milestone: Modularização de Seeds (2026-06-13)
 
 ### Implemented Features
