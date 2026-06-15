@@ -77,7 +77,7 @@ jobs:
       - name: Deploy stack
         working-directory: ${{ github.workspace }}/deploy-output
         run: |
-          cp .env.Development .env
+          if [ -f .env.Production ]; then cp .env.Production .env; else cp .env.Development .env; fi
           docker compose --project-name rail-factory pull --ignore-pull-failures
           docker compose --project-name rail-factory up -d --build --remove-orphans
 
