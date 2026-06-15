@@ -64,6 +64,8 @@ jobs:
           DOTNET_ENVIRONMENT: Production
           ASPNETCORE_ENVIRONMENT: Production
         run: |
+          mkdir -p ${{ github.workspace }}/deploy-output
+          echo "services: {}" > ${{ github.workspace }}/deploy-output/docker-compose.yaml
           dotnet run \
             --project src/RailFactory.AppHost/RailFactory.AppHost.csproj \
             --configuration Release \
