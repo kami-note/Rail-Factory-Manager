@@ -63,6 +63,8 @@ jobs:
         env:
           DOTNET_ENVIRONMENT: Production
           ASPNETCORE_ENVIRONMENT: Production
+          AppHost__Operation: Publish
+          Publishing__Publisher: docker-compose
         run: |
           mkdir -p ${{ github.workspace }}/deploy-output
           echo "services: {}" > ${{ github.workspace }}/deploy-output/docker-compose.yaml
