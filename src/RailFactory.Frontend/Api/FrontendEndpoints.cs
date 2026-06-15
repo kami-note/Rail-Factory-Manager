@@ -11,9 +11,6 @@ public static class FrontendEndpoints
 
     public static WebApplication MapFrontendEndpoints(this WebApplication app, FrontendHostingExtensions.FrontendStaticUiState staticUi)
     {
-        // Root redirect
-        app.MapGet(RootPath, () => Results.Redirect(StatusPath));
-
         var group = app.MapGroup("/api");
 
         group.MapGet("/frontend/status", FrontendStatusEndpoint.HandleGet);
