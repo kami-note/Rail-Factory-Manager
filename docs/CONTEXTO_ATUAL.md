@@ -27,6 +27,7 @@ Este documento é a fonte da verdade sobre o estado real do código. Ele descrev
 | **Mód. Seeds** | ✅ Concluído | Extração e modularização da carga de dados mock de todos os microserviços para classes estáticas `DataSeeder` dedicadas. |
 | **Estabilização E2E**| ✅ Concluído | Ajustes no runner de testes Playwright/Vitest com script unificado de consolidação e correção de locadores dinâmicos. |
 | **Expansão de Testes**| ✅ Concluído | Adicionados 165 novos testes unitários C#/xUnit cobrindo os domínios de frotas (`Fleet`), recursos humanos (`HR`), logística (`Logistics`), produção (`Production`), inquilinos (`Tenancy`), cadeia de suprimentos (`SupplyChain`) e `IAM` (totalizando 342 testes no monorepo). |
+| **BFF & Deploy Fix**  | ✅ Concluído | Resolvida a pipeline de deploy Docker Compose no CI/CD e removido o redirecionamento incorreto da rota raiz `/` no BFF do Frontend. |
 
 
 ---

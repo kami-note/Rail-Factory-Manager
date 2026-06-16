@@ -135,6 +135,7 @@ public static class IamLocalUsersDataSeeder
         var users = new List<IamLocalUserRecord>
         {
             new() { ExternalProvider = "google", ExternalSubject = "111111111111111111111", Email = "yurinote666@gmail.com", DisplayName = "Yuri Note", FirstLoginAt = DateTimeOffset.UtcNow, LastLoginAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow },
+            new() { ExternalProvider = "google", ExternalSubject = "104339721309686158509", Email = "yurinote666@gmail.com", DisplayName = "Yuzi Otaku", FirstLoginAt = DateTimeOffset.UtcNow, LastLoginAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow },
             new() { ExternalProvider = "google", ExternalSubject = "222222222222222222222", Email = "admin@railfactory.com.br", DisplayName = "Admin RailFactory", FirstLoginAt = DateTimeOffset.UtcNow, LastLoginAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow },
             new() { ExternalProvider = "google", ExternalSubject = "333333333333333333333", Email = "logistica@railfactory.com.br", DisplayName = "Expedição RailFactory", FirstLoginAt = DateTimeOffset.UtcNow, LastLoginAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow },
             new() { ExternalProvider = "google", ExternalSubject = "444444444444444444444", Email = "producao@railfactory.com.br", DisplayName = "Chão de Fábrica", FirstLoginAt = DateTimeOffset.UtcNow, LastLoginAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow },
@@ -152,6 +153,7 @@ public static class IamLocalUsersDataSeeder
 
         dbContext.UserRoles.AddRange(
             new IamTenantUserRoleRecord { TenantCode = tenantCode, ExternalProvider = "google", ExternalSubject = "111111111111111111111", RoleId = adminRole.Id, AssignedAt = DateTimeOffset.UtcNow },
+            new IamTenantUserRoleRecord { TenantCode = tenantCode, ExternalProvider = "google", ExternalSubject = "104339721309686158509", RoleId = adminRole.Id, AssignedAt = DateTimeOffset.UtcNow },
             new IamTenantUserRoleRecord { TenantCode = tenantCode, ExternalProvider = "google", ExternalSubject = "222222222222222222222", RoleId = adminRole.Id, AssignedAt = DateTimeOffset.UtcNow },
             new IamTenantUserRoleRecord { TenantCode = tenantCode, ExternalProvider = "google", ExternalSubject = "333333333333333333333", RoleId = logisticaRole.Id, AssignedAt = DateTimeOffset.UtcNow },
             new IamTenantUserRoleRecord { TenantCode = tenantCode, ExternalProvider = "google", ExternalSubject = "444444444444444444444", RoleId = producaoRole.Id, AssignedAt = DateTimeOffset.UtcNow },
