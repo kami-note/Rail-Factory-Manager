@@ -80,16 +80,8 @@ Esta pasta centraliza toda a documentação do projeto. Organizada para **busca 
 | Documento | O que responde |
 |---|---|
 | **[DESIGN_STYLE_GUIDE.md](./DESIGN_STYLE_GUIDE.md)** | Paleta de cores, tipografia, iconografia, componentes compartilhados, padrões de UX. |
-| **[../src/RailFactory.Frontend/GEMINI.md](../src/RailFactory.Frontend/GEMINI.md)** | Arquitetura Feature-Sliced, regras de dependência, shared kernel. |
 
 ---
-
-## 🛠️ Regras de Desenvolvimento
-
-| Documento | O que responde |
-|---|---|
-| **[../GEMINI.md](../GEMINI.md)** | Mandatos de engenharia: documentação, FTQ, estilo, protocolos elite, dead code. |
-| **[../AGENTS.md](../AGENTS.md)** | Guia rápido de onboarding para desenvolvedores (aponta para GEMINI.md). |
 
 ---
 
@@ -111,8 +103,6 @@ Esta pasta centraliza toda a documentação do projeto. Organizada para **busca 
 | Quais são os requisitos RF-XX? | `REQUISITOS.md` |
 | Em qual passada entra RF-XX? | `ANALISE_REQUISITOS_E_PASSADAS.md` §2 |
 | Como fazer um componente UI? | `DESIGN_STYLE_GUIDE.md` |
-| Padrão de código (C#/TS)? | `GEMINI.md` |
-| Estrutura de pastas do frontend? | `src/RailFactory.Frontend/GEMINI.md` |
 | Como adicionar um tenant? | `TENANT_ONBOARDING_STRATEGY.md` |
 | Há algum bug conhecido? | `ISSUES_CONHECIDOS.md` |
 | Como funciona o fluxo de trabalho de X? | `./technical/FLUXOS_DE_TRABALHO.md` |
