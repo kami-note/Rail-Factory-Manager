@@ -163,11 +163,22 @@ A documentação detalhada de cada módulo e processo está centralizada no dire
 
 ---
 
+## 🤖 Diretrizes Locais
+
+Para manter a base de código limpa e focada exclusivamente no domínio do software, os metadados e arquivos de suporte ao desenvolvimento local são mantidos **apenas localmente** e não são rastreados pelo Git.
+
+Esses arquivos incluem:
+*   `.agents/`, `.gemini/`, `.claude/`, `.codex/`: Configurações de ferramentas, prompts de sistema e definições de subagentes.
+*   [`GEMINI.md`](./GEMINI.md): Mandato de engenharia e regras de codificação compartilhadas para os contribuidores.
+*   [`MEMORY.md`](./MEMORY.md): Registro privado do estado atual, histórico de milestones e contexto das sessões locais.
+
+---
+
 ## 🛡️ Protocolos Elite de Desenvolvimento
 
-Para garantir a qualidade máxima do código e a estabilidade do produto, todos os contribuidores e contribuidores devem seguir estritamente as diretrizes contidas em **[`GEMINI.md`](./GEMINI.md)**:
+Todos os contribuidores e contribuidores seguem os mandatos de engenharia descritos no arquivo local [`GEMINI.md`](./GEMINI.md):
 
-*   **TDD (Test Driven Development)**: Sempre crie um teste para validar novos recursos ou reproduzir bugs antes da alteração lógica.
-*   **Evite placeholders**: Nenhum arquivo deve conter códigos incompletos ou comentários com `// rest of code`.
-*   **Consistência Linguística**: Código, logs e documentações técnicas internas em **Inglês técnico**. Textos visíveis ao usuário no sistema (labels, modais) em **Português (Brasil)**.
-*   **Decoupling Rígido**: Módulos e domínios são independentes e comunicam-se via eventos (RabbitMQ) ou ports específicos.
+*   **TDD (Test Driven Development)**: Nunca implemente uma funcionalidade ou corrija um bug sem antes criar um teste que valide o cenário de sucesso ou falha.
+*   **Zero Placeholders**: Nenhum código gerado ou modificado deve conter trechos incompletos, reticências (`...`) ou marcações como `// resto do código`.
+*   **Padrão de Idioma**: Comentários no código, logs e arquitetura em **Inglês técnico**. Textos e telas voltados ao operador/usuário final em **Português (Brasil)**.
+*   **Integridade Hexagonal**: O domínio de negócios deve permanecer totalmente desacoplado da infraestrutura física de banco de dados, mensageria e frameworks.
